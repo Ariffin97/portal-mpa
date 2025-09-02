@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import mpaLogo from '../assets/images/mpa.png';
+import apiService from '../services/api';
 
 const Login = ({ setCurrentPage, setIsLoggedIn }) => {
   const [formData, setFormData] = useState({
@@ -24,19 +25,24 @@ const Login = ({ setCurrentPage, setIsLoggedIn }) => {
     setLoading(true);
     setError('');
 
-    // Simulate login delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const response = await apiService.adminLogin({
+        username: formData.username,
+        password: formData.password
+      });
 
-    // Check credentials
-    if (formData.username === 'admin' && formData.password === 'admin123') {
-      setIsLoggedIn(true);
-      localStorage.setItem('isLoggedIn', 'true');
-      setCurrentPage('admin'); // Redirect directly to admin dashboard
-    } else {
-      setError('Invalid username or password');
+      if (response.success) {
+        setIsLoggedIn(true);
+        localStorage.setItem('isLoggedIn', 'true');
+        setCurrentPage('admin'); // Redirect directly to admin dashboard
+      } else {
+        setError(response.message || 'Login failed');
+      }
+    } catch (error) {
+      setError(error.message || 'Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (

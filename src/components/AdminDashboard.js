@@ -1,17 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import apiService from '../services/api';
 
 const AdminDashboard = ({ setCurrentPage }) => {
   const [applications, setApplications] = useState([]);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('tournamentApplications');
-    if (saved) {
-      setApplications(JSON.parse(saved));
-    }
+    loadApplications();
   }, []);
+
+  const loadApplications = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const data = await apiService.getAllApplications();
+      setApplications(data);
+    } catch (error) {
+      console.error('Failed to load applications:', error);
+      setError('Failed to load applications. Please check if the server is running.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -38,27 +52,37 @@ const AdminDashboard = ({ setCurrentPage }) => {
     });
   };
 
-  const updateApplicationStatus = (id, newStatus) => {
-    const updatedApplications = applications.map(app => 
-      app.id === id ? { ...app, status: newStatus } : app
-    );
-    setApplications(updatedApplications);
-    localStorage.setItem('tournamentApplications', JSON.stringify(updatedApplications));
+  const updateApplicationStatus = async (id, newStatus) => {
+    try {
+      await apiService.updateApplicationStatus(id, newStatus);
+      // Update local state after successful API call
+      const updatedApplications = applications.map(app => 
+        (app.id === id || app.applicationId === id) ? { ...app, status: newStatus } : app
+      );
+      setApplications(updatedApplications);
+    } catch (error) {
+      console.error('Failed to update application status:', error);
+      alert('Failed to update application status. Please try again.');
+    }
   };
 
   const updateApplicationRemarks = (id, remarks) => {
+    // Note: This is a local-only feature for now
+    // In production, you'd want to save remarks to the database
     const updatedApplications = applications.map(app => 
-      app.id === id ? { ...app, remarks: remarks } : app
+      (app.id === id || app.applicationId === id) ? { ...app, remarks: remarks } : app
     );
     setApplications(updatedApplications);
-    localStorage.setItem('tournamentApplications', JSON.stringify(updatedApplications));
   };
 
   const deleteApplication = (id) => {
     if (window.confirm('Are you sure you want to delete this application?')) {
-      const updatedApplications = applications.filter(app => app.id !== id);
+      // Note: This is a local-only feature for now
+      // In production, you'd want to add a delete API endpoint
+      const updatedApplications = applications.filter(app => 
+        app.id !== id && app.applicationId !== id
+      );
       setApplications(updatedApplications);
-      localStorage.setItem('tournamentApplications', JSON.stringify(updatedApplications));
     }
   };
 
@@ -286,7 +310,29 @@ Settings
 
             <div className="applications-section">
               <h3>All Applications ({applications.length})</h3>
-              {applications.length === 0 ? (
+              {error && (
+                <div className="error-message" style={{ 
+                  color: '#d32f2f', 
+                  backgroundColor: '#ffebee', 
+                  padding: '15px', 
+                  borderRadius: '4px', 
+                  marginBottom: '20px',
+                  border: '1px solid #ffcdd2' 
+                }}>
+                  {error}
+                  <button 
+                    onClick={loadApplications} 
+                    style={{ marginLeft: '10px', padding: '5px 10px' }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+              {isLoading ? (
+                <div className="loading-message" style={{ textAlign: 'center', padding: '20px' }}>
+                  <p>Loading applications...</p>
+                </div>
+              ) : applications.length === 0 ? (
                 <div className="no-applications">
                   <p>No applications found.</p>
                   <p>Applications will appear here once users submit tournament applications.</p>
@@ -305,68 +351,72 @@ Settings
                       </tr>
                     </thead>
                     <tbody>
-                      {applications.map((app, index) => (
-                        <tr key={app.id}>
-                          <td>{index + 1}</td>
-                          <td>
-                            <span 
-                              className="clickable-link" 
-                              onClick={() => showApplicationDetails(app)}
-                              title="Click to view details"
-                            >
-                              {app.eventTitle || 'No Event Title'}
-                            </span>
-                          </td>
-                          <td>
-                            <span 
-                              className="clickable-link" 
-                              onClick={() => showApplicationDetails(app)}
-                              title="Click to view details"
-                            >
-                              {app.id}
-                            </span>
-                          </td>
-                          <td>
-                            <span 
-                              className="status-badge-table" 
-                              style={{ backgroundColor: getStatusColor(app.status) }}
-                            >
-                              {app.status}
-                            </span>
-                          </td>
-                          <td>
-                            <input
-                              type="text"
-                              value={app.remarks || ''}
-                              onChange={(e) => updateApplicationRemarks(app.id, e.target.value)}
-                              placeholder="Add remarks..."
-                              className="remarks-input"
-                              disabled={app.status !== 'Rejected'}
-                            />
-                          </td>
-                          <td>
-                            <div className="table-actions">
-                              <select 
-                                value={app.status} 
-                                onChange={(e) => updateApplicationStatus(app.id, e.target.value)}
-                                className="status-select-table"
+                      {applications.map((app, index) => {
+                        const appId = app.applicationId || app.id;
+                        return (
+                          <tr key={appId}>
+                            <td>{index + 1}</td>
+                            <td>
+                              <span 
+                                className="clickable-link" 
+                                onClick={() => showApplicationDetails(app)}
+                                title="Click to view details"
                               >
-                                <option value="Pending Review">Pending Review</option>
-                                <option value="Under Review">Under Review</option>
-                                <option value="Approved">Approved</option>
-                                <option value="Rejected">Rejected</option>
-                              </select>
-                              <button 
-                                onClick={() => deleteApplication(app.id)}
-                                className="delete-btn-table"
-                                title="Delete Application"
+                                {app.eventTitle || 'No Event Title'}
+                              </span>
+                            </td>
+                            <td>
+                              <span 
+                                className="clickable-link" 
+                                onClick={() => showApplicationDetails(app)}
+                                title="Click to view details"
                               >
+                                {appId}
+                              </span>
+                            </td>
+                            <td>
+                              <span 
+                                className="status-badge-table" 
+                                style={{ backgroundColor: getStatusColor(app.status) }}
+                              >
+                                {app.status}
+                              </span>
+                            </td>
+                            <td>
+                              <input
+                                type="text"
+                                value={app.remarks || ''}
+                                onChange={(e) => updateApplicationRemarks(appId, e.target.value)}
+                                placeholder="Add remarks..."
+                                className="remarks-input"
+                                disabled={app.status !== 'Rejected'}
+                              />
+                            </td>
+                            <td>
+                              <div className="table-actions">
+                                <select 
+                                  value={app.status} 
+                                  onChange={(e) => updateApplicationStatus(appId, e.target.value)}
+                                  className="status-select-table"
+                                >
+                                  <option value="Pending Review">Pending Review</option>
+                                  <option value="Under Review">Under Review</option>
+                                  <option value="Approved">Approved</option>
+                                  <option value="Rejected">Rejected</option>
+                                  <option value="More Info Required">More Info Required</option>
+                                </select>
+                                <button 
+                                  onClick={() => deleteApplication(appId)}
+                                  className="delete-btn-table"
+                                  title="Delete Application"
+                                >
 Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -394,7 +444,7 @@ Delete
                 <div className="detail-grid">
                   <div className="detail-item">
                     <label>Application ID:</label>
-                    <span>{selectedApplication.id}</span>
+                    <span>{selectedApplication.applicationId || selectedApplication.id}</span>
                   </div>
                   <div className="detail-item">
                     <label>Organiser Name:</label>

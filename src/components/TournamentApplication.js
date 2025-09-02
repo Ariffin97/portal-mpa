@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import mpaLogo from '../assets/images/mpa.png';
+import apiService from '../services/api';
 
 const TournamentApplication = ({ setCurrentPage }) => {
   // Malaysian States and Cities data
@@ -52,11 +53,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedApplication, setSubmittedApplication] = useState(null);
-
-  const [applications, setApplications] = useState(() => {
-    const saved = localStorage.getItem('tournamentApplications');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -327,12 +325,9 @@ const TournamentApplication = ({ setCurrentPage }) => {
       doc.text('SKILL RATINGS', 113, yPosition);
       
       doc.setFont('helvetica', 'normal');
-      doc.text('Novice: <=2.499', 113, yPosition + 6);
-      doc.text('Intermediate: <=2.999', 113, yPosition + 12);
-      doc.text('Intermediate+: <=3.499', 113, yPosition + 18);
-      doc.text('Advanced: <=3.999', 113, yPosition + 24);
-      doc.text('Advanced+: <=4.499', 113, yPosition + 30);
-      doc.text('Elite: 4.5+', 113, yPosition + 36);
+      doc.text('Intermediate: < 3.5', 113, yPosition + 6);
+      doc.text('Advanced: < 4.5', 113, yPosition + 12);
+      doc.text('Elite: >= 4.5', 113, yPosition + 18);
       
       yPosition += 45;
       
@@ -363,53 +358,72 @@ const TournamentApplication = ({ setCurrentPage }) => {
     img.src = mpaLogo;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitError('');
     
-    const newApplication = {
-      id: generateApplicationId(),
-      ...formData,
-      submissionDate: new Date().toISOString(),
-      status: 'Pending Review'
-    };
-    
-    const updatedApplications = [...applications, newApplication];
-    setApplications(updatedApplications);
-    localStorage.setItem('tournamentApplications', JSON.stringify(updatedApplications));
-    
-    alert(`Application submitted successfully! Your application ID is: ${newApplication.id}`);
-    
-    // Enable PDF download and show message
-    setSubmittedApplication(newApplication);
-    setIsSubmitted(true);
-    
-    setFormData({
-      // Organiser Information
-      organiserName: '',
-      registrationNo: '',
-      telContact: '',
-      organisingPartner: '',
+    try {
+      // Prepare data for API submission
+      const submissionData = {
+        organiserName: formData.organiserName,
+        registrationNo: formData.registrationNo,
+        telContact: formData.telContact,
+        organisingPartner: formData.organisingPartner,
+        eventTitle: formData.eventTitle,
+        eventStartDate: formData.eventStartDate,
+        eventEndDate: formData.eventEndDate,
+        state: formData.state,
+        city: formData.city,
+        venue: formData.venue,
+        classification: formData.classification,
+        expectedParticipants: parseInt(formData.expectedParticipants),
+        eventSummary: formData.eventSummary,
+        scoringFormat: formData.scoringFormat,
+        dataConsent: formData.dataConsent,
+        termsConsent: formData.termsConsent
+      };
+
+      const response = await apiService.submitTournamentApplication(submissionData);
+      const newApplication = response.application;
       
-      // Event Details
-      eventTitle: '',
-      eventStartDate: '',
-      eventEndDate: '',
-      eventStartDateFormatted: '',
-      eventEndDateFormatted: '',
-      state: '',
-      city: '',
-      venue: '',
-      classification: '',
-      expectedParticipants: '',
-      eventSummary: '',
+      alert(`Application submitted successfully! Your application ID is: ${newApplication.applicationId}`);
       
-      // Tournament Settings
-      scoringFormat: 'traditional',
+      // Enable PDF download and show message
+      setSubmittedApplication({
+        ...newApplication,
+        id: newApplication.applicationId // For backward compatibility with PDF generation
+      });
+      setIsSubmitted(true);
       
-      // Consent
-      dataConsent: false,
-      termsConsent: false
-    });
+      // Reset form
+      setFormData({
+        organiserName: '',
+        registrationNo: '',
+        telContact: '',
+        organisingPartner: '',
+        eventTitle: '',
+        eventStartDate: '',
+        eventEndDate: '',
+        eventStartDateFormatted: '',
+        eventEndDateFormatted: '',
+        state: '',
+        city: '',
+        venue: '',
+        classification: '',
+        expectedParticipants: '',
+        eventSummary: '',
+        scoringFormat: 'traditional',
+        dataConsent: false,
+        termsConsent: false
+      });
+      
+    } catch (error) {
+      console.error('Submission error:', error);
+      setSubmitError(error.message || 'Failed to submit application. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSave = () => {
@@ -468,12 +482,9 @@ ${dataToUse.eventSummary || '[Not filled]'}
 TOURNAMENT CATEGORIES & SKILL RATINGS
 ===========================================
 Skill Rating Guidelines:
-• Novice: 2.499 & below
-• Intermediate: 2.999 & below
-• Intermediate+: 3.499 & below
-• Advanced: 3.999 & below
-• Advanced+: 4.499 & below
-• Elite: 4.5 & above
+• Intermediate: < 3.5
+• Advanced: < 4.5
+• Elite: >= 4.5
 
 Note: Players with lower ratings can play in any higher rated categories
 but players of higher ratings cannot participate in the lower rated categories.
@@ -747,12 +758,9 @@ Generated on: ${currentDate}
           <div className="skill-ratings-info">
             <h4>Skill Rating Guidelines:</h4>
             <ul className="skill-ratings">
-              <li><strong>Novice:</strong> 2.499 & below</li>
-              <li><strong>Intermediate:</strong> 2.999 & below</li>
-              <li><strong>Intermediate+:</strong> 3.499 & below</li>
-              <li><strong>Advanced:</strong> 3.999 & below</li>
-              <li><strong>Advanced+:</strong> 4.499 & below</li>
-              <li><strong>Elite:</strong> 4.5 & above</li>
+              <li><strong>Intermediate:</strong> &lt; 3.5</li>
+              <li><strong>Advanced:</strong> &lt; 4.5</li>
+              <li><strong>Elite:</strong> &gt;= 4.5</li>
             </ul>
             <p className="skill-note">
               <strong>Note:</strong> Players with lower ratings can play in any higher rated categories 
@@ -806,12 +814,24 @@ Generated on: ${currentDate}
         
         {!isSubmitted ? (
           <div className="form-actions">
+            {submitError && (
+              <div className="error-message" style={{ 
+                color: '#d32f2f', 
+                backgroundColor: '#ffebee', 
+                padding: '10px', 
+                borderRadius: '4px', 
+                marginBottom: '15px',
+                border: '1px solid #ffcdd2' 
+              }}>
+                {submitError}
+              </div>
+            )}
             <button 
               type="submit" 
-              className={`submit-btn ${(!formData.dataConsent || !formData.termsConsent) ? 'disabled' : ''}`}
-              disabled={!formData.dataConsent || !formData.termsConsent}
+              className={`submit-btn ${(!formData.dataConsent || !formData.termsConsent || isSubmitting) ? 'disabled' : ''}`}
+              disabled={!formData.dataConsent || !formData.termsConsent || isSubmitting}
             >
-              Submit Tournament Application
+              {isSubmitting ? 'Submitting Application...' : 'Submit Tournament Application'}
             </button>
           </div>
         ) : (

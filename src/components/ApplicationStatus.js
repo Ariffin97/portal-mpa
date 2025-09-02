@@ -1,27 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import mpaLogo from '../assets/images/mpa.png';
+import apiService from '../services/api';
 
 const ApplicationStatus = () => {
   const [searchId, setSearchId] = useState('');
   const [searchResult, setSearchResult] = useState(null);
-  const [applications, setApplications] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
 
-  useEffect(() => {
-    const saved = localStorage.getItem('tournamentApplications');
-    if (saved) {
-      setApplications(JSON.parse(saved));
-    }
-  }, []);
-
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchId.trim()) {
       alert('Please enter an application ID');
       return;
     }
 
-    const found = applications.find(app => app.id.toLowerCase() === searchId.toLowerCase());
-    setSearchResult(found || 'not_found');
+    setIsSearching(true);
+    setSearchError('');
+    setSearchResult(null);
+
+    try {
+      const application = await apiService.getApplicationById(searchId.trim());
+      setSearchResult(application);
+    } catch (error) {
+      console.error('Search error:', error);
+      if (error.message.includes('404') || error.message.includes('not found')) {
+        setSearchResult('not_found');
+      } else {
+        setSearchError('Unable to search applications. Please check if the server is running and try again.');
+      }
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -64,10 +74,26 @@ const ApplicationStatus = () => {
               value={searchId}
               onChange={(e) => setSearchId(e.target.value)}
               placeholder="Enter your application ID (e.g., MPA12345)"
+              disabled={isSearching}
             />
-            <button type="submit">Search</button>
+            <button type="submit" disabled={isSearching}>
+              {isSearching ? 'Searching...' : 'Search'}
+            </button>
           </div>
         </form>
+        
+        {searchError && (
+          <div className="search-error" style={{ 
+            color: '#d32f2f', 
+            backgroundColor: '#ffebee', 
+            padding: '10px', 
+            borderRadius: '4px', 
+            marginTop: '10px',
+            border: '1px solid #ffcdd2' 
+          }}>
+            {searchError}
+          </div>
+        )}
       </div>
 
       {searchResult === 'not_found' && (
@@ -105,7 +131,7 @@ const ApplicationStatus = () => {
                 <tbody>
                   <tr>
                     <td>{searchResult.eventTitle}</td>
-                    <td>{searchResult.id}</td>
+                    <td>{searchResult.applicationId || searchResult.id}</td>
                     <td>{searchResult.organiserName}</td>
                     <td>
                       <span 
