@@ -45,7 +45,7 @@ const Header = ({ currentPage, setCurrentPage, isLoggedIn, setIsLoggedIn }) => {
               <span className="org-name">Malaysia Pickleball Association</span>
             </div>
             <div className="utility-links">
-              {(currentPage === 'apply' || currentPage === 'status' || currentPage === 'admin') && (
+              {(currentPage === 'apply' || currentPage === 'status' || currentPage === 'admin' || currentPage === 'terms') && (
                 <button 
                   className="utility-link" 
                   onClick={() => setCurrentPage('home')}
@@ -63,8 +63,13 @@ const Header = ({ currentPage, setCurrentPage, isLoggedIn, setIsLoggedIn }) => {
                   Admin
                 </button>
               )}
-              <a href="#" className="utility-link">Bahasa Malaysia</a>
-              <a href="#" className="utility-link">Help</a>
+              <button 
+                className="utility-link" 
+                onClick={() => setCurrentPage('terms')}
+                title="Terms and Conditions"
+              >
+                Terms & Conditions
+              </button>
               {isLoggedIn ? (
                 <button className="utility-link" onClick={handleLogout}>
                   Logout

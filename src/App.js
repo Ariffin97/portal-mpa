@@ -6,6 +6,7 @@ import Login from './components/Login';
 import AdminDashboard from './components/AdminDashboard';
 import TournamentApplication from './components/TournamentApplication';
 import ApplicationStatus from './components/ApplicationStatus';
+import TermsAndConditions from './components/TermsAndConditions';
 import mpaLogo from './assets/images/mpa.png';
 
 function App() {
@@ -30,6 +31,8 @@ function App() {
         return <TournamentApplication setCurrentPage={setCurrentPage} />;
       case 'status':
         return <ApplicationStatus setCurrentPage={setCurrentPage} />;
+      case 'terms':
+        return <TermsAndConditions setCurrentPage={setCurrentPage} />;
       case 'about':
         return (
           <div className="page-content">

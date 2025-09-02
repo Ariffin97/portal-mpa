@@ -3,6 +3,25 @@ import jsPDF from 'jspdf';
 import mpaLogo from '../assets/images/mpa.png';
 
 const TournamentApplication = ({ setCurrentPage }) => {
+  // Malaysian States and Cities data
+  const malaysianStatesAndCities = {
+    'Johor': ['Johor Bahru', 'Batu Pahat', 'Muar', 'Kluang', 'Pontian', 'Segamat', 'Mersing', 'Kota Tinggi', 'Kulai', 'Skudai'],
+    'Kedah': ['Alor Setar', 'Sungai Petani', 'Kulim', 'Jitra', 'Baling', 'Langkawi', 'Kuala Kedah', 'Pendang', 'Sik', 'Yan'],
+    'Kelantan': ['Kota Bharu', 'Wakaf Che Yeh', 'Tanah Merah', 'Machang', 'Pasir Mas', 'Gua Musang', 'Kuala Krai', 'Tumpat', 'Pasir Puteh', 'Bachok'],
+    'Melaka': ['Melaka City', 'Ayer Keroh', 'Batu Berendam', 'Bukit Baru', 'Tanjung Kling', 'Jasin', 'Merlimau', 'Masjid Tanah', 'Alor Gajah', 'Bemban'],
+    'Negeri Sembilan': ['Seremban', 'Port Dickson', 'Bahau', 'Tampin', 'Kuala Pilah', 'Rembau', 'Jelebu', 'Gemenceh', 'Labu', 'Linggi'],
+    'Pahang': ['Kuantan', 'Temerloh', 'Bentong', 'Raub', 'Jerantut', 'Pekan', 'Kuala Lipis', 'Bera', 'Maran', 'Rompin'],
+    'Penang': ['George Town', 'Bukit Mertajam', 'Butterworth', 'Perai', 'Nibong Tebal', 'Balik Pulau', 'Bayan Lepas', 'Air Itam', 'Tanjung Tokong', 'Jelutong'],
+    'Perak': ['Ipoh', 'Taiping', 'Sitiawan', 'Kuala Kangsar', 'Teluk Intan', 'Batu Gajah', 'Lumut', 'Parit Buntar', 'Ayer Tawar', 'Bagan Serai'],
+    'Perlis': ['Kangar', 'Arau', 'Padang Besar', 'Wang Kelian', 'Kaki Bukit', 'Simpang Empat', 'Beseri', 'Chuping', 'Mata Ayer', 'Sanglang'],
+    'Sabah': ['Kota Kinabalu', 'Sandakan', 'Tawau', 'Lahad Datu', 'Keningau', 'Kota Belud', 'Kudat', 'Semporna', 'Beaufort', 'Ranau'],
+    'Sarawak': ['Kuching', 'Miri', 'Sibu', 'Bintulu', 'Limbang', 'Sarikei', 'Sri Aman', 'Kapit', 'Betong', 'Mukah'],
+    'Selangor': ['Shah Alam', 'Petaling Jaya', 'Subang Jaya', 'Klang', 'Ampang', 'Cheras', 'Kajang', 'Puchong', 'Seri Kembangan', 'Bangi'],
+    'Terengganu': ['Kuala Terengganu', 'Chukai', 'Dungun', 'Marang', 'Jerteh', 'Besut', 'Setiu', 'Hulu Terengganu', 'Kemaman', 'Kuala Nerus'],
+    'Kuala Lumpur': ['Kuala Lumpur City Centre', 'Bukit Bintang', 'Cheras', 'Ampang', 'Bangsar', 'Mont Kiara', 'Wangsa Maju', 'Kepong', 'Setapak', 'Titiwangsa'],
+    'Putrajaya': ['Putrajaya', 'Precinct 1', 'Precinct 8', 'Precinct 9', 'Precinct 11', 'Precinct 14', 'Precinct 16', 'Precinct 18', 'Precinct 19', 'Precinct 20'],
+    'Labuan': ['Labuan Town', 'Victoria', 'Batu Manikar', 'Patau-Patau', 'Rancha-Rancha', 'Kiansam', 'Layang-Layangan', 'Sungai Lada', 'Sungai Miri', 'Varley']
+  };
   const [formData, setFormData] = useState({
     // Organiser Information
     organiserName: '',
@@ -12,8 +31,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
     
     // Event Details
     eventTitle: '',
-    eventDates: '',
-    location: '',
+    eventStartDate: '',
+    eventEndDate: '',
+    eventStartDateFormatted: '',
+    eventEndDateFormatted: '',
+    state: '',
+    city: '',
     venue: '',
     classification: '',
     expectedParticipants: '',
@@ -28,6 +51,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
   });
 
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedApplication, setSubmittedApplication] = useState(null);
 
   const [applications, setApplications] = useState(() => {
     const saved = localStorage.getItem('tournamentApplications');
@@ -42,6 +66,41 @@ const TournamentApplication = ({ setCurrentPage }) => {
     }));
   };
 
+  const handleStateChange = (e) => {
+    const selectedState = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      state: selectedState,
+      city: '' // Reset city when state changes
+    }));
+  };
+
+  const handleDateChange = (e) => {
+    const { name, value } = e.target;
+    const formattedValue = value ? formatDateForDisplay(value) : '';
+    
+    if (name === 'eventStartDate') {
+      setFormData(prev => ({
+        ...prev,
+        eventStartDate: value,
+        eventStartDateFormatted: formattedValue
+      }));
+    } else if (name === 'eventEndDate') {
+      setFormData(prev => ({
+        ...prev,
+        eventEndDate: value,
+        eventEndDateFormatted: formattedValue
+      }));
+    }
+  };
+
+  const formatDateForDisplay = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const options = { day: '2-digit', month: 'long', year: 'numeric' };
+    return date.toLocaleDateString('en-GB', options);
+  };
+
   const generateApplicationId = () => {
     // Generate 6 random alphanumeric characters (letters and numbers)
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -53,171 +112,247 @@ const TournamentApplication = ({ setCurrentPage }) => {
   };
 
   const generatePDF = () => {
-    const doc = new jsPDF();
-    let yPosition = 20;
+    const dataToUse = submittedApplication || formData;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    let yPosition = 10;
     
-    // Add MPA Logo
+    // Helper functions for consistent styling
+    const addSectionHeader = (title, y) => {
+      doc.setTextColor(0, 63, 127);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(title, 25, y + 5);
+      return y + 12;
+    };
+    
+    const addInfoRow = (label, value, y, isLast = false) => {
+      const rowHeight = 6;
+      
+      // Label
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(label + ':', 25, y + 3);
+      
+      // Value
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      const displayValue = value || 'Not provided';
+      const splitValue = doc.splitTextToSize(displayValue, 110);
+      doc.text(splitValue, 80, y + 3);
+      
+      return y + Math.max(rowHeight, splitValue.length * 5);
+    };
+    
+    // Add MPA Logo and Header
     const img = new Image();
     img.onload = function() {
-      // Header with logo
-      doc.addImage(img, 'PNG', 20, yPosition, 30, 30);
+      // Create watermark function
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.globalAlpha = 0.1; // Make it very transparent
+      ctx.drawImage(img, 0, 0);
+      const watermarkDataUrl = canvas.toDataURL('image/png');
       
-      // Title next to logo
-      doc.setFontSize(18);
+      const addWatermark = () => {
+        // Position watermark in center of page - much larger
+        const pageWidth = 210; // A4 width in mm
+        const pageHeight = 297; // A4 height in mm
+        const logoSize = 120; // Much larger watermark size
+        const xPos = (pageWidth - logoSize) / 2;
+        const yPos = (pageHeight - logoSize) / 2;
+        
+        doc.addImage(watermarkDataUrl, 'PNG', xPos, yPos, logoSize, logoSize);
+      };
+      
+      // Add watermark to first page
+      addWatermark();
+      
+      // Professional header with smaller logo
+      doc.addImage(img, 'PNG', 20, yPosition, 20, 20);
+      
+      // Title and subtitle
+      doc.setTextColor(0, 63, 127);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.text('MALAYSIA PICKLEBALL ASSOCIATION', 55, yPosition + 10);
-      doc.setFontSize(14);
-      doc.text('TOURNAMENT APPLICATION FORM', 55, yPosition + 20);
+      doc.text('MALAYSIA PICKLEBALL ASSOCIATION', 45, yPosition + 8);
       
-      yPosition += 40;
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Tournament Application Form', 45, yPosition + 15);
       
-      // Header line
-      doc.setDrawColor(0, 0, 0);
+      yPosition += 25;
+      
+      // Header separator line
+      doc.setDrawColor(0, 63, 127);
       doc.setLineWidth(0.5);
       doc.line(20, yPosition, 190, yPosition);
       yPosition += 10;
       
-      // Application details box
-      doc.setFillColor(240, 248, 255);
-      doc.roundedRect(20, yPosition, 170, 20, 3, 3, 'F');
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Application ID: ${generateApplicationId()}`, 25, yPosition + 8);
-      doc.text(`Submission Date: ${new Date().toLocaleDateString('en-MY')}`, 25, yPosition + 15);
-      yPosition += 30;
-      
-      // Section: Organiser Information
-      doc.setFillColor(70, 130, 180);
-      doc.roundedRect(20, yPosition, 170, 8, 2, 2, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('ORGANISER INFORMATION', 25, yPosition + 5);
-      yPosition += 15;
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.text(`Organiser Name: ${formData.organiserName || 'Not provided'}`, 25, yPosition);
-      yPosition += 8;
-      doc.text(`Registration No.: ${formData.registrationNo || 'Not provided'}`, 25, yPosition);
-      yPosition += 8;
-      doc.text(`Telephone Contact: ${formData.telContact || 'Not provided'}`, 25, yPosition);
-      yPosition += 8;
-      doc.text(`Organising Partner: ${formData.organisingPartner || 'Not applicable'}`, 25, yPosition);
-      yPosition += 15;
-      
-      // Section: Event Details
-      doc.setFillColor(70, 130, 180);
-      doc.roundedRect(20, yPosition, 170, 8, 2, 2, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('EVENT DETAILS', 25, yPosition + 5);
-      yPosition += 15;
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      doc.text(`Event Title: ${formData.eventTitle || 'Not provided'}`, 25, yPosition);
-      yPosition += 8;
-      doc.text(`Event Dates: ${formData.eventDates || 'Not provided'}`, 25, yPosition);
-      yPosition += 8;
-      doc.text(`Location: ${formData.location || 'Not provided'}`, 25, yPosition);
-      yPosition += 8;
-      doc.text(`Venue: ${formData.venue || 'Not provided'}`, 25, yPosition);
-      yPosition += 8;
-      doc.text(`Level/Type of Event: ${formData.classification || 'Not provided'}`, 25, yPosition);
-      yPosition += 8;
-      doc.text(`Expected Participants: ${formData.expectedParticipants || 'Not provided'}`, 25, yPosition);
-      yPosition += 15;
-      
-      // Event Summary
-      doc.setFont('helvetica', 'bold');
-      doc.text('Event Summary/Purpose:', 25, yPosition);
-      yPosition += 8;
-      doc.setFont('helvetica', 'normal');
-      const summary = formData.eventSummary || 'No summary provided';
-      const splitSummary = doc.splitTextToSize(summary, 165);
-      doc.text(splitSummary, 25, yPosition);
-      yPosition += splitSummary.length * 6 + 10;
-      
-      // Add new page
-      doc.addPage();
-      yPosition = 20;
-      
-      // Section: Consent & Agreement
-      doc.setFillColor(70, 130, 180);
-      doc.roundedRect(20, yPosition, 170, 8, 2, 2, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('CONSENT & AGREEMENT', 25, yPosition + 5);
-      yPosition += 15;
-      
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(11);
-      
-      // Data Consent
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Data Consent: ${formData.dataConsent ? '✓ AGREED' : '✗ NOT AGREED'}`, 25, yPosition);
-      yPosition += 8;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      const dataConsentText = 'I consent to the collection, use, and processing of my personal data by Malaysia Pickleball Association (MPA) for the purposes of tournament organization, administration, and related communications. I understand that my data will be handled in accordance with applicable data protection laws.';
-      const splitDataConsent = doc.splitTextToSize(dataConsentText, 165);
-      doc.text(splitDataConsent, 25, yPosition);
-      yPosition += splitDataConsent.length * 5 + 10;
-      
-      // Terms Consent
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Terms & Conditions: ${formData.termsConsent ? '✓ AGREED' : '✗ NOT AGREED'}`, 25, yPosition);
-      yPosition += 8;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      const termsConsentText = 'I have read, understood, and agree to abide by the Terms and Conditions set forth by Malaysia Pickleball Association (MPA) for tournament participation and organization. I acknowledge that failure to comply with these terms may result in disqualification or other appropriate actions.';
-      const splitTermsConsent = doc.splitTextToSize(termsConsentText, 165);
-      doc.text(splitTermsConsent, 25, yPosition);
-      yPosition += splitTermsConsent.length * 5 + 15;
-      
-      // Important Notes
-      doc.setFillColor(255, 248, 220);
-      doc.roundedRect(20, yPosition, 170, 50, 3, 3, 'F');
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('IMPORTANT NOTES', 25, yPosition + 8);
-      yPosition += 15;
-      
+      // Application details
+      doc.setTextColor(0, 63, 127);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('SCORING FORMAT:', 25, yPosition);
-      yPosition += 6;
+      doc.text('APPLICATION DETAILS', 25, yPosition + 5);
+      
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('• Traditional scoring up to 11 pts or more', 30, yPosition);
-      yPosition += 5;
-      doc.text('• Rally Scoring (minimum up to 21 pts) is acceptable for first round-robins only', 30, yPosition);
+      doc.text('Application ID:', 25, yPosition + 12);
+      doc.text('Submission Date:', 25, yPosition + 18);
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'bold');
+      doc.text(dataToUse.id || generateApplicationId(), 80, yPosition + 12);
+      doc.text(new Date().toLocaleDateString('en-GB', { 
+        day: '2-digit', 
+        month: 'long', 
+        year: 'numeric' 
+      }), 80, yPosition + 18);
+      
+      yPosition += 25;
+      
+      // ORGANISER INFORMATION Section
+      yPosition = addSectionHeader('ORGANISER INFORMATION', yPosition);
+      
+      yPosition = addInfoRow('Organiser Name', dataToUse.organiserName, yPosition);
+      yPosition = addInfoRow('Registration Number', dataToUse.registrationNo, yPosition);
+      yPosition = addInfoRow('Telephone Contact', dataToUse.telContact, yPosition);
+      yPosition = addInfoRow('Organising Partner', dataToUse.organisingPartner || 'Not applicable', yPosition, true);
       yPosition += 10;
       
-      doc.setFont('helvetica', 'bold');
-      doc.text('SKILL RATING GUIDELINES:', 25, yPosition);
-      yPosition += 6;
-      doc.setFont('helvetica', 'normal');
-      doc.text('• Novice: 2.499 & below  • Intermediate: 2.999 & below  • Intermediate+: 3.499 & below', 30, yPosition);
-      yPosition += 5;
-      doc.text('• Advanced: 3.999 & below  • Advanced+: 4.499 & below  • Elite: 4.5 & above', 30, yPosition);
+      // EVENT DETAILS Section
+      yPosition = addSectionHeader('EVENT DETAILS', yPosition);
       
-      // Footer
-      yPosition = 280;
-      doc.setDrawColor(70, 130, 180);
-      doc.setLineWidth(1);
-      doc.line(20, yPosition, 190, yPosition);
+      yPosition = addInfoRow('Event Title', dataToUse.eventTitle, yPosition);
+      
+      // Format dates
+      const formatDate = (dateStr) => {
+        if (!dateStr) return 'Not provided';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+      };
+      const eventDatesFormatted = dataToUse.eventStartDate && dataToUse.eventEndDate 
+        ? `${formatDate(dataToUse.eventStartDate)} - ${formatDate(dataToUse.eventEndDate)}`
+        : 'Not provided';
+      yPosition = addInfoRow('Event Dates', eventDatesFormatted, yPosition);
+      
+      const locationText = dataToUse.state && dataToUse.city 
+        ? `${dataToUse.city}, ${dataToUse.state}`
+        : 'Not provided';
+      yPosition = addInfoRow('Location', locationText, yPosition);
+      yPosition = addInfoRow('Venue', dataToUse.venue, yPosition);
+      yPosition = addInfoRow('Event Level/Type', dataToUse.classification, yPosition);
+      yPosition = addInfoRow('Expected Participants', dataToUse.expectedParticipants, yPosition, true);
+      yPosition += 10;
+      
+      // EVENT SUMMARY Section
+      if (dataToUse.eventSummary && dataToUse.eventSummary.trim()) {
+        yPosition = addSectionHeader('EVENT SUMMARY', yPosition);
+        
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        const splitSummary = doc.splitTextToSize(dataToUse.eventSummary, 160);
+        doc.text(splitSummary, 25, yPosition + 5);
+        yPosition += splitSummary.length * 5 + 10;
+      }
+      
+      // Check if we need a new page
+      if (yPosition > 200) {
+        doc.addPage();
+        addWatermark(); // Add watermark to new page
+        yPosition = 25;
+      }
+      
+      // CONSENT & AGREEMENT Section
+      yPosition = addSectionHeader('CONSENT & AGREEMENT', yPosition);
+      
+      // Data Consent
+      if (dataToUse.dataConsent) {
+        doc.setTextColor(76, 175, 80);
+      } else {
+        doc.setTextColor(244, 67, 54);
+      }
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(dataToUse.dataConsent ? 'DATA PROTECTION CONSENT' : 'DATA PROTECTION CONSENT', 25, yPosition + 5);
+      doc.text(dataToUse.dataConsent ? 'AGREED' : 'NOT AGREED', 140, yPosition + 5);
+      
+      doc.setTextColor(60, 60, 60);
       doc.setFontSize(8);
-      doc.setTextColor(70, 130, 180);
-      doc.text(`Generated by Malaysia Pickleball Portal | ${new Date().toLocaleString('en-MY')}`, 25, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      const dataConsentText = 'I consent to the collection, use, and processing of my personal data by Malaysia Pickleball Association (MPA) for the purposes of tournament organization, administration, and related communications. I understand that my data will be handled in accordance with applicable data protection laws.';
+      const splitDataConsent = doc.splitTextToSize(dataConsentText, 160);
+      doc.text(splitDataConsent, 25, yPosition + 12, { lineHeightFactor: 1.3 });
+      yPosition += 35;
+      
+      // Terms Consent
+      if (dataToUse.termsConsent) {
+        doc.setTextColor(76, 175, 80);
+      } else {
+        doc.setTextColor(244, 67, 54);
+      }
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TERMS & CONDITIONS', 25, yPosition + 5);
+      doc.text(dataToUse.termsConsent ? 'AGREED' : 'NOT AGREED', 140, yPosition + 5);
+      
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const termsConsentText = 'I have read, understood, and agree to abide by the Terms and Conditions set forth by Malaysia Pickleball Association (MPA) for tournament participation and organization. I acknowledge that failure to comply with these terms may result in disqualification or other appropriate actions.';
+      const splitTermsConsent = doc.splitTextToSize(termsConsentText, 160);
+      doc.text(splitTermsConsent, 25, yPosition + 12, { lineHeightFactor: 1.3 });
+      yPosition += 35;
+      
+      // TOURNAMENT GUIDELINES Section
+      yPosition = addSectionHeader('TOURNAMENT GUIDELINES', yPosition);
+      
+      // Guidelines in plain text
+      doc.setTextColor(60, 60, 60);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('SCORING FORMAT', 25, yPosition);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.text('• Traditional scoring: 11+ pts', 25, yPosition + 6);
+      doc.text('• Rally scoring: 21+ pts', 25, yPosition + 12);
+      doc.text('  (first round-robins only)', 25, yPosition + 18);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('SKILL RATINGS', 113, yPosition);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.text('Novice: <=2.499', 113, yPosition + 6);
+      doc.text('Intermediate: <=2.999', 113, yPosition + 12);
+      doc.text('Intermediate+: <=3.499', 113, yPosition + 18);
+      doc.text('Advanced: <=3.999', 113, yPosition + 24);
+      doc.text('Advanced+: <=4.499', 113, yPosition + 30);
+      doc.text('Elite: 4.5+', 113, yPosition + 36);
+      
+      yPosition += 45;
+      
+      // Professional Footer
+      yPosition = 270; // Fixed footer position
+      doc.setDrawColor(0, 63, 127);
+      doc.setLineWidth(0.5);
+      doc.line(20, yPosition, 190, yPosition);
+      
+      doc.setTextColor(0, 63, 127);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MALAYSIA PICKLEBALL ASSOCIATION', 20, yPosition + 8);
+      
+      doc.setTextColor(100, 100, 100);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(`Generated: ${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'})}`, 20, yPosition + 15);
+      doc.text('Official Tournament Application Portal', 130, yPosition + 8);
+      doc.text('www.malaysiapickleball.my', 130, yPosition + 15);
       
       // Open PDF in new tab instead of downloading
       const pdfBlob = doc.output('blob');
@@ -245,19 +380,35 @@ const TournamentApplication = ({ setCurrentPage }) => {
     alert(`Application submitted successfully! Your application ID is: ${newApplication.id}`);
     
     // Enable PDF download and show message
+    setSubmittedApplication(newApplication);
     setIsSubmitted(true);
     
     setFormData({
-      fullName: '',
-      nric: '',
-      email: '',
-      phone: '',
-      age: '',
-      category: '',
-      experience: '',
-      emergencyContact: '',
-      emergencyPhone: '',
-      medicalConditions: ''
+      // Organiser Information
+      organiserName: '',
+      registrationNo: '',
+      telContact: '',
+      organisingPartner: '',
+      
+      // Event Details
+      eventTitle: '',
+      eventStartDate: '',
+      eventEndDate: '',
+      eventStartDateFormatted: '',
+      eventEndDateFormatted: '',
+      state: '',
+      city: '',
+      venue: '',
+      classification: '',
+      expectedParticipants: '',
+      eventSummary: '',
+      
+      // Tournament Settings
+      scoringFormat: 'traditional',
+      
+      // Consent
+      dataConsent: false,
+      termsConsent: false
     });
   };
 
@@ -269,7 +420,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
     const element = document.createElement('a');
     const file = new Blob([formContent], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
-    element.download = `Tournament_Application_${formData.eventTitle || 'Form'}_${new Date().toISOString().split('T')[0]}.txt`;
+    const dataToUse = submittedApplication || formData;
+    element.download = `Tournament_Application_${dataToUse.eventTitle || 'Form'}_${new Date().toISOString().split('T')[0]}.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
@@ -278,6 +430,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
   };
 
   const generateFormContent = () => {
+    const dataToUse = submittedApplication || formData;
     const currentDate = new Date().toLocaleDateString('en-MY');
     
     return `
@@ -289,23 +442,27 @@ Generated on: ${currentDate}
 ===========================================
 ORGANISER INFORMATION
 ===========================================
-Organiser Name: ${formData.organiserName || '[Not filled]'}
-PJS/ROS/Company Registration No.: ${formData.registrationNo || '[Not filled]'}
-Tel. Contact: ${formData.telContact || '[Not filled]'}
-Organising Partner: ${formData.organisingPartner || '[Not applicable]'}
+Organiser Name: ${dataToUse.organiserName || '[Not filled]'}
+PJS/ROS/Company Registration No.: ${dataToUse.registrationNo || '[Not filled]'}
+Tel. Contact: ${dataToUse.telContact || '[Not filled]'}
+Organising Partner: ${dataToUse.organisingPartner || '[Not applicable]'}
 
 ===========================================
 EVENT DETAILS
 ===========================================
-Title of Event: ${formData.eventTitle || '[Not filled]'}
-Dates of Event: ${formData.eventDates || '[Not filled]'}
-Location: ${formData.location || '[Not filled]'}
-Venue: ${formData.venue || '[Not filled]'}
-Level/Type of Event: ${formData.classification || '[Not filled]'}
-Expected No. of Participants: ${formData.expectedParticipants || '[Not filled]'}
+Title of Event: ${dataToUse.eventTitle || '[Not filled]'}
+Dates of Event: ${dataToUse.eventStartDate && dataToUse.eventEndDate 
+  ? `${new Date(dataToUse.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} - ${new Date(dataToUse.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`
+  : '[Not filled]'}
+Location: ${dataToUse.state && dataToUse.city 
+  ? `${dataToUse.city}, ${dataToUse.state}`
+  : '[Not filled]'}
+Venue: ${dataToUse.venue || '[Not filled]'}
+Level/Type of Event: ${dataToUse.classification || '[Not filled]'}
+Expected No. of Participants: ${dataToUse.expectedParticipants || '[Not filled]'}
 
 Brief Summary/Purpose of Event:
-${formData.eventSummary || '[Not filled]'}
+${dataToUse.eventSummary || '[Not filled]'}
 
 ===========================================
 TOURNAMENT CATEGORIES & SKILL RATINGS
@@ -349,8 +506,13 @@ Generated on: ${currentDate}
 
   return (
     <div className="tournament-application">
-      <h2>Tournament Application Form</h2>
-      <p className="form-subtitle">Apply to organize a pickleball tournament</p>
+      <div className="form-header">
+        <img src={mpaLogo} alt="Malaysia Pickleball Association" className="form-logo" />
+        <div className="form-header-text">
+          <h2>Tournament Application Form</h2>
+          <p className="form-subtitle">Apply to organize a pickleball tournament</p>
+        </div>
+      </div>
       
       <form onSubmit={handleSubmit}>
         <div className="form-section">
@@ -413,51 +575,113 @@ Generated on: ${currentDate}
               name="eventTitle"
               value={formData.eventTitle}
               onChange={handleInputChange}
-              placeholder="Should not include 'Malaysia (or State) Open/Closed'"
+              placeholder=""
               required
             />
             <small className="form-note">Note: Should Not Include the National/State Title (e.g. Malaysia Open/Closed, State Open/Closed etc)</small>
           </div>
           
-          <div className="form-group">
-            <label htmlFor="eventDates">Dates of Event *</label>
-            <input
-              type="text"
-              id="eventDates"
-              name="eventDates"
-              value={formData.eventDates}
-              onChange={handleInputChange}
-              placeholder="Start Date - End Date (DD/MM/YYYY)"
-              required
-            />
-            <small className="form-note">Format: DD/MM/YYYY - DD/MM/YYYY (e.g., 15/03/2024 - 17/03/2024)</small>
+          <div className="form-group date-input-group">
+            <label htmlFor="eventStartDate">Event Start Date *</label>
+            <div className="date-input-wrapper">
+              <input
+                type="date"
+                id="eventStartDate"
+                name="eventStartDate"
+                value={formData.eventStartDate}
+                onChange={handleDateChange}
+                className="date-picker-hidden"
+                required
+              />
+              <input
+                type="text"
+                className="date-display-input"
+                value={formData.eventStartDateFormatted}
+                placeholder="Click to select date"
+                readOnly
+                onClick={() => document.getElementById('eventStartDate').showPicker()}
+              />
+            </div>
+          </div>
+          
+          <div className="form-group date-input-group">
+            <label htmlFor="eventEndDate">Event End Date *</label>
+            <div className="date-input-wrapper">
+              <input
+                type="date"
+                id="eventEndDate"
+                name="eventEndDate"
+                value={formData.eventEndDate}
+                onChange={handleDateChange}
+                min={formData.eventStartDate}
+                className="date-picker-hidden"
+                required
+              />
+              <input
+                type="text"
+                className="date-display-input"
+                value={formData.eventEndDateFormatted}
+                placeholder="Click to select date"
+                readOnly
+                onClick={() => document.getElementById('eventEndDate').showPicker()}
+              />
+            </div>
+            <small className="form-note">End date must be on or after start date</small>
           </div>
           
           <div className="form-group">
-            <label htmlFor="location">Location *</label>
-            <input
-              type="text"
-              id="location"
-              name="location"
-              value={formData.location}
-              onChange={handleInputChange}
-              placeholder="Town, district, state, etc"
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="venue">Venue *</label>
-            <input
-              type="text"
-              id="venue"
-              name="venue"
-              value={formData.venue}
-              onChange={handleInputChange}
-              placeholder="Covered - with OP, etc."
-              required
-            />
-            <small className="form-note">Note: Must have government occupancy permit</small>
+            <label>Location *</label>
+            <div className="location-row">
+              <div className="form-subgroup">
+                <label htmlFor="state">State</label>
+                <select
+                  id="state"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleStateChange}
+                  required
+                >
+                  <option value="">Select State</option>
+                  {Object.keys(malaysianStatesAndCities).map(state => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="form-subgroup">
+                <label htmlFor="city">City</label>
+                <select
+                  id="city"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!formData.state}
+                >
+                  <option value="">Select City</option>
+                  {formData.state && malaysianStatesAndCities[formData.state].map(city => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+                {!formData.state && (
+                  <small className="form-note">Please select a state first</small>
+                )}
+              </div>
+            </div>
+            
+            <div className="form-subgroup">
+              <label htmlFor="venue">Venue</label>
+              <input
+                type="text"
+                id="venue"
+                name="venue"
+                value={formData.venue}
+                onChange={handleInputChange}
+                placeholder=""
+                required
+              />
+              <small className="form-note">Note: The venue must be fully covered and is required to hold a valid government occupancy permit.</small>
+            </div>
           </div>
           
           <div className="form-group">
@@ -500,7 +724,7 @@ Generated on: ${currentDate}
               onChange={handleInputChange}
               rows="5"
               maxLength="300"
-              placeholder="Brief description of your event (not more than 300 words). Do not include your factsheet."
+              placeholder=""
               required
             />
             <small className="form-note">Maximum 300 words. Do not include your factsheet.</small>
@@ -582,22 +806,27 @@ Generated on: ${currentDate}
         
         {!isSubmitted ? (
           <div className="form-actions">
-            <button type="submit" className="submit-btn">Submit Tournament Application</button>
-            <button type="button" className="pdf-btn" onClick={generatePDF} disabled>Show PDF File</button>
+            <button 
+              type="submit" 
+              className={`submit-btn ${(!formData.dataConsent || !formData.termsConsent) ? 'disabled' : ''}`}
+              disabled={!formData.dataConsent || !formData.termsConsent}
+            >
+              Submit Tournament Application
+            </button>
           </div>
         ) : (
           <div className="submission-success">
             <div className="success-message">
-              <h3>🎉 Application Submitted Successfully!</h3>
+              <h3>Application Submitted Successfully!</h3>
               <p>Your tournament application has been submitted and is now under review.</p>
               <p><strong>Important:</strong> Please download your application copy for your records.</p>
             </div>
             <div className="form-actions">
               <button type="button" className="pdf-btn active" onClick={generatePDF}>
-                📄 Download Application PDF
+                Download Application PDF
               </button>
               <button type="button" className="home-btn" onClick={() => setCurrentPage('home')}>
-                🏠 Back to Home
+                Back to Home
               </button>
             </div>
           </div>

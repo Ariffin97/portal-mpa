@@ -81,7 +81,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
       <div className="analytics-stats">
         <div className="analytics-card">
-          <div className="analytics-icon">📊</div>
+          <div className="analytics-icon"></div>
           <div className="analytics-content">
             <div className="analytics-number">{applications.length}</div>
             <div className="analytics-label">Total Applications</div>
@@ -90,7 +90,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
         </div>
         
         <div className="analytics-card">
-          <div className="analytics-icon">✅</div>
+          <div className="analytics-icon"></div>
           <div className="analytics-content">
             <div className="analytics-number">
               {((applications.filter(app => app.status === 'Approved').length / applications.length) * 100).toFixed(1)}%
@@ -101,7 +101,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
         </div>
         
         <div className="analytics-card">
-          <div className="analytics-icon">⏱️</div>
+          <div className="analytics-icon"></div>
           <div className="analytics-content">
             <div className="analytics-number">2.3</div>
             <div className="analytics-label">Avg. Processing Days</div>
@@ -110,7 +110,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
         </div>
         
         <div className="analytics-card">
-          <div className="analytics-icon">🏆</div>
+          <div className="analytics-icon"></div>
           <div className="analytics-content">
             <div className="analytics-number">
               {applications.reduce((sum, app) => sum + parseInt(app.expectedParticipants || 0), 0)}
@@ -152,7 +152,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
       <div className="settings-sections">
         <div className="settings-card">
-          <h3>🔐 Account Settings</h3>
+          <h3>Account Settings</h3>
           <div className="setting-item">
             <label>Username</label>
             <input type="text" value="admin" disabled />
@@ -168,7 +168,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
         </div>
 
         <div className="settings-card">
-          <h3>⚙️ System Settings</h3>
+          <h3>System Settings</h3>
           <div className="setting-item">
             <label>Auto-Archive Applications</label>
             <select>
@@ -189,7 +189,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
         </div>
 
         <div className="settings-card">
-          <h3>📊 Export Settings</h3>
+          <h3>Export Settings</h3>
           <div className="setting-item">
             <label>Export Format</label>
             <select>
@@ -206,7 +206,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
         </div>
 
         <div className="settings-card danger">
-          <h3>⚠️ Danger Zone</h3>
+          <h3>Danger Zone</h3>
           <div className="setting-item">
             <label>Clear All Applications</label>
             <p className="danger-text">This action cannot be undone</p>
@@ -225,25 +225,25 @@ const AdminDashboard = ({ setCurrentPage }) => {
             className={`sidebar-nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
             onClick={() => setCurrentView('dashboard')}
           >
-            🏠 Dashboard
+Dashboard
           </button>
           <button 
             className={`sidebar-nav-item ${currentView === 'applications' ? 'active' : ''}`}
             onClick={() => setCurrentView('applications')}
           >
-            📋 Applications
+Applications
           </button>
           <button 
             className={`sidebar-nav-item ${currentView === 'analytics' ? 'active' : ''}`}
             onClick={() => setCurrentView('analytics')}
           >
-            📊 Analytics
+Analytics
           </button>
           <button 
             className={`sidebar-nav-item ${currentView === 'settings' ? 'active' : ''}`}
             onClick={() => setCurrentView('settings')}
           >
-            ⚙️ Settings
+Settings
           </button>
         </div>
       </div>
@@ -361,7 +361,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
                                 className="delete-btn-table"
                                 title="Delete Application"
                               >
-                                🗑️
+Delete
                               </button>
                             </div>
                           </td>

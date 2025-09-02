@@ -8,12 +8,26 @@ const Footer = () => {
       <div className="footer-container">
         <div className="footer-content">
 
-          {/* Services Column */}
+          {/* Social Media Column */}
           <div className="footer-column">
-            <h4 className="footer-title">Services</h4>
-            <ul className="footer-links">
-              <li><a href="#" className="footer-link">Sponsorship</a></li>
-              <li><a href="#" className="footer-link">Rankings</a></li>
+            <h4 className="footer-title">Follow Us</h4>
+            <ul className="footer-links social-links">
+              <li>
+                <a href="https://www.facebook.com/malaysiapickleball" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   className="footer-link social-link">
+                  <span className="social-icon facebook-icon">F</span> Facebook
+                </a>
+              </li>
+              <li>
+                <a href="https://www.instagram.com/malaysiapickleball" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   className="footer-link social-link">
+                  <span className="social-icon instagram-icon">IG</span> Instagram
+                </a>
+              </li>
             </ul>
           </div>
 
