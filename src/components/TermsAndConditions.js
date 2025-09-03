@@ -22,8 +22,8 @@ const TermsAndConditions = ({ setCurrentPage }) => {
         <section className="terms-section">
           <h2>2. Use License</h2>
           <p>
-            Permission is granted to temporarily access the MPA Tournament Portal for personal, 
-            non-commercial transitory viewing and tournament application purposes only. This license shall automatically terminate if you violate any of these restrictions and may be terminated by MPA at any time.
+            Permission is granted to temporarily access the MPA Tournament Portal, developed and maintained by Fenix Digital, for personal, 
+            non-commercial transitory viewing and tournament application purposes only. This license shall automatically terminate if you violate any of these restrictions and may be terminated by MPA or Fenix Digital at any time.
           </p>
           <p>Under this license you may not:</p>
           <ul>
@@ -76,7 +76,23 @@ const TermsAndConditions = ({ setCurrentPage }) => {
         </section>
 
         <section className="terms-section">
-          <h2>6. Limitation of Liability</h2>
+          <h2>6. Website Development and Information Management</h2>
+          <p>
+            <strong>6.1 Website Creator:</strong> This tournament portal website has been developed and is maintained by Fenix Digital, serving as the official technical partner of the Malaysia Pickleball Association.
+          </p>
+          <p>
+            <strong>6.2 Information Custody:</strong> Fenix Digital serves as the custodian and keeper of all information, data, and technical infrastructure related to this portal, ensuring proper maintenance, security, and functionality of the system.
+          </p>
+          <p>
+            <strong>6.3 Technical Support:</strong> All technical matters, system maintenance, and data management services are provided by Fenix Digital in partnership with MPA to ensure reliable portal operations.
+          </p>
+          <p>
+            <strong>6.4 Data Processing:</strong> Fenix Digital processes and manages user data in accordance with MPA's data protection policies and applicable privacy laws, acting as a trusted technical partner in the handling of tournament-related information.
+          </p>
+        </section>
+
+        <section className="terms-section">
+          <h2>7. Limitation of Liability</h2>
           <p>
             In no event shall Malaysia Pickleball Association or its suppliers be liable for any damages 
             (including, without limitation, damages for loss of data or profit, or due to business interruption) 
@@ -86,9 +102,9 @@ const TermsAndConditions = ({ setCurrentPage }) => {
         </section>
 
         <section className="terms-section">
-          <h2>7. Tournament Regulations</h2>
+          <h2>8. Tournament Regulations</h2>
           <p>
-            <strong>7.1 Skill Ratings:</strong> Tournament categories must follow MPA skill rating guidelines:
+            <strong>8.1 Skill Ratings:</strong> Tournament categories must follow MPA skill rating guidelines:
           </p>
           <ul>
             <li>Novice: 2.499 & below</li>
@@ -99,16 +115,16 @@ const TermsAndConditions = ({ setCurrentPage }) => {
             <li>Elite: 4.5 & above</li>
           </ul>
           <p>
-            <strong>7.2 Scoring Format:</strong> Tournaments must use traditional scoring up to 11 points or more. 
+            <strong>8.2 Scoring Format:</strong> Tournaments must use traditional scoring up to 11 points or more. 
             Rally scoring (minimum 21 points) is acceptable for first round-robins only.
           </p>
           <p>
-            <strong>7.3 Branding:</strong> Approved tournaments must display MPA endorsement logos on event banners and at the venue.
+            <strong>8.3 Branding:</strong> Approved tournaments must display MPA endorsement logos on event banners and at the venue.
           </p>
         </section>
 
         <section className="terms-section">
-          <h2>8. Prohibited Activities</h2>
+          <h2>9. Prohibited Activities</h2>
           <p>Users are prohibited from:</p>
           <ul>
             <li>Submitting false or fraudulent tournament applications</li>
@@ -121,7 +137,7 @@ const TermsAndConditions = ({ setCurrentPage }) => {
         </section>
 
         <section className="terms-section">
-          <h2>9. Termination</h2>
+          <h2>10. Termination</h2>
           <p>
             MPA may terminate or suspend access to the portal immediately, without prior notice or liability, 
             for any reason whatsoever, including without limitation if you breach the Terms and Conditions.
@@ -129,7 +145,7 @@ const TermsAndConditions = ({ setCurrentPage }) => {
         </section>
 
         <section className="terms-section">
-          <h2>10. Governing Law</h2>
+          <h2>11. Governing Law</h2>
           <p>
             These Terms and Conditions are governed by and construed in accordance with the laws of Malaysia. 
             Any disputes arising under or in connection with these Terms shall be subject to the exclusive jurisdiction of the Malaysian courts.
@@ -137,7 +153,7 @@ const TermsAndConditions = ({ setCurrentPage }) => {
         </section>
 
         <section className="terms-section">
-          <h2>11. Changes to Terms</h2>
+          <h2>12. Changes to Terms</h2>
           <p>
             MPA reserves the right, at its sole discretion, to modify or replace these Terms and Conditions at any time. 
             If a revision is material, we will try to provide at least 30 days notice prior to any new terms taking effect.
@@ -145,13 +161,13 @@ const TermsAndConditions = ({ setCurrentPage }) => {
         </section>
 
         <section className="terms-section">
-          <h2>12. Contact Information</h2>
+          <h2>13. Contact Information</h2>
           <p>
             If you have any questions about these Terms and Conditions, please contact us at:
           </p>
           <div className="contact-details">
             <p><strong>Malaysia Pickleball Association</strong></p>
-            <p>Email: info@malaysiapickleball.my</p>
+            <p>Email: tournament@malaysiapickleballassociation.org</p>
             <p>Phone: +6011-16197471</p>
           </div>
         </section>

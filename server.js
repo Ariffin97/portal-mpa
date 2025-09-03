@@ -129,6 +129,60 @@ const emailTemplates = {
         </div>
       </div>
     `
+  }),
+
+  applicationRejected: (applicationData, rejectionReason) => ({
+    subject: 'Tournament Application REJECTED - Malaysia Pickleball Association',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h2 style="color: #2c5aa0;">Malaysia Pickleball Association</h2>
+          <h3 style="color: #666;">Tournament Application Update</h3>
+        </div>
+        
+        <div style="background-color: #fee2e2; border: 1px solid #fecaca; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #991b1b; margin-top: 0;">❌ Your Application has been REJECTED</h4>
+          <p><strong>Application ID:</strong> ${applicationData.applicationId}</p>
+          <p><strong>Event Title:</strong> ${applicationData.eventTitle}</p>
+          <p><strong>Organiser:</strong> ${applicationData.organiserName}</p>
+          <p><strong>Event Date:</strong> ${new Date(applicationData.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} - ${new Date(applicationData.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+          <p><strong>Location:</strong> ${applicationData.city}, ${applicationData.state}</p>
+        </div>
+        
+        <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 20px; margin-bottom: 20px;">
+          <h4 style="color: #dc2626; margin-top: 0;">Rejection Reason:</h4>
+          <p style="color: #7f1d1d; line-height: 1.6; margin-bottom: 0;">${rejectionReason}</p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h4>What can you do next?</h4>
+          <ul style="line-height: 1.6;">
+            <li>Review the rejection reason carefully and address the mentioned concerns</li>
+            <li>You may submit a new application after making the necessary changes</li>
+            <li>If you need clarification on the rejection reason, please contact us</li>
+            <li>Ensure all future applications comply with MPA guidelines and requirements</li>
+          </ul>
+        </div>
+        
+        <div style="background-color: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #0056b3; margin-top: 0;">Important Information:</h4>
+          <ul style="margin-bottom: 0; line-height: 1.6;">
+            <li>This decision is based on current MPA standards and guidelines</li>
+            <li>You are welcome to reapply with a revised submission</li>
+            <li>Please review our tournament guidelines before resubmitting</li>
+            <li>For assistance, contact our support team using the details below</li>
+          </ul>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+          <p style="color: #666; font-size: 14px;">
+            Malaysia Pickleball Association<br>
+            Email: info@malaysiapickleball.my<br>
+            Phone: +6011-16197471
+          </p>
+        </div>
+      </div>
+    `
   })
 };
 
@@ -245,6 +299,11 @@ const tournamentApplicationSchema = new mongoose.Schema({
   lastUpdated: {
     type: Date,
     default: Date.now
+  },
+  // Admin remarks/rejection reason
+  remarks: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true
@@ -356,13 +415,20 @@ app.post('/api/applications', async (req, res) => {
 // Update tournament application status (admin only)
 app.patch('/api/applications/:id/status', async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, rejectionReason } = req.body;
+    const updateData = { 
+      status, 
+      lastUpdated: Date.now() 
+    };
+    
+    // Add rejection reason if status is rejected
+    if (status === 'Rejected' && rejectionReason) {
+      updateData.remarks = rejectionReason;
+    }
+    
     const application = await TournamentApplication.findOneAndUpdate(
       { applicationId: req.params.id },
-      { 
-        status, 
-        lastUpdated: Date.now() 
-      },
+      updateData,
       { new: true }
     );
     
@@ -381,9 +447,48 @@ app.patch('/api/applications/:id/status', async (req, res) => {
       }
     }
     
+    // Send rejection email if status is changed to 'Rejected'
+    if (status === 'Rejected' && application.email && rejectionReason) {
+      const emailTemplate = emailTemplates.applicationRejected(application, rejectionReason);
+      const emailResult = await sendEmail(application.email, emailTemplate);
+      
+      if (!emailResult.success) {
+        console.error('Failed to send rejection email:', emailResult.error);
+        // Still return success for the status update, even if email fails
+      }
+    }
+    
     res.json(application);
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Delete tournament application (admin only)
+app.delete('/api/applications/:id', async (req, res) => {
+  try {
+    console.log('Delete request received for application ID:', req.params.id);
+    const application = await TournamentApplication.findOneAndDelete({
+      applicationId: req.params.id
+    });
+    
+    if (!application) {
+      console.log('Application not found with ID:', req.params.id);
+      return res.status(404).json({ error: 'Application not found' });
+    }
+    
+    console.log('Application deleted successfully:', application.applicationId);
+    res.json({ 
+      message: 'Application deleted successfully',
+      deletedApplication: {
+        applicationId: application.applicationId,
+        eventTitle: application.eventTitle,
+        organiserName: application.organiserName
+      }
+    });
+  } catch (error) {
+    console.error('Error deleting application:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -188,7 +188,10 @@ button.utility-link {
     radial-gradient(circle at 80% 20%, rgba(0, 255, 127, 0.1) 0%, transparent 50%),
     linear-gradient(135deg, #0a0e27 0%, #1a1f3a  30%, #162447 70%, #0f3460 100%);
   color: var(--white);
-  padding: 4rem 0 6rem;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   overflow: hidden;
 }
@@ -566,14 +569,57 @@ button.utility-link {
   z-index: 2;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 4rem 2rem 2rem;
+  padding: 1rem 2rem;
 }
 
 .footer-content {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 3rem;
-  margin-bottom: 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0;
+}
+
+.footer-branding {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.footer-org-name {
+  color: var(--white);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.footer-partner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-partner-text {
+  color: var(--white);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.footer-partner-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.footer-partner-name {
+  color: var(--white);
+  font-size: 0.8rem;
+  font-weight: 400;
 }
 
 .footer-column {
@@ -848,12 +894,14 @@ button.utility-link {
 /* Responsive Footer Styles */
 @media (max-width: 768px) {
   .footer-container {
-    padding: 3rem 1.5rem 1.5rem;
+    padding: 1rem 1.5rem;
   }
   
   .footer-content {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 2rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+    text-align: center;
   }
   
   .newsletter-form {
@@ -878,12 +926,13 @@ button.utility-link {
 
 @media (max-width: 480px) {
   .footer-container {
-    padding: 2rem 1rem 1rem;
+    padding: 1rem;
   }
   
   .footer-content {
-    grid-template-columns: 1fr;
-    gap: 2rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
     text-align: center;
   }
   
@@ -956,6 +1005,28 @@ button.utility-link {
   color: #6b7280;
   font-size: 0.85rem;
   font-style: italic;
+}
+
+.character-counter-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 0.5rem;
+}
+
+.character-counter {
+  color: #6b7280;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-left: 1rem;
+}
+
+.character-counter.near-limit {
+  color: #f59e0b;
+}
+
+.character-counter.at-limit {
+  color: #dc2626;
 }
 
 .date-input-group {
@@ -2137,6 +2208,519 @@ button.utility-link {
   border-radius: 2px;
 }
 
+/* Status Table Headers */
+.status-table-header {
+  color: #1e293b;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+
+.status-table-header.pending {
+  background-color: #fff7ed;
+  border-left-color: #f59e0b;
+  color: #92400e;
+}
+
+.status-table-header.under-review {
+  background-color: #eff6ff;
+  border-left-color: #3b82f6;
+  color: #1e40af;
+}
+
+.status-table-header.approved {
+  background-color: #f0fdf4;
+  border-left-color: #22c55e;
+  color: #166534;
+}
+
+.status-table-header.rejected {
+  background-color: #fef2f2;
+  border-left-color: #ef4444;
+  color: #991b1b;
+}
+
+.empty-status-table {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+  font-style: italic;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 2px dashed #d1d5db;
+  margin-bottom: 2rem;
+}
+
+.applications-status-tables {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.applications-status-tables .applications-section {
+  margin-bottom: 0;
+}
+
+/* Horizontal Status Columns Layout */
+.status-columns-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.status-column {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  min-height: 400px;
+  max-height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.status-column-header {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  border: none;
+  border-radius: 0;
+}
+
+.status-column-header.pending {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.status-column-header.under-review {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.status-column-header.approved {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.status-column-header.rejected {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.status-column-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.tournament-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tournament-item {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #374151;
+  background: #ffffff;
+}
+
+/* Professional styling for rejected applications */
+.status-column.rejected .tournament-item {
+  background: linear-gradient(135deg, #fef2f2, #fef7f7);
+  border-left: 4px solid #ef4444;
+  color: #7f1d1d;
+  font-weight: 500;
+  position: relative;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.1);
+}
+
+.status-column.rejected .tournament-item:hover {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+  border-left-color: #dc2626;
+}
+
+.status-column.rejected .tournament-item::before {
+  content: "❌";
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+.status-column.rejected .tournament-number {
+  color: #ef4444;
+  font-weight: 700;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.tournament-number {
+  color: #9ca3af;
+  font-weight: 600;
+  margin-right: 0.5rem;
+  font-size: 0.8rem;
+}
+
+/* Professional View Button */
+.view-btn-table {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  margin-left: 0.5rem;
+  min-width: 70px;
+}
+
+.view-btn-table:hover {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.view-btn-table:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+/* Applications Folder Structure */
+.applications-folders {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.applications-folder {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.folder-header {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.folder-icon {
+  font-size: 1.2rem;
+}
+
+.folder-header h3 {
+  color: #374151;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.folder-table-container {
+  padding: 0;
+}
+
+.folder-table {
+  margin: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.folder-table thead th {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.folder-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.folder-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.folder-table tbody td {
+  padding: 1rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.empty-folder {
+  padding: 3rem;
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+  background: #f9fafb;
+}
+
+/* Status Filter Buttons */
+.status-filter-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.status-filter-btn {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  border: 2px solid #e5e7eb;
+  color: #374151;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-width: 160px;
+  text-align: center;
+}
+
+.status-filter-btn:hover {
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.status-filter-btn.active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-color: #1d4ed8;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(59, 130, 246, 0.3);
+}
+
+.status-filter-btn.active:hover {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+}
+
+/* Table Column Width Adjustments */
+.applications-table th:nth-child(1), 
+.applications-table td:nth-child(1) {
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+}
+
+.applications-table th:nth-child(2), 
+.applications-table td:nth-child(2) {
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+}
+
+.applications-table th:nth-child(3), 
+.applications-table td:nth-child(3) {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+.applications-table th:nth-child(4), 
+.applications-table td:nth-child(4) {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+}
+
+.applications-table th:nth-child(5), 
+.applications-table td:nth-child(5) {
+  width: 180px;
+  min-width: 180px;
+  max-width: 180px;
+}
+
+.applications-table th:nth-child(6), 
+.applications-table td:nth-child(6) {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
+}
+
+.applications-table td:nth-child(2) {
+  word-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.applications-table td:nth-child(3) {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Rejection Modal Styles */
+.rejection-modal {
+  max-width: 500px;
+}
+
+.rejection-warning {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.rejection-reason-input {
+  margin-bottom: 2.5rem;
+}
+
+.rejection-reason-input label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+.rejection-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+}
+
+.rejection-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.rejection-textarea::placeholder {
+  color: #9ca3af;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem 1rem 1.5rem 0;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 1.5rem;
+  min-height: 80px;
+}
+
+.modal-footer .button-group {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+  margin-right: 0.5rem;
+}
+
+.modal-btn {
+  padding: 0.875rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  font-size: 0.95rem;
+  letter-spacing: 0.025em;
+  min-width: 120px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-btn-cancel {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  color: #475569;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.modal-btn-cancel:hover {
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modal-btn-reject {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+  border: 2px solid #dc2626;
+  box-shadow: 0 3px 6px rgba(220, 38, 38, 0.25);
+}
+
+.modal-btn-reject:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c, #991b1b);
+  border-color: #b91c1c;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(220, 38, 38, 0.35);
+}
+
+.modal-btn-reject:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 3px 6px rgba(220, 38, 38, 0.25);
+}
+
+.modal-btn-reject:disabled {
+  background: linear-gradient(135deg, #9ca3af, #6b7280);
+  border-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  opacity: 0.6;
+}
+
+.tournament-item:hover {
+  background: #f3f4f6;
+  box-shadow: inset 4px 0 0 #3b82f6;
+}
+
+.tournament-item:last-child {
+  border-bottom: none;
+}
+
+.empty-column {
+  padding: 2rem;
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+
 .no-applications {
   text-align: center;
   padding: 3rem;
@@ -2212,6 +2796,37 @@ button.utility-link {
   background: #f8fafc;
 }
 
+/* Professional styling for rejected applications in table */
+.applications-table tbody tr[data-status="Rejected"] {
+  background: linear-gradient(135deg, #fef2f2, #fef7f7);
+  border-left: 4px solid #ef4444;
+  position: relative;
+}
+
+.applications-table tbody tr[data-status="Rejected"]:hover {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.applications-table tbody tr[data-status="Rejected"] td {
+  color: #7f1d1d;
+  font-weight: 500;
+}
+
+.applications-table tbody tr[data-status="Rejected"] td:first-child {
+  color: #ef4444;
+  font-weight: 700;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 4px;
+}
+
+.applications-table tbody tr[data-status="Rejected"] td:nth-child(3) {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+/* Removed the ::before pseudo-element that was causing table misalignment */
+
 .applications-table td:first-child {
   text-align: center;
   font-weight: 600;
@@ -2273,20 +2888,39 @@ button.utility-link {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
+.status-select-table:disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+  border-color: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .delete-btn-table {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  border: 1px solid #fca5a5;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+  border: 2px solid #dc2626;
   border-radius: 6px;
-  padding: 0.4rem 0.6rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+  margin-left: 0.5rem;
+  min-width: 70px;
 }
 
 .delete-btn-table:hover {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  border-color: #f87171;
-  transform: scale(1.1);
+  background: linear-gradient(135deg, #b91c1c, #991b1b);
+  border-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+}
+
+.delete-btn-table:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
 }
 
 .clickable-link {
@@ -3366,7 +4000,8 @@ button.utility-link {
   
   /* Hero Responsive */
   .hero-banner {
-    padding: 3rem 0 4rem;
+    min-height: 100vh;
+    padding: 2rem 0;
   }
   
   .hero-content {

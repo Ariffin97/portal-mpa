@@ -666,7 +666,15 @@ const TournamentApplication = ({ setCurrentPage }) => {
               placeholder=""
               required
             />
-            <small className="form-note">Maximum 300 words. Do not include your factsheet.</small>
+            <div className="character-counter-wrapper">
+              <small className="form-note">Maximum 300 characters. Do not include your factsheet.</small>
+              <small className={`character-counter ${
+                formData.eventSummary.length >= 300 ? 'at-limit' : 
+                formData.eventSummary.length >= 250 ? 'near-limit' : ''
+              }`}>
+                {formData.eventSummary.length}/300
+              </small>
+            </div>
           </div>
         </div>
         
