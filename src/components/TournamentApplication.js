@@ -28,6 +28,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
     organiserName: '',
     registrationNo: '',
     telContact: '',
+    email: '',
     organisingPartner: '',
     
     // Event Details
@@ -219,6 +220,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
       yPosition = addInfoRow('Organiser Name', dataToUse.organiserName, yPosition);
       yPosition = addInfoRow('Registration Number', dataToUse.registrationNo, yPosition);
       yPosition = addInfoRow('Telephone Contact', dataToUse.telContact, yPosition);
+      yPosition = addInfoRow('Email Address', dataToUse.email, yPosition);
       yPosition = addInfoRow('Organising Partner', dataToUse.organisingPartner || 'Not applicable', yPosition, true);
       yPosition += 10;
       
@@ -369,6 +371,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
         organiserName: formData.organiserName,
         registrationNo: formData.registrationNo,
         telContact: formData.telContact,
+        email: formData.email,
         organisingPartner: formData.organisingPartner,
         eventTitle: formData.eventTitle,
         eventStartDate: formData.eventStartDate,
@@ -401,6 +404,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
         organiserName: '',
         registrationNo: '',
         telContact: '',
+        email: '',
         organisingPartner: '',
         eventTitle: '',
         eventStartDate: '',
@@ -426,94 +430,6 @@ const TournamentApplication = ({ setCurrentPage }) => {
     }
   };
 
-  const handleSave = () => {
-    // Generate form content based on filled data
-    const formContent = generateFormContent();
-    
-    // Create and download the form
-    const element = document.createElement('a');
-    const file = new Blob([formContent], { type: 'text/plain' });
-    element.href = URL.createObjectURL(file);
-    const dataToUse = submittedApplication || formData;
-    element.download = `Tournament_Application_${dataToUse.eventTitle || 'Form'}_${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-    
-    alert('Form saved successfully!');
-  };
-
-  const generateFormContent = () => {
-    const dataToUse = submittedApplication || formData;
-    const currentDate = new Date().toLocaleDateString('en-MY');
-    
-    return `
-MALAYSIA PICKLEBALL ASSOCIATION
-TOURNAMENT APPLICATION FORM
-
-Generated on: ${currentDate}
-
-===========================================
-ORGANISER INFORMATION
-===========================================
-Organiser Name: ${dataToUse.organiserName || '[Not filled]'}
-PJS/ROS/Company Registration No.: ${dataToUse.registrationNo || '[Not filled]'}
-Tel. Contact: ${dataToUse.telContact || '[Not filled]'}
-Organising Partner: ${dataToUse.organisingPartner || '[Not applicable]'}
-
-===========================================
-EVENT DETAILS
-===========================================
-Title of Event: ${dataToUse.eventTitle || '[Not filled]'}
-Dates of Event: ${dataToUse.eventStartDate && dataToUse.eventEndDate 
-  ? `${new Date(dataToUse.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} - ${new Date(dataToUse.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`
-  : '[Not filled]'}
-Location: ${dataToUse.state && dataToUse.city 
-  ? `${dataToUse.city}, ${dataToUse.state}`
-  : '[Not filled]'}
-Venue: ${dataToUse.venue || '[Not filled]'}
-Level/Type of Event: ${dataToUse.classification || '[Not filled]'}
-Expected No. of Participants: ${dataToUse.expectedParticipants || '[Not filled]'}
-
-Brief Summary/Purpose of Event:
-${dataToUse.eventSummary || '[Not filled]'}
-
-===========================================
-TOURNAMENT CATEGORIES & SKILL RATINGS
-===========================================
-Skill Rating Guidelines:
-• Intermediate: < 3.5
-• Advanced: < 4.5
-• Elite: >= 4.5
-
-Note: Players with lower ratings can play in any higher rated categories
-but players of higher ratings cannot participate in the lower rated categories.
-
-===========================================
-SCORING FORMAT
-===========================================
-Scoring Format to be adopted for each match:
-• Traditional scoring up to 11 pts or more
-• Rally Scoring minimum up to 21 pts is acceptable for the first round-robins only
-
-===========================================
-IMPORTANT REMARKS
-===========================================
-• Endorsement logos (state, national & PJS/KBS) must be displayed on your event banners/at the venue etc.
-• Traditional scoring up to 11 pts or more; Rally Scoring (minimum up to 21 pts) is acceptable for the first round-robins only.
-
-===========================================
-REQUIREMENTS
-===========================================
-• Event title should NOT include the National/State Title (e.g. Malaysia Open/Closed, State Open/Closed etc)
-• Venue must have government occupancy permit
-• Date format should be DD/MM/YYYY - DD/MM/YYYY
-
----
-This form was generated from the Malaysia Pickleball Association Tournament Application Portal
-Generated on: ${currentDate}
-    `.trim();
-  };
 
   return (
     <div className="tournament-application">
@@ -559,6 +475,18 @@ Generated on: ${currentDate}
               id="telContact"
               name="telContact"
               value={formData.telContact}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="email">Email Address *</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
               onChange={handleInputChange}
               required
             />

@@ -1,31 +1,6 @@
-import React, { useState, useEffect } from 'react';
 import mpaLogo from '../assets/images/mpa.png';
 
 const Header = ({ currentPage, setCurrentPage, isLoggedIn, setIsLoggedIn }) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0);
-    };
-    
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const navigationItems = [
-    { key: 'home', label: 'Home', icon: '🏠' },
-    { key: 'apply', label: 'Apply Tournament', icon: '📝' },
-    { key: 'status', label: 'Check Status', icon: '📊' },
-    { key: 'about', label: 'About MPA', icon: 'ℹ️' },
-    { key: 'contact', label: 'Contact', icon: '📧' }
-  ];
-
-  const handleNavClick = (page) => {
-    setCurrentPage(page);
-    setIsMobileMenuOpen(false);
-  };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
