@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const path = require('path');
+const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 require('dotenv').config();
 
 const app = express();
@@ -69,6 +70,7 @@ const emailTemplates = {
           <h4 style="color: #0056b3; margin-top: 0;">Important Notes:</h4>
           <ul style="margin-bottom: 0; line-height: 1.6;">
             <li>Please save your Application ID: <strong>${applicationData.applicationId}</strong></li>
+            <li>Your complete application form is attached as a PDF for your records</li>
             <li>Do not reply to this email - this is an automated message</li>
             <li>For inquiries, please contact us through our official channels</li>
           </ul>
@@ -190,21 +192,240 @@ const emailTemplates = {
   })
 };
 
-// Email sending function
-const sendEmail = async (to, template) => {
+// PDF Generation function
+const generateApplicationPDF = async (applicationData) => {
   try {
+    console.log('🔄 Generating PDF for application:', applicationData.applicationId);
+    
+    // Create a new PDFDocument
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
+    
+    // Get fonts
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    const { width, height } = page.getSize();
+    let yPosition = height - 50;
+    
+    // Colors
+    const headerColor = rgb(0, 0.247, 0.498); // #003f7f
+    const textColor = rgb(0, 0, 0);
+    const labelColor = rgb(0.4, 0.4, 0.4);
+    
+    // Add watermark
+    page.drawText('MPA', {
+      x: width / 2 - 60,
+      y: height / 2 - 30,
+      size: 80,
+      font: helveticaBoldFont,
+      color: rgb(0.9, 0.9, 0.9),
+      opacity: 0.3
+    });
+    
+    // Header
+    page.drawText('MALAYSIA PICKLEBALL ASSOCIATION', {
+      x: 50,
+      y: yPosition,
+      size: 20,
+      font: helveticaBoldFont,
+      color: headerColor
+    });
+    yPosition -= 25;
+    
+    page.drawText('Tournament Application Form', {
+      x: 50,
+      y: yPosition,
+      size: 16,
+      font: helveticaFont,
+      color: rgb(0.4, 0.4, 0.4)
+    });
+    yPosition -= 20;
+    
+    page.drawText(`Application ID: ${applicationData.applicationId}`, {
+      x: 50,
+      y: yPosition,
+      size: 11,
+      font: helveticaBoldFont,
+      color: textColor
+    });
+    yPosition -= 15;
+    
+    page.drawText(`Submission Date: ${new Date(applicationData.submissionDate).toLocaleDateString()}`, {
+      x: 50,
+      y: yPosition,
+      size: 11,
+      font: helveticaFont,
+      color: textColor
+    });
+    yPosition -= 30;
+    
+    // Draw line under header
+    page.drawLine({
+      start: { x: 50, y: yPosition },
+      end: { x: width - 50, y: yPosition },
+      thickness: 2,
+      color: headerColor
+    });
+    yPosition -= 25;
+    
+    // Function to add section
+    const addSectionContent = (title, items) => {
+      // Section header background
+      page.drawRectangle({
+        x: 50,
+        y: yPosition - 15,
+        width: width - 100,
+        height: 20,
+        color: headerColor
+      });
+      
+      // Section title
+      page.drawText(title, {
+        x: 60,
+        y: yPosition - 10,
+        size: 12,
+        font: helveticaBoldFont,
+        color: rgb(1, 1, 1)
+      });
+      yPosition -= 30;
+      
+      // Section items
+      items.forEach(item => {
+        if (item.value) {
+          page.drawText(`${item.label}:`, {
+            x: 60,
+            y: yPosition,
+            size: 11,
+            font: helveticaBoldFont,
+            color: labelColor
+          });
+          
+          page.drawText(item.value || 'Not provided', {
+            x: 250,
+            y: yPosition,
+            size: 11,
+            font: helveticaFont,
+            color: textColor
+          });
+          yPosition -= 18;
+        }
+      });
+      yPosition -= 10;
+    };
+    
+    // ORGANISER INFORMATION
+    addSectionContent('ORGANISER INFORMATION', [
+      { label: 'Organiser Name', value: applicationData.organiserName },
+      { label: 'Registration Number', value: applicationData.registrationNo },
+      { label: 'Contact Number', value: applicationData.telContact },
+      { label: 'Email Address', value: applicationData.email },
+      { label: 'Organising Partner', value: applicationData.organisingPartner }
+    ]);
+    
+    // EVENT DETAILS
+    addSectionContent('EVENT DETAILS', [
+      { label: 'Event Title', value: applicationData.eventTitle },
+      { label: 'Event Start Date', value: applicationData.eventStartDateFormatted },
+      { label: 'Event End Date', value: applicationData.eventEndDateFormatted },
+      { label: 'State', value: applicationData.state },
+      { label: 'City', value: applicationData.city },
+      { label: 'Venue', value: applicationData.venue },
+      { label: 'Classification', value: applicationData.classification },
+      { label: 'Expected Participants', value: applicationData.expectedParticipants?.toString() },
+      { label: 'Event Summary', value: applicationData.eventSummary }
+    ]);
+    
+    // TOURNAMENT SETTINGS
+    const scoringText = applicationData.scoringFormat === 'traditional' 
+      ? 'Traditional (11 points, win by 2)' 
+      : 'Rally (15 points, win by 2)';
+      
+    addSectionContent('TOURNAMENT SETTINGS', [
+      { label: 'Scoring Format', value: scoringText }
+    ]);
+    
+    // CONSENT & AGREEMENT
+    addSectionContent('CONSENT & AGREEMENT', [
+      { label: 'Data Processing Consent', value: applicationData.dataConsent ? 'Agreed' : 'Not agreed' },
+      { label: 'Terms & Conditions', value: applicationData.termsConsent ? 'Agreed' : 'Not agreed' }
+    ]);
+    
+    // Footer
+    yPosition -= 20;
+    page.drawLine({
+      start: { x: 50, y: yPosition },
+      end: { x: width - 50, y: yPosition },
+      thickness: 1,
+      color: rgb(0.8, 0.8, 0.8)
+    });
+    yPosition -= 20;
+    
+    page.drawText('This application is submitted to Malaysia Pickleball Association (MPA) for tournament approval.', {
+      x: 50,
+      y: yPosition,
+      size: 10,
+      font: helveticaFont,
+      color: textColor
+    });
+    yPosition -= 15;
+    
+    page.drawText('For inquiries, please contact: info@malaysiapickleball.my', {
+      x: 50,
+      y: yPosition,
+      size: 10,
+      font: helveticaFont,
+      color: textColor
+    });
+    yPosition -= 15;
+    
+    page.drawText(`Generated on: ${new Date().toLocaleString()}`, {
+      x: 50,
+      y: yPosition,
+      size: 10,
+      font: helveticaFont,
+      color: textColor
+    });
+    
+    // Serialize the PDFDocument to bytes
+    const pdfBytes = await pdfDoc.save();
+    const buffer = Buffer.from(pdfBytes);
+    
+    console.log('✅ PDF generated successfully, size:', buffer.length, 'bytes');
+    return buffer;
+    
+  } catch (error) {
+    console.error('❌ Error generating PDF:', error);
+    throw error;
+  }
+};
+
+// Email sending function
+const sendEmail = async (to, template, attachments = []) => {
+  try {
+    console.log('📧 Preparing to send email to:', to);
+    console.log('📧 Attachments count:', attachments.length);
+    
+    if (attachments.length > 0) {
+      attachments.forEach((attachment, index) => {
+        console.log(`📎 Attachment ${index + 1}: ${attachment.filename} (${attachment.content ? attachment.content.length : 0} bytes)`);
+      });
+    }
+
     const mailOptions = {
       from: process.env.EMAIL_USER || 'noreply@malaysiapickleball.my',
       to: to,
       subject: template.subject,
-      html: template.html
+      html: template.html,
+      attachments: attachments
     };
 
+    console.log('📧 Sending email...');
     const result = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', result.messageId);
+    console.log('✅ Email sent successfully:', result.messageId);
     return { success: true, messageId: result.messageId };
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('❌ Error sending email:', error);
     return { success: false, error: error.message };
   }
 };
@@ -396,14 +617,36 @@ app.post('/api/applications', async (req, res) => {
 
     const savedApplication = await newApplication.save();
     
-    // Send confirmation email to the organiser
+    // Send confirmation email to the organiser with PDF attachment
     if (savedApplication.email) {
-      const emailTemplate = emailTemplates.applicationSubmitted(savedApplication);
-      const emailResult = await sendEmail(savedApplication.email, emailTemplate);
-      
-      if (!emailResult.success) {
-        console.error('Failed to send confirmation email:', emailResult.error);
-        // Still return success for the application, even if email fails
+      try {
+        // Generate PDF
+        const pdfBuffer = await generateApplicationPDF(savedApplication);
+        
+        // Create attachment
+        const attachments = [{
+          filename: `Tournament_Application_${savedApplication.applicationId}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }];
+        
+        const emailTemplate = emailTemplates.applicationSubmitted(savedApplication);
+        const emailResult = await sendEmail(savedApplication.email, emailTemplate, attachments);
+        
+        if (!emailResult.success) {
+          console.error('Failed to send confirmation email:', emailResult.error);
+          // Still return success for the application, even if email fails
+        }
+      } catch (pdfError) {
+        console.error('Failed to generate PDF:', pdfError);
+        // Still try to send email without PDF
+        const emailTemplate = emailTemplates.applicationSubmitted(savedApplication);
+        const emailResult = await sendEmail(savedApplication.email, emailTemplate);
+        
+        if (!emailResult.success) {
+          console.error('Failed to send confirmation email:', emailResult.error);
+          // Still return success for the application, even if email fails
+        }
       }
     }
     

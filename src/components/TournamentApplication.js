@@ -775,11 +775,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
             <div className="success-message">
               <h3>Application Submitted Successfully!</h3>
               <p>Your tournament application has been submitted and is now under review.</p>
-              <p><strong>Important:</strong> Please download your application copy for your records.</p>
+              <p><strong>Important:</strong> Check your email for a confirmation message with your application PDF attached.</p>
+              <p>If you don't receive the email within a few minutes, please check your spam folder.</p>
             </div>
             <div className="form-actions">
               <button type="button" className="pdf-btn active" onClick={generatePDF}>
-                Download Application PDF
+                Download Application PDF (Backup)
               </button>
               <button type="button" className="home-btn" onClick={() => setCurrentPage('home')}>
                 Back to Home
