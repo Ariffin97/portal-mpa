@@ -9,7 +9,7 @@
     "@testing-library/user-event": "^13.5.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
-    "express": "^5.1.0",
+    "express": "^4.21.2",
     "jspdf": "^3.0.2",
     "mongoose": "^8.18.0",
     "nodemailer": "^7.0.6",
@@ -24,7 +24,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "node server.js",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev": "concurrently \"npm run server\" \"PORT=3000 npm run client\"",
     "client": "react-scripts start",
     "heroku-postbuild": "npm run build"
   },

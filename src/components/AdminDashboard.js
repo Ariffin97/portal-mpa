@@ -132,14 +132,6 @@ const AdminDashboard = ({ setCurrentPage }) => {
     }
   };
 
-  const updateApplicationRemarks = (id, remarks) => {
-    // Note: This is a local-only feature for now
-    // In production, you'd want to save remarks to the database
-    const updatedApplications = applications.map(app => 
-      (app.id === id || app.applicationId === id) ? { ...app, remarks: remarks } : app
-    );
-    setApplications(updatedApplications);
-  };
 
 
   const showApplicationDetails = (application) => {
