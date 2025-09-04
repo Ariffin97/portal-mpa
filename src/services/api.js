@@ -1,5 +1,8 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
+// Log the API URL for debugging
+console.log('API Base URL:', API_BASE_URL);
+
 class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
