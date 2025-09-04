@@ -4,6 +4,7 @@ const cors = require('cors');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -192,38 +193,142 @@ const emailTemplates = {
   })
 };
 
-// PDF Generation function
+// PDF Generation function with MPA Logo, Full Terms & Conditions
 const generateApplicationPDF = async (applicationData) => {
   try {
     console.log('🔄 Generating PDF for application:', applicationData.applicationId);
     
     // Create a new PDFDocument
     const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
     
     // Get fonts
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     
-    const { width, height } = page.getSize();
-    let yPosition = height - 50;
+    // Load MPA logo
+    let logoImage = null;
+    try {
+      const logoPath = path.join(__dirname, 'public', 'mpa.png');
+      if (fs.existsSync(logoPath)) {
+        const logoBytes = fs.readFileSync(logoPath);
+        logoImage = await pdfDoc.embedPng(logoBytes);
+        console.log('[OK] MPA logo loaded successfully');
+      } else {
+        console.log('[WARN] MPA logo not found at:', logoPath);
+      }
+    } catch (logoError) {
+      console.log('[WARN] Could not load MPA logo:', logoError.message);
+    }
     
     // Colors
     const headerColor = rgb(0, 0.247, 0.498); // #003f7f
     const textColor = rgb(0, 0, 0);
     const labelColor = rgb(0.4, 0.4, 0.4);
+    const lightGray = rgb(0.95, 0.95, 0.95);
     
-    // Add watermark
-    page.drawText('MPA', {
-      x: width / 2 - 60,
-      y: height / 2 - 30,
-      size: 80,
-      font: helveticaBoldFont,
-      color: rgb(0.9, 0.9, 0.9),
-      opacity: 0.3
-    });
+    // Helper function to add a new page with logo background
+    const addPageWithLogo = () => {
+      const page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
+      const { width, height } = page.getSize();
+      
+      // Add logo as background if available
+      if (logoImage) {
+        const logoSize = 150;
+        page.drawImage(logoImage, {
+          x: width / 2 - logoSize / 2,
+          y: height / 2 - logoSize / 2,
+          width: logoSize,
+          height: logoSize,
+          opacity: 0.05 // Very light background
+        });
+      }
+      
+      return { page, width, height };
+    };
     
-    // Header
+    // Create first page
+    let { page, width, height } = addPageWithLogo();
+    let yPosition = height - 50;
+    
+    // Helper function to add text with word wrapping and newline handling
+    const addWrappedText = (text, x, y, maxWidth, options = {}) => {
+      const fontSize = options.size || 11;
+      const font = options.bold ? helveticaBoldFont : helveticaFont;
+      const color = options.color || textColor;
+      const lineHeight = fontSize * 1.4;
+      
+      // Clean text by removing problematic characters and handling newlines
+      const cleanText = text
+        .replace(/[\r\n]+/g, ' ') // Replace newlines with spaces
+        .replace(/[^\x20-\x7E]/g, ' ') // Remove non-ASCII characters
+        .replace(/\s+/g, ' ') // Collapse multiple spaces
+        .trim();
+      
+      const words = cleanText.split(' ');
+      const lines = [];
+      let currentLine = '';
+      
+      for (const word of words) {
+        if (!word) continue; // Skip empty words
+        
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        let testWidth;
+        
+        try {
+          testWidth = font.widthOfTextAtSize(testLine, fontSize);
+        } catch (error) {
+          // If there's an encoding error, skip this word
+          console.log('[WARN] Skipping problematic word in PDF:', word);
+          continue;
+        }
+        
+        if (testWidth <= maxWidth) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else {
+            // If single word is too long, truncate it
+            lines.push(word.substring(0, 30) + '...');
+            currentLine = '';
+          }
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+      
+      let currentY = y;
+      lines.forEach((line, index) => {
+        if (line.trim()) { // Only draw non-empty lines
+          try {
+            page.drawText(line.trim(), {
+              x,
+              y: currentY - (index * lineHeight),
+              size: fontSize,
+              font,
+              color
+            });
+          } catch (error) {
+            console.log('[WARN] Could not render line in PDF:', line);
+          }
+        }
+      });
+      
+      return currentY - (lines.length * lineHeight);
+    };
+    
+    // Helper function to check if new page is needed
+    const checkNewPage = (requiredSpace = 100) => {
+      if (yPosition < requiredSpace) {
+        const newPageData = addPageWithLogo();
+        page = newPageData.page;
+        yPosition = newPageData.height - 50;
+        return true;
+      }
+      return false;
+    };
+    
+    // HEADER - Page 1
     page.drawText('MALAYSIA PICKLEBALL ASSOCIATION', {
       x: 50,
       y: yPosition,
@@ -271,6 +376,8 @@ const generateApplicationPDF = async (applicationData) => {
     
     // Function to add section
     const addSectionContent = (title, items) => {
+      checkNewPage(80);
+      
       // Section header background
       page.drawRectangle({
         x: 50,
@@ -293,6 +400,8 @@ const generateApplicationPDF = async (applicationData) => {
       // Section items
       items.forEach(item => {
         if (item.value) {
+          checkNewPage(25);
+          
           page.drawText(`${item.label}:`, {
             x: 60,
             y: yPosition,
@@ -301,14 +410,19 @@ const generateApplicationPDF = async (applicationData) => {
             color: labelColor
           });
           
-          page.drawText(item.value || 'Not provided', {
-            x: 250,
-            y: yPosition,
-            size: 11,
-            font: helveticaFont,
-            color: textColor
-          });
-          yPosition -= 18;
+          // Handle long text with wrapping
+          if (item.value.length > 50) {
+            yPosition = addWrappedText(item.value, 250, yPosition, width - 300, { size: 11 });
+          } else {
+            page.drawText(item.value, {
+              x: 250,
+              y: yPosition,
+              size: 11,
+              font: helveticaFont,
+              color: textColor
+            });
+            yPosition -= 18;
+          }
         }
       });
       yPosition -= 10;
@@ -345,21 +459,89 @@ const generateApplicationPDF = async (applicationData) => {
       { label: 'Scoring Format', value: scoringText }
     ]);
     
-    // CONSENT & AGREEMENT
-    addSectionContent('CONSENT & AGREEMENT', [
-      { label: 'Data Processing Consent', value: applicationData.dataConsent ? 'Agreed' : 'Not agreed' },
-      { label: 'Terms & Conditions', value: applicationData.termsConsent ? 'Agreed' : 'Not agreed' }
-    ]);
+    // CONSENT STATEMENTS
+    checkNewPage(100);
     
-    // Footer
-    yPosition -= 20;
+    page.drawRectangle({
+      x: 50,
+      y: yPosition - 15,
+      width: width - 100,
+      height: 20,
+      color: headerColor
+    });
+    
+    page.drawText('CONSENT STATEMENTS', {
+      x: 60,
+      y: yPosition - 10,
+      size: 12,
+      font: helveticaBoldFont,
+      color: rgb(1, 1, 1)
+    });
+    yPosition -= 35;
+    
+    // Data Processing Consent
+    page.drawText('1. Data Processing Consent:', {
+      x: 60,
+      y: yPosition,
+      size: 11,
+      font: helveticaBoldFont,
+      color: textColor
+    });
+    yPosition -= 18;
+    
+    const dataConsentText = `I consent to the collection, use, and processing of my personal data by Malaysia Pickleball Association (MPA) for the purposes of tournament organization, administration, and related communications. I understand that my data will be handled in accordance with applicable data protection laws.`;
+    
+    yPosition = addWrappedText(dataConsentText, 70, yPosition, width - 130, { size: 11 });
+    
+    const dataStatus = `Status: ${applicationData.dataConsent ? 'AGREED AND CONSENTED' : 'NOT CONSENTED'}`;
+    page.drawText(dataStatus, {
+      x: 70,
+      y: yPosition,
+      size: 11,
+      font: helveticaBoldFont,
+      color: applicationData.dataConsent ? rgb(0, 0.6, 0) : rgb(0.8, 0, 0)
+    });
+    yPosition -= 30;
+    
+    // Terms and Conditions Consent
+    checkNewPage(100);
+    
+    page.drawText('2. Terms and Conditions Consent:', {
+      x: 60,
+      y: yPosition,
+      size: 11,
+      font: helveticaBoldFont,
+      color: textColor
+    });
+    yPosition -= 18;
+    
+    const termsConsentText = `I have read, understood, and agree to abide by the Terms and Conditions set forth by Malaysia Pickleball Association (MPA) for tournament participation and organization. I acknowledge that failure to comply with these terms may result in disqualification or other appropriate actions.`;
+    
+    yPosition = addWrappedText(termsConsentText, 70, yPosition, width - 130, { size: 11 });
+    
+    const termsStatus = `Status: ${applicationData.termsConsent ? 'AGREED AND ACCEPTED' : 'NOT ACCEPTED'}`;
+    page.drawText(termsStatus, {
+      x: 70,
+      y: yPosition,
+      size: 11,
+      font: helveticaBoldFont,
+      color: applicationData.termsConsent ? rgb(0, 0.6, 0) : rgb(0.8, 0, 0)
+    });
+    yPosition -= 30;
+    
+    // Footer - ensure proper margin
+    checkNewPage(120);
+    
+    // Add some space before footer
+    yPosition -= 30;
+    
     page.drawLine({
       start: { x: 50, y: yPosition },
       end: { x: width - 50, y: yPosition },
       thickness: 1,
       color: rgb(0.8, 0.8, 0.8)
     });
-    yPosition -= 20;
+    yPosition -= 25;
     
     page.drawText('This application is submitted to Malaysia Pickleball Association (MPA) for tournament approval.', {
       x: 50,
@@ -368,16 +550,16 @@ const generateApplicationPDF = async (applicationData) => {
       font: helveticaFont,
       color: textColor
     });
-    yPosition -= 15;
+    yPosition -= 18;
     
-    page.drawText('For inquiries, please contact: info@malaysiapickleball.my', {
+    page.drawText('For inquiries, please contact: tournament@malaysiapickleballassociation.org', {
       x: 50,
       y: yPosition,
       size: 10,
-      font: helveticaFont,
-      color: textColor
+      font: helveticaBoldFont,
+      color: headerColor
     });
-    yPosition -= 15;
+    yPosition -= 18;
     
     page.drawText(`Generated on: ${new Date().toLocaleString()}`, {
       x: 50,
@@ -391,11 +573,12 @@ const generateApplicationPDF = async (applicationData) => {
     const pdfBytes = await pdfDoc.save();
     const buffer = Buffer.from(pdfBytes);
     
-    console.log('✅ PDF generated successfully, size:', buffer.length, 'bytes');
+    console.log('[OK] Enhanced PDF generated successfully, size:', buffer.length, 'bytes');
+    console.log('[OK] Includes: MPA logo background, consent statements (data processing & terms acceptance)');
     return buffer;
     
   } catch (error) {
-    console.error('❌ Error generating PDF:', error);
+    console.error('[ERROR] Error generating PDF:', error);
     throw error;
   }
 };
