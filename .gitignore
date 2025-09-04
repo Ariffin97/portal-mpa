@@ -9,7 +9,7 @@
 /coverage
 
 # production
-/build
+# /build  # Commented out for Heroku deployment - build folder needed or will be built by heroku-postbuild
 
 # misc
 .DS_Store
