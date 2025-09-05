@@ -26,8 +26,12 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "server": "node server.js",
+    "server:dev": "node server-dev.js",
     "dev": "concurrently \"npm run server\" \"PORT=3000 npm run client\"",
+    "dev:local": "concurrently \"npm run server:dev\" \"PORT=3000 npm run client\"",
     "client": "react-scripts start",
+    "copy-to-local": "node copy-to-local.js",
+    "verify-setup": "node verify-setup.js",
     "heroku-postbuild": "npm run build"
   },
   "eslintConfig": {

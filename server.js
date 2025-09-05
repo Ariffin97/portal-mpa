@@ -719,6 +719,90 @@ const tournamentApplicationSchema = new mongoose.Schema({
 
 const TournamentApplication = mongoose.model('TournamentApplication', tournamentApplicationSchema);
 
+// Organization Registration Schema
+const organizationSchema = new mongoose.Schema({
+  organizationId: {
+    type: String,
+    unique: true
+  },
+  organizationName: {
+    type: String,
+    required: true
+  },
+  registrationNo: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  applicantFullName: {
+    type: String,
+    required: true
+  },
+  phoneNumber: {
+    type: String,
+    required: true
+  },
+  email: {
+    type: String,
+    required: true
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 8,
+    validate: {
+      validator: function(password) {
+        // Password must contain: uppercase, lowercase, number, and symbol
+        const hasUppercase = /[A-Z]/.test(password);
+        const hasLowercase = /[a-z]/.test(password);
+        const hasNumber = /[0-9]/.test(password);
+        const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+        
+        return password.length >= 8 && hasUppercase && hasLowercase && hasNumber && hasSymbol;
+      },
+      message: 'Password must be at least 8 characters and contain uppercase, lowercase, number, and symbol.'
+    }
+  },
+  addressLine1: {
+    type: String,
+    required: true
+  },
+  addressLine2: {
+    type: String,
+    default: ''
+  },
+  city: {
+    type: String,
+    required: true
+  },
+  postcode: {
+    type: String,
+    required: true
+  },
+  state: {
+    type: String,
+    required: true
+  },
+  country: {
+    type: String,
+    required: true,
+    default: 'Malaysia'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'suspended'],
+    default: 'active'
+  },
+  registeredAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true
+});
+
+const Organization = mongoose.model('Organization', organizationSchema);
+
 // Admin Login Schema
 const adminLoginSchema = new mongoose.Schema({
   username: {
@@ -741,13 +825,389 @@ const adminLoginSchema = new mongoose.Schema({
 
 const AdminLogin = mongoose.model('AdminLogin', adminLoginSchema);
 
+// Admin User Schema
+const adminUserSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  email: {
+    type: String,
+    required: false
+  },
+  fullName: {
+    type: String,
+    required: false
+  },
+  authorityLevel: {
+    type: String,
+    enum: ['super_admin', 'admin'],
+    default: 'admin'
+  },
+  status: {
+    type: String,
+    enum: ['active', 'disabled'],
+    default: 'active'
+  },
+  lastLogin: {
+    type: Date,
+    default: null
+  }
+}, {
+  timestamps: true
+});
+
+const AdminUser = mongoose.model('AdminUser', adminUserSchema);
+
+// Generate unique organization ID
+const generateOrganizationId = async () => {
+  let organizationId;
+  let isUnique = false;
+  
+  while (!isUnique) {
+    // Generate 5-digit random number
+    const randomNum = Math.floor(Math.random() * 90000) + 10000; // Ensures 5 digits (10000-99999)
+    organizationId = `MPO${randomNum}`;
+    
+    // Check if this ID already exists
+    const existingOrg = await Organization.findOne({ organizationId });
+    if (!existingOrg) {
+      isUnique = true;
+    }
+  }
+  
+  return organizationId;
+};
+
 // Routes
+
+// Organization registration endpoint
+app.post('/api/organizations/register', async (req, res) => {
+  try {
+    const {
+      organizationName,
+      registrationNo,
+      applicantFullName,
+      phoneNumber,
+      email,
+      password,
+      addressLine1,
+      addressLine2,
+      city,
+      postcode,
+      state,
+      country
+    } = req.body;
+
+    // Check if organization with this registration number already exists
+    const existingOrganization = await Organization.findOne({ registrationNo });
+    if (existingOrganization) {
+      return res.status(400).json({ 
+        error: 'An organization with this registration number already exists' 
+      });
+    }
+
+    // Check if organization with this email already exists
+    const existingEmail = await Organization.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ 
+        error: 'An organization with this email address already exists' 
+      });
+    }
+
+    // Generate unique organization ID
+    const organizationId = await generateOrganizationId();
+
+    // Create new organization
+    const organization = new Organization({
+      organizationId,
+      organizationName,
+      registrationNo,
+      applicantFullName,
+      phoneNumber,
+      email,
+      password,
+      addressLine1,
+      addressLine2,
+      city,
+      postcode,
+      state,
+      country
+    });
+
+    await organization.save();
+
+    // Send confirmation email
+    const mailOptions = {
+      from: `"Malaysia Pickleball Association" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Organization Registration Successful - Malaysia Pickleball Association',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+            .success-badge { background: #28a745; color: white; padding: 10px 20px; border-radius: 25px; display: inline-block; margin: 20px 0; font-weight: bold; }
+            .info-card { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .info-label { font-weight: bold; color: #2c3e50; display: inline-block; min-width: 120px; }
+            .login-section { background: #e3f2fd; padding: 20px; border-left: 4px solid #2196f3; margin: 20px 0; border-radius: 4px; }
+            .btn { background: #3498db; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Welcome to Malaysia Pickleball Association</h1>
+            <p>Your organization has been successfully registered!</p>
+          </div>
+          
+          <div class="content">
+            <div class="success-badge">✅ Registration Successful</div>
+            
+            <p>Dear <strong>${applicantFullName}</strong>,</p>
+            
+            <p>Congratulations! Your organization registration has been completed successfully. You are now part of the Malaysia Pickleball Association community.</p>
+            
+            <div class="info-card">
+              <h3>📋 Registration Details</h3>
+              <p><span class="info-label">Organization ID:</span> <strong>${organizationId}</strong></p>
+              <p><span class="info-label">Organization:</span> ${organizationName}</p>
+              <p><span class="info-label">Registration No:</span> ${registrationNo}</p>
+              <p><span class="info-label">Applicant Name:</span> ${applicantFullName}</p>
+              <p><span class="info-label">Email:</span> ${email}</p>
+              <p><span class="info-label">Phone:</span> ${phoneNumber}</p>
+            </div>
+            
+            <div class="login-section">
+              <h3>🔐 Access Your Tournament Portal</h3>
+              <p>You can now log in to access the tournament application form using your registered credentials:</p>
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>Password:</strong> Your registered password</p>
+              <p>Visit our portal and click "Apply for Tournament" to get started!</p>
+            </div>
+            
+            <h3>🎯 What's Next?</h3>
+            <ul>
+              <li>Use your registered email and password to log in</li>
+              <li>Access the tournament application form</li>
+              <li>Submit tournament applications for MPA sanctioning</li>
+              <li>Track your application status through the portal</li>
+            </ul>
+            
+            <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+            
+            <div class="footer">
+              <p><strong>Malaysia Pickleball Association</strong><br>
+              Email: tournament@malaysiapickleballassociation.org<br>
+              Official Tournament Management Portal</p>
+              <p><em>This email was sent automatically. Please do not reply to this email.</em></p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log('Registration confirmation email sent to:', email);
+    } catch (emailError) {
+      console.error('Failed to send confirmation email:', emailError);
+      // Don't fail the registration if email fails
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Organization registered successfully',
+      organization: {
+        id: organization._id,
+        organizationId: organization.organizationId,
+        organizationName: organization.organizationName,
+        registrationNo: organization.registrationNo,
+        applicantFullName: organization.applicantFullName,
+        phoneNumber: organization.phoneNumber,
+        email: organization.email
+      }
+    });
+
+  } catch (error) {
+    console.error('Organization registration error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Organization login endpoint
+app.post('/api/organizations/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find organization by email and password
+    const organization = await Organization.findOne({ 
+      email: email,
+      password: password
+    });
+
+    if (!organization) {
+      return res.status(401).json({ 
+        success: false,
+        error: 'Invalid credentials. Please check your email and password.' 
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      organization: {
+        id: organization._id,
+        organizationId: organization.organizationId,
+        organizationName: organization.organizationName,
+        registrationNo: organization.registrationNo,
+        applicantFullName: organization.applicantFullName,
+        phoneNumber: organization.phoneNumber,
+        email: organization.email,
+        organizationAddress: organization.organizationAddress
+      }
+    });
+
+  } catch (error) {
+    console.error('Organization login error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all registered organizations (for admin)
+app.get('/api/organizations', async (req, res) => {
+  try {
+    // First, fix any organizations without registeredAt field
+    await Organization.updateMany(
+      { registeredAt: { $exists: false } },
+      [{ $set: { registeredAt: "$createdAt" } }]
+    );
+    
+    const organizations = await Organization.find({}, {
+      password: 0 // Exclude password from response
+    }).sort({ registeredAt: -1 });
+    
+    res.json(organizations);
+  } catch (error) {
+    console.error('Get organizations error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Suspend organization (for admin)
+app.patch('/api/organizations/:id/suspend', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const organization = await Organization.findById(id);
+    
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+    
+    organization.status = 'suspended';
+    await organization.save();
+    
+    res.json({ 
+      success: true, 
+      message: 'Organization suspended successfully',
+      organizationId: organization.organizationId 
+    });
+  } catch (error) {
+    console.error('Suspend organization error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reactivate organization (for admin)
+app.patch('/api/organizations/:id/reactivate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const organization = await Organization.findById(id);
+    
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+    
+    organization.status = 'active';
+    await organization.save();
+    
+    res.json({ 
+      success: true, 
+      message: 'Organization reactivated successfully',
+      organizationId: organization.organizationId 
+    });
+  } catch (error) {
+    console.error('Reactivate organization error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete organization permanently (for admin)
+app.delete('/api/organizations/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const organization = await Organization.findById(id);
+    
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+    
+    const organizationId = organization.organizationId;
+    const organizationName = organization.organizationName;
+    
+    await Organization.findByIdAndDelete(id);
+    
+    console.log(`Organization permanently deleted: ${organizationId} - ${organizationName}`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Organization permanently deleted',
+      organizationId: organizationId 
+    });
+  } catch (error) {
+    console.error('Delete organization error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Get all tournament applications (for admin)
 app.get('/api/applications', async (req, res) => {
   try {
     const applications = await TournamentApplication.find().sort({ submissionDate: -1 });
     res.json(applications);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get tournament applications by organization (for organization dashboard)
+app.get('/api/applications/organization/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const applications = await TournamentApplication.find({ email }).sort({ submissionDate: -1 });
+    res.json(applications);
+  } catch (error) {
+    console.error('Get organization applications error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get approved tournaments (sanctioned tournaments)
+app.get('/api/approved-tournaments', async (req, res) => {
+  try {
+    const approvedTournaments = await TournamentApplication.find({ 
+      status: 'Approved' 
+    }).sort({ eventStartDate: 1 });
+    res.json(approvedTournaments);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -925,32 +1385,94 @@ app.delete('/api/applications/:id', async (req, res) => {
 // Admin login endpoint
 app.post('/api/admin/login', async (req, res) => {
   try {
+    console.log('Admin login attempt:', req.body);
     const { username, password } = req.body;
     
-    // Simple authentication (in production, use proper hashing)
-    if (username === 'admin' && password === 'admin123') {
-      // Log the login attempt
-      const loginRecord = new AdminLogin({
-        username,
-        password: '***', // Don't store actual password
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
+    // Check if credentials are provided
+    if (!username || !password) {
+      console.log('Missing credentials');
+      return res.status(400).json({
+        success: false,
+        message: 'Username and password are required'
       });
-      
-      await loginRecord.save();
+    }
+
+    // Trim whitespace and check credentials
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+    
+    console.log('Checking credentials:', { username: trimmedUsername, password: '***' });
+    
+    let loginSuccessful = false;
+    let userAuthority = 'admin';
+    
+    // Check hardcoded super admin credentials first
+    if (trimmedUsername === 'admin' && trimmedPassword === 'admin123') {
+      console.log('Login successful for hardcoded super admin');
+      loginSuccessful = true;
+      userAuthority = 'super_admin';
+    } else {
+      // Check database for admin users
+      try {
+        const adminUser = await AdminUser.findOne({ 
+          username: trimmedUsername, 
+          status: 'active' 
+        });
+        
+        if (adminUser && adminUser.password === trimmedPassword) {
+          console.log('Login successful for database admin user:', trimmedUsername);
+          loginSuccessful = true;
+          userAuthority = adminUser.authorityLevel;
+          
+          // Update last login time
+          adminUser.lastLogin = new Date();
+          await adminUser.save();
+        }
+      } catch (dbError) {
+        console.error('Database error during authentication:', dbError);
+        // Continue with login failure below
+      }
+    }
+    
+    if (loginSuccessful) {
+      // Log the login attempt
+      try {
+        const loginRecord = new AdminLogin({
+          username: trimmedUsername,
+          password: '***', // Don't store actual password
+          ipAddress: req.ip || req.connection.remoteAddress,
+          userAgent: req.get('User-Agent') || 'Unknown'
+        });
+        
+        await loginRecord.save();
+        console.log('Login record saved');
+      } catch (logError) {
+        console.error('Failed to save login record:', logError);
+        // Don't fail the login if logging fails
+      }
       
       res.json({
         success: true,
-        message: 'Login successful'
+        message: 'Login successful',
+        user: {
+          username: trimmedUsername,
+          authority: userAuthority
+        }
       });
     } else {
+      console.log('Invalid credentials provided:', { username: trimmedUsername });
       res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Invalid username or password'
       });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Admin login error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      message: 'Something went wrong. Please try again.'
+    });
   }
 });
 
@@ -964,11 +1486,161 @@ app.get('/api/admin/login-history', async (req, res) => {
   }
 });
 
+// Admin User Management Endpoints
+
+// Create new admin user
+app.post('/api/admin/users', async (req, res) => {
+  try {
+    console.log('Creating new admin user:', req.body);
+    const { username, password, email, fullName, authorityLevel } = req.body;
+    
+    // Validation
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and password are required'
+      });
+    }
+
+    // Check if username already exists
+    const existingUser = await AdminUser.findOne({ username: username.trim() });
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'Username already exists'
+      });
+    }
+
+    // Create new admin user
+    const newAdminUser = new AdminUser({
+      username: username.trim(),
+      password: password.trim(), // In production, hash this password
+      email: email ? email.trim() : null,
+      fullName: fullName ? fullName.trim() : null,
+      authorityLevel: authorityLevel || 'admin',
+      status: 'active'
+    });
+
+    await newAdminUser.save();
+    console.log('New admin user created successfully');
+
+    res.json({
+      success: true,
+      message: 'Admin user created successfully',
+      user: {
+        id: newAdminUser._id,
+        username: newAdminUser.username,
+        email: newAdminUser.email,
+        fullName: newAdminUser.fullName,
+        authorityLevel: newAdminUser.authorityLevel,
+        status: newAdminUser.status,
+        createdAt: newAdminUser.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to create admin user'
+    });
+  }
+});
+
+// Get all admin users
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const adminUsers = await AdminUser.find({}, '-password').sort({ createdAt: -1 });
+    res.json({
+      success: true,
+      users: adminUsers
+    });
+  } catch (error) {
+    console.error('Error fetching admin users:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to fetch admin users'
+    });
+  }
+});
+
+// Update admin user status
+app.patch('/api/admin/users/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!['active', 'disabled'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be "active" or "disabled"'
+      });
+    }
+
+    const updatedUser = await AdminUser.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, select: '-password' }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin user not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'User status updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to update user status'
+    });
+  }
+});
+
+// Delete admin user
+app.delete('/api/admin/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const deletedUser = await AdminUser.findByIdAndDelete(id);
+    
+    if (!deletedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin user not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Admin user deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting admin user:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to delete admin user'
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
-    status: 'OK', 
+    status: 'ok', 
+    message: 'Server is running',
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
     database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected'
   });
 });

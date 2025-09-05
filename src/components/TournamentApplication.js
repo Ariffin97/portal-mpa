@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import mpaLogo from '../assets/images/mpa.png';
 import apiService from '../services/api';
 
 const TournamentApplication = ({ setCurrentPage }) => {
+  const [organizationData, setOrganizationData] = useState(null);
+  const [appliedTournaments, setAppliedTournaments] = useState([]);
+  const [isLoadingTournaments, setIsLoadingTournaments] = useState(true);
+  
   // Malaysian States and Cities data
   const malaysianStatesAndCities = {
     'Johor': ['Johor Bahru', 'Batu Pahat', 'Muar', 'Kluang', 'Pontian', 'Segamat', 'Mersing', 'Kota Tinggi', 'Kulai', 'Skudai'],
@@ -28,6 +32,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
     organiserName: '',
     registrationNo: '',
     telContact: '',
+    personInCharge: '',
     email: '',
     organisingPartner: '',
     
@@ -56,6 +61,84 @@ const TournamentApplication = ({ setCurrentPage }) => {
   const [submittedApplication, setSubmittedApplication] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  // Load organization data on component mount
+  useEffect(() => {
+    const organizationData = localStorage.getItem('organizationData');
+    const isOrgLoggedIn = localStorage.getItem('organizationLoggedIn');
+    
+    if (organizationData && isOrgLoggedIn === 'true') {
+      const orgData = JSON.parse(organizationData);
+      updateOrganizationData(orgData);
+      
+      setFormData(prev => ({
+        ...prev,
+        organiserName: orgData.organizationName,
+        registrationNo: orgData.registrationNo,
+        personInCharge: orgData.applicantFullName,
+        telContact: orgData.phoneNumber,
+        email: orgData.email
+      }));
+
+      // Load applied tournaments for this organization
+      loadAppliedTournaments(orgData.email);
+    } else {
+      // If no organization login, redirect to home
+      alert('Please login to your organization account first.');
+      setCurrentPage('home');
+    }
+  }, [setCurrentPage]);
+
+  const loadAppliedTournaments = async (email) => {
+    try {
+      setIsLoadingTournaments(true);
+      console.log('Loading applied tournaments for email:', email);
+      const tournaments = await apiService.getApplicationsByOrganization(email);
+      console.log('Loaded tournaments:', tournaments);
+      setAppliedTournaments(tournaments);
+    } catch (error) {
+      console.error('Failed to load applied tournaments:', error);
+      setAppliedTournaments([]);
+    } finally {
+      setIsLoadingTournaments(false);
+    }
+  };
+
+  const updateOrganizationData = async (orgData) => {
+    // If organizationId is missing, try to fetch it
+    if (!orgData.organizationId && orgData.email) {
+      try {
+        const organizations = await apiService.getRegisteredOrganizations();
+        const currentOrg = organizations.find(org => org.email === orgData.email);
+        if (currentOrg && currentOrg.organizationId) {
+          const updatedOrgData = { ...orgData, organizationId: currentOrg.organizationId };
+          setOrganizationData(updatedOrgData);
+          // Update localStorage with the organizationId
+          localStorage.setItem('organizationData', JSON.stringify(updatedOrgData));
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to fetch organization ID:', error);
+      }
+    }
+    setOrganizationData(orgData);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('organizationData');
+    localStorage.removeItem('organizationLoggedIn');
+    setCurrentPage('home');
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Pending Review': return '#ffa500';
+      case 'Approved': return '#28a745';
+      case 'Rejected': return '#dc3545';
+      case 'Under Review': return '#007bff';
+      default: return '#6c757d';
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -220,6 +303,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
       yPosition = addInfoRow('Organiser Name', dataToUse.organiserName, yPosition);
       yPosition = addInfoRow('Registration Number', dataToUse.registrationNo, yPosition);
       yPosition = addInfoRow('Telephone Contact', dataToUse.telContact, yPosition);
+      yPosition = addInfoRow('Person in Charge', dataToUse.personInCharge, yPosition);
       yPosition = addInfoRow('Email Address', dataToUse.email, yPosition);
       yPosition = addInfoRow('Organising Partner', dataToUse.organisingPartner || 'Not applicable', yPosition, true);
       yPosition += 10;
@@ -371,6 +455,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
         organiserName: formData.organiserName,
         registrationNo: formData.registrationNo,
         telContact: formData.telContact,
+        personInCharge: formData.personInCharge,
         email: formData.email,
         organisingPartner: formData.organisingPartner,
         eventTitle: formData.eventTitle,
@@ -392,6 +477,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
       
       alert(`Application submitted successfully! Your application ID is: ${newApplication.applicationId}`);
       
+      // Reload applied tournaments to show the new application
+      const orgData = JSON.parse(localStorage.getItem('organizationData') || '{}');
+      if (orgData.email) {
+        await loadAppliedTournaments(orgData.email);
+      }
+      
       // Enable PDF download and show message
       setSubmittedApplication({
         ...newApplication,
@@ -404,6 +495,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
         organiserName: '',
         registrationNo: '',
         telContact: '',
+        personInCharge: '',
         email: '',
         organisingPartner: '',
         eventTitle: '',
@@ -432,14 +524,80 @@ const TournamentApplication = ({ setCurrentPage }) => {
 
 
   return (
-    <div className="tournament-application">
-      <div className="form-header">
-        <img src={mpaLogo} alt="Malaysia Pickleball Association" className="form-logo" />
-        <div className="form-header-text">
-          <h2>Tournament Application Form</h2>
-          <p className="form-subtitle">Apply to organize a pickleball tournament</p>
+    <div className="tournament-application-container">
+      {/* Sidebar */}
+      <div className="tournament-sidebar">
+        {/* Profile Section */}
+        <div className="sidebar-section profile-section">
+          <div className="profile-header">
+            <div className="profile-avatar">
+              {organizationData?.organizationName?.charAt(0) || 'O'}
+            </div>
+            <div className="profile-info">
+              <h3>{organizationData?.organizationName || 'Organization'}</h3>
+              <p className="profile-id">{organizationData?.organizationId || 'N/A'}</p>
+              <p className="profile-email">{organizationData?.email || 'N/A'}</p>
+            </div>
+          </div>
+          <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
+
+        {/* Applied Tournaments Section */}
+        <div className="sidebar-section tournaments-section">
+          <h3>Applied Tournaments</h3>
+          {isLoadingTournaments ? (
+            <div className="loading-tournaments">Loading...</div>
+          ) : appliedTournaments.length === 0 ? (
+            <div className="no-tournaments">
+              <p>No tournaments applied yet.</p>
+              <p>Submit your first application below!</p>
+            </div>
+          ) : (
+            <div className="tournaments-list">
+              {appliedTournaments.map((tournament, index) => (
+                <div key={tournament.applicationId || index} className="tournament-item">
+                  <div className="tournament-title">
+                    {tournament.eventTitle || 'Untitled Tournament'}
+                  </div>
+                  <div className="tournament-meta">
+                    <span className="tournament-id">ID: {tournament.applicationId}</span>
+                    <span 
+                      className="tournament-status"
+                      style={{ 
+                        backgroundColor: getStatusColor(tournament.status),
+                        color: 'white',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        fontSize: '11px'
+                      }}
+                    >
+                      {tournament.status}
+                    </span>
+                  </div>
+                  <div className="tournament-date">
+                    {tournament.submissionDate ? 
+                      new Date(tournament.submissionDate).toLocaleDateString() : 
+                      'Date N/A'
+                    }
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Main Content */}
+      <div className="tournament-main-content">
+        <div className="form-header">
+          <img src={mpaLogo} alt="Malaysia Pickleball Association" className="form-logo" />
+          <div className="form-header-text">
+            <h2>Tournament Application Form</h2>
+            <p className="form-subtitle">Apply to organize a pickleball tournament</p>
+          </div>
+        </div>
       
       <form onSubmit={handleSubmit}>
         <div className="form-section">
@@ -453,7 +611,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
               value={formData.organiserName}
               onChange={handleInputChange}
               required
+              readOnly
+              style={{backgroundColor: '#f5f5f5', cursor: 'not-allowed'}}
             />
+            <small className="form-note">Pre-filled from organization registration</small>
           </div>
           
           <div className="form-group">
@@ -465,7 +626,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
               value={formData.registrationNo}
               onChange={handleInputChange}
               required
+              readOnly
+              style={{backgroundColor: '#f5f5f5', cursor: 'not-allowed'}}
             />
+            <small className="form-note">Pre-filled from organization registration</small>
           </div>
           
           <div className="form-group">
@@ -477,7 +641,25 @@ const TournamentApplication = ({ setCurrentPage }) => {
               value={formData.telContact}
               onChange={handleInputChange}
               required
+              readOnly
+              style={{backgroundColor: '#f5f5f5', cursor: 'not-allowed'}}
             />
+            <small className="form-note">Pre-filled from organization registration</small>
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="personInCharge">Person in Charge *</label>
+            <input
+              type="text"
+              id="personInCharge"
+              name="personInCharge"
+              value={formData.personInCharge}
+              onChange={handleInputChange}
+              required
+              readOnly
+              style={{backgroundColor: '#f5f5f5', cursor: 'not-allowed'}}
+            />
+            <small className="form-note">Pre-filled from organization registration</small>
           </div>
           
           <div className="form-group">
@@ -489,7 +671,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
               value={formData.email}
               onChange={handleInputChange}
               required
+              readOnly
+              style={{backgroundColor: '#f5f5f5', cursor: 'not-allowed'}}
             />
+            <small className="form-note">Pre-filled from organization registration</small>
           </div>
           
           <div className="form-group">
@@ -789,6 +974,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
           </div>
         )}
       </form>
+      </div>
     </div>
   );
 };

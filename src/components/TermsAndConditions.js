@@ -168,7 +168,7 @@ const TermsAndConditions = ({ setCurrentPage }) => {
           <div className="contact-details">
             <p><strong>Malaysia Pickleball Association</strong></p>
             <p>Email: tournament@malaysiapickleballassociation.org</p>
-            <p>Phone: +6011-16197471</p>
+            <p>Phone: +6012-883 0407 (Puan Delima Ibrahim)</p>
           </div>
         </section>
       </div>

@@ -25,21 +25,55 @@ const Login = ({ setCurrentPage, setIsLoggedIn }) => {
     setLoading(true);
     setError('');
 
+    // Basic validation
+    if (!formData.username.trim()) {
+      setError('Username is required');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.password.trim()) {
+      setError('Password is required');
+      setLoading(false);
+      return;
+    }
+
+    console.log('Attempting login with:', { username: formData.username.trim(), password: '***' });
+
     try {
       const response = await apiService.adminLogin({
-        username: formData.username,
-        password: formData.password
+        username: formData.username.trim(),
+        password: formData.password.trim()
       });
 
+      console.log('Login response:', response);
+
       if (response.success) {
+        console.log('Login successful, setting up session');
+        console.log('User authority from server:', response.user?.authority);
         setIsLoggedIn(true);
         localStorage.setItem('isLoggedIn', 'true');
-        setCurrentPage('admin'); // Redirect directly to admin dashboard
+        localStorage.setItem('userAuthority', response.user?.authority || 'admin');
+        localStorage.setItem('username', formData.username.trim());
+        setCurrentPage('admin');
+        console.log('Redirecting to admin dashboard');
       } else {
+        console.log('Login failed:', response.message);
         setError(response.message || 'Login failed');
       }
     } catch (error) {
-      setError(error.message || 'Network error. Please try again.');
+      console.error('Login error:', error);
+      
+      // More specific error messages
+      if (error.message.includes('401')) {
+        setError('Invalid username or password. Please check your credentials.');
+      } else if (error.message.includes('500')) {
+        setError('Server error. Please try again later.');
+      } else if (error.message.includes('fetch')) {
+        setError('Network error. Please check your connection and try again.');
+      } else {
+        setError(error.message || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
