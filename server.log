@@ -1,0 +1,29 @@
+[dotenv@17.2.1] injecting env (5) from .env.local -- tip: ⚙️  write to custom object with { processEnv: myObject }
+📁 Using .env.local (local development mode)
+[dotenv@17.2.1] injecting env (3) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+🏠 Using LOCAL MongoDB for development
+🏠 Old database mapped to LOCAL for testing
+🏠 Using LOCAL MongoDB for development
+🏠 Old database mapped to LOCAL for testing
+
+=== DATABASE CONFIGURATION ===
+Environment: development
+Mode: LOCAL
+Safe Mode: ✅ ON (localhost only)
+New DB: mongodb://localhost:27017/malaysia-pickleball-portal-dev
+Old DB: mongodb://localhost:27017/malaysia-pickleball-dev
+===============================
+
+🔄 Local Development: Database sync ENABLED (local-to-local only)
+Server is running on port 5001
+✅ Connected to MongoDB (local)
+🔄 Syncing tournament update to old database: Fenix Digital
+🔄 Updating tournament in old database: Fenix Digital
+✅ Successfully updated tournament in old database: Fenix Digital
+✅ Tournament sync successful: Tournament updated in old database
+🔄 Syncing tournament update to old database: Test Update Title
+🔄 Updating tournament in old database: Test Update Title
+⚠️  Tournament not found in old database, creating new: Test Update Title
+🚀 Migrating approved tournament: Test Update Title
+✅ Successfully migrated tournament to old database: Test Update Title
+✅ Tournament sync successful: Tournament migrated successfully

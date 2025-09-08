@@ -7,6 +7,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
   const [organizationData, setOrganizationData] = useState(null);
   const [appliedTournaments, setAppliedTournaments] = useState([]);
   const [isLoadingTournaments, setIsLoadingTournaments] = useState(true);
+
+  // Edit Tournament States
+  const [editingTournament, setEditingTournament] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [editTournamentError, setEditTournamentError] = useState('');
+  const [tournamentUpdated, setTournamentUpdated] = useState(false);
   
   // Malaysian States and Cities data
   const malaysianStatesAndCities = {
@@ -82,6 +88,18 @@ const TournamentApplication = ({ setCurrentPage }) => {
 
       // Load applied tournaments for this organization
       loadAppliedTournaments(orgData.email);
+      
+      // Set up periodic refresh to sync with admin changes
+      const refreshInterval = setInterval(() => {
+        console.log('Auto-refreshing organization tournaments to sync with admin changes...');
+        loadAppliedTournaments(orgData.email);
+      }, 30000); // Refresh every 30 seconds
+      
+      // Cleanup interval on component unmount
+      return () => {
+        console.log('Cleaning up tournament refresh interval');
+        clearInterval(refreshInterval);
+      };
     } else {
       // If no organization login, redirect to home
       alert('Please login to your organization account first.');
@@ -102,6 +120,128 @@ const TournamentApplication = ({ setCurrentPage }) => {
     } finally {
       setIsLoadingTournaments(false);
     }
+  };
+
+  // Date formatting functions
+  const formatDateForDisplay = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return ''; // Invalid date
+    const options = { day: '2-digit', month: 'long', year: 'numeric' };
+    return date.toLocaleDateString('en-GB', options);
+  };
+
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return '';
+    
+    // If it's already in YYYY-MM-DD format, return as is
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    
+    // If it's an ISO timestamp, extract just the date part
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(dateStr)) {
+      return dateStr.split('T')[0];
+    }
+    
+    // Try to parse the date
+    let date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      console.warn('Could not parse date:', dateStr);
+      return '';
+    }
+    
+    // Return in YYYY-MM-DD format for HTML date input
+    return date.toISOString().split('T')[0];
+  };
+
+  // Edit Tournament handlers
+  const startEditTournament = (tournament) => {
+    console.log('Editing tournament:', tournament);
+    setEditingTournament(tournament);
+    setEditFormData({
+      organiserName: tournament.organiserName || '',
+      registrationNo: tournament.registrationNo || '',
+      telContact: tournament.telContact || '',
+      personInCharge: tournament.personInCharge || '',
+      email: tournament.email || '',
+      organisingPartner: tournament.organisingPartner || '',
+      eventTitle: tournament.eventTitle || '',
+      eventStartDate: formatDateForInput(tournament.eventStartDate || ''),
+      eventEndDate: formatDateForInput(tournament.eventEndDate || ''),
+      state: tournament.state || '',
+      city: tournament.city || '',
+      venue: tournament.venue || '',
+      classification: tournament.classification || '',
+      expectedParticipants: (tournament.expectedParticipants || '').toString(),
+      eventSummary: tournament.eventSummary || '',
+      scoringFormat: tournament.scoringFormat || 'traditional',
+      dataConsent: true,
+      termsConsent: true
+    });
+    setEditTournamentError('');
+    setTournamentUpdated(false);
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleEditStateChange = (e) => {
+    const selectedState = e.target.value;
+    setEditFormData(prev => ({
+      ...prev,
+      state: selectedState,
+      city: '' // Reset city when state changes
+    }));
+  };
+
+  const handleUpdateTournament = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const tournamentId = editingTournament.applicationId;
+      
+      const updatePayload = {
+        ...editFormData,
+        applicationId: tournamentId,
+        id: tournamentId,
+        isUpdate: true
+      };
+      
+      await apiService.updateTournamentApplication(tournamentId, updatePayload);
+      
+      // Update local state
+      setAppliedTournaments(prevTournaments => 
+        prevTournaments.map(tournament => 
+          tournament.applicationId === tournamentId 
+            ? { ...tournament, ...editFormData }
+            : tournament
+        )
+      );
+      
+      setTournamentUpdated(true);
+      setEditTournamentError('');
+      alert('Tournament updated successfully!');
+      
+      // Close edit mode
+      setEditingTournament(null);
+      
+    } catch (error) {
+      console.error('Error updating tournament:', error);
+      setEditTournamentError(error.message || 'Failed to update tournament');
+    }
+  };
+
+  const cancelEditTournament = () => {
+    setEditingTournament(null);
+    setEditFormData({});
+    setEditTournamentError('');
+    setTournamentUpdated(false);
   };
 
   const updateOrganizationData = async (orgData) => {
@@ -176,13 +316,6 @@ const TournamentApplication = ({ setCurrentPage }) => {
     }
   };
 
-  const formatDateForDisplay = (dateStr) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const options = { day: '2-digit', month: 'long', year: 'numeric' };
-    return date.toLocaleDateString('en-GB', options);
-  };
-
   const generateApplicationId = () => {
     // Generate 6 random alphanumeric characters (letters and numbers)
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -207,7 +340,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
       return y + 12;
     };
     
-    const addInfoRow = (label, value, y, isLast = false) => {
+    const addInfoRow = (label, value, y) => {
       const rowHeight = 6;
       
       // Label
@@ -582,6 +715,24 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       'Date N/A'
                     }
                   </div>
+                  <div className="tournament-actions">
+                    <button 
+                      className="edit-tournament-btn"
+                      onClick={() => startEditTournament(tournament)}
+                      style={{
+                        backgroundColor: '#3498db',
+                        color: 'white',
+                        border: 'none',
+                        padding: '4px 8px',
+                        borderRadius: '3px',
+                        fontSize: '10px',
+                        cursor: 'pointer',
+                        marginTop: '5px'
+                      }}
+                    >
+                      Edit
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -611,10 +762,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
               value={formData.organiserName}
               onChange={handleInputChange}
               required
-              readOnly
-              style={{backgroundColor: '#f5f5f5', cursor: 'not-allowed'}}
             />
-            <small className="form-note">Pre-filled from organization registration</small>
+            <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
           </div>
           
           <div className="form-group">
@@ -626,10 +775,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
               value={formData.registrationNo}
               onChange={handleInputChange}
               required
-              readOnly
-              style={{backgroundColor: '#f5f5f5', cursor: 'not-allowed'}}
             />
-            <small className="form-note">Pre-filled from organization registration</small>
+            <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
           </div>
           
           <div className="form-group">
@@ -641,10 +788,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
               value={formData.telContact}
               onChange={handleInputChange}
               required
-              readOnly
-              style={{backgroundColor: '#f5f5f5', cursor: 'not-allowed'}}
             />
-            <small className="form-note">Pre-filled from organization registration</small>
+            <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
           </div>
           
           <div className="form-group">
@@ -656,10 +801,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
               value={formData.personInCharge}
               onChange={handleInputChange}
               required
-              readOnly
-              style={{backgroundColor: '#f5f5f5', cursor: 'not-allowed'}}
             />
-            <small className="form-note">Pre-filled from organization registration</small>
+            <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
           </div>
           
           <div className="form-group">
@@ -671,10 +814,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
               value={formData.email}
               onChange={handleInputChange}
               required
-              readOnly
-              style={{backgroundColor: '#f5f5f5', cursor: 'not-allowed'}}
             />
-            <small className="form-note">Pre-filled from organization registration</small>
+            <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
           </div>
           
           <div className="form-group">
@@ -975,6 +1116,243 @@ const TournamentApplication = ({ setCurrentPage }) => {
         )}
       </form>
       </div>
+
+      {/* Edit Tournament Modal */}
+      {editingTournament && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '30px',
+            maxWidth: '800px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <h3 style={{ marginBottom: '20px' }}>Edit Tournament Application</h3>
+            
+            <form onSubmit={handleUpdateTournament} className="tournament-form">
+              <div className="form-section">
+                <h4>Organiser Information</h4>
+                
+                <div className="form-group">
+                  <label htmlFor="edit-organiserName">Organiser Name *</label>
+                  <input
+                    type="text"
+                    id="edit-organiserName"
+                    name="organiserName"
+                    value={editFormData.organiserName || ''}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-registrationNo">Registration No. *</label>
+                  <input
+                    type="text"
+                    id="edit-registrationNo"
+                    name="registrationNo"
+                    value={editFormData.registrationNo || ''}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-telContact">Phone Contact *</label>
+                  <input
+                    type="tel"
+                    id="edit-telContact"
+                    name="telContact"
+                    value={editFormData.telContact || ''}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-personInCharge">Person in Charge</label>
+                  <input
+                    type="text"
+                    id="edit-personInCharge"
+                    name="personInCharge"
+                    value={editFormData.personInCharge || ''}
+                    onChange={handleEditInputChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-email">Email *</label>
+                  <input
+                    type="email"
+                    id="edit-email"
+                    name="email"
+                    value={editFormData.email || ''}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h4>Event Details</h4>
+                
+                <div className="form-group">
+                  <label htmlFor="edit-eventTitle">Event Title *</label>
+                  <input
+                    type="text"
+                    id="edit-eventTitle"
+                    name="eventTitle"
+                    value={editFormData.eventTitle || ''}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-eventStartDate">Event Start Date *</label>
+                    <input
+                      type="date"
+                      id="edit-eventStartDate"
+                      name="eventStartDate"
+                      value={editFormData.eventStartDate || ''}
+                      onChange={handleEditInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="edit-eventEndDate">Event End Date *</label>
+                    <input
+                      type="date"
+                      id="edit-eventEndDate"
+                      name="eventEndDate"
+                      value={editFormData.eventEndDate || ''}
+                      onChange={handleEditInputChange}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-state">State *</label>
+                    <select
+                      id="edit-state"
+                      name="state"
+                      value={editFormData.state || ''}
+                      onChange={handleEditStateChange}
+                      required
+                    >
+                      <option value="">Select State</option>
+                      {Object.keys(malaysianStatesAndCities).map(state => (
+                        <option key={state} value={state}>{state}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="edit-city">City *</label>
+                    <select
+                      id="edit-city"
+                      name="city"
+                      value={editFormData.city || ''}
+                      onChange={handleEditInputChange}
+                      required
+                    >
+                      <option value="">Select City</option>
+                      {editFormData.state && malaysianStatesAndCities[editFormData.state]?.map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-venue">Venue *</label>
+                  <input
+                    type="text"
+                    id="edit-venue"
+                    name="venue"
+                    value={editFormData.venue || ''}
+                    onChange={handleEditInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-eventSummary">Event Summary *</label>
+                  <textarea
+                    id="edit-eventSummary"
+                    name="eventSummary"
+                    value={editFormData.eventSummary || ''}
+                    onChange={handleEditInputChange}
+                    rows="4"
+                    required
+                  />
+                </div>
+              </div>
+
+              {editTournamentError && (
+                <div style={{ 
+                  color: '#d32f2f', 
+                  backgroundColor: '#ffebee', 
+                  padding: '10px', 
+                  borderRadius: '4px', 
+                  marginBottom: '15px',
+                  border: '1px solid #ffcdd2' 
+                }}>
+                  {editTournamentError}
+                </div>
+              )}
+
+              <div className="form-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                <button 
+                  type="button" 
+                  onClick={cancelEditTournament}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#28a745',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Update Tournament
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

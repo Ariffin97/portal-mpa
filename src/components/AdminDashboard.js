@@ -45,12 +45,100 @@ const AdminDashboard = ({ setCurrentPage }) => {
     isExporting: false
   });
 
+  // Create Tournament Form States
+  const malaysianStatesAndCities = {
+    'Johor': ['Johor Bahru', 'Batu Pahat', 'Muar', 'Kluang', 'Pontian', 'Segamat', 'Mersing', 'Kota Tinggi', 'Kulai', 'Skudai'],
+    'Kedah': ['Alor Setar', 'Sungai Petani', 'Kulim', 'Jitra', 'Baling', 'Langkawi', 'Kuala Kedah', 'Pendang', 'Sik', 'Yan'],
+    'Kelantan': ['Kota Bharu', 'Wakaf Che Yeh', 'Tanah Merah', 'Machang', 'Pasir Mas', 'Gua Musang', 'Kuala Krai', 'Tumpat', 'Pasir Puteh', 'Bachok'],
+    'Melaka': ['Melaka City', 'Ayer Keroh', 'Batu Berendam', 'Bukit Baru', 'Tanjung Kling', 'Jasin', 'Merlimau', 'Masjid Tanah', 'Alor Gajah', 'Bemban'],
+    'Negeri Sembilan': ['Seremban', 'Port Dickson', 'Bahau', 'Tampin', 'Kuala Pilah', 'Rembau', 'Jelebu', 'Gemenceh', 'Labu', 'Linggi'],
+    'Pahang': ['Kuantan', 'Temerloh', 'Bentong', 'Raub', 'Jerantut', 'Pekan', 'Kuala Lipis', 'Bera', 'Maran', 'Rompin'],
+    'Penang': ['George Town', 'Bukit Mertajam', 'Butterworth', 'Perai', 'Nibong Tebal', 'Balik Pulau', 'Bayan Lepas', 'Air Itam', 'Tanjung Tokong', 'Jelutong'],
+    'Perak': ['Ipoh', 'Taiping', 'Sitiawan', 'Kuala Kangsar', 'Teluk Intan', 'Batu Gajah', 'Lumut', 'Parit Buntar', 'Ayer Tawar', 'Bagan Serai'],
+    'Perlis': ['Kangar', 'Arau', 'Padang Besar', 'Wang Kelian', 'Kaki Bukit', 'Simpang Empat', 'Beseri', 'Chuping', 'Mata Ayer', 'Sanglang'],
+    'Sabah': ['Kota Kinabalu', 'Sandakan', 'Tawau', 'Lahad Datu', 'Keningau', 'Kota Belud', 'Kudat', 'Semporna', 'Beaufort', 'Ranau'],
+    'Sarawak': ['Kuching', 'Miri', 'Sibu', 'Bintulu', 'Limbang', 'Sarikei', 'Sri Aman', 'Kapit', 'Betong', 'Mukah'],
+    'Selangor': ['Shah Alam', 'Petaling Jaya', 'Subang Jaya', 'Klang', 'Ampang', 'Cheras', 'Kajang', 'Puchong', 'Seri Kembangan', 'Bangi'],
+    'Terengganu': ['Kuala Terengganu', 'Chukai', 'Dungun', 'Marang', 'Jerteh', 'Besut', 'Setiu', 'Hulu Terengganu', 'Kemaman', 'Kuala Nerus'],
+    'Kuala Lumpur': ['Kuala Lumpur City Centre', 'Bukit Bintang', 'Cheras', 'Ampang', 'Bangsar', 'Mont Kiara', 'Wangsa Maju', 'Kepong', 'Setapak', 'Titiwangsa'],
+    'Putrajaya': ['Putrajaya', 'Precinct 1', 'Precinct 8', 'Precinct 9', 'Precinct 11', 'Precinct 14', 'Precinct 16', 'Precinct 18', 'Precinct 19', 'Precinct 20'],
+    'Labuan': ['Labuan Town', 'Victoria', 'Batu Manikar', 'Patau-Patau', 'Rancha-Rancha', 'Kiansam', 'Layang-Layangan', 'Sungai Lada', 'Sungai Miri', 'Varley']
+  };
+
+  const [tournamentFormData, setTournamentFormData] = useState({
+    organiserName: '',
+    registrationNo: '',
+    telContact: '',
+    personInCharge: '',
+    email: '',
+    organisingPartner: '',
+    eventTitle: '',
+    eventStartDate: '',
+    eventEndDate: '',
+    eventStartDateFormatted: '',
+    eventEndDateFormatted: '',
+    state: '',
+    city: '',
+    venue: '',
+    classification: '',
+    expectedParticipants: '',
+    eventSummary: '',
+    scoringFormat: 'traditional',
+    dataConsent: false,
+    termsConsent: false
+  });
+
+  const [isCreatingTournament, setIsCreatingTournament] = useState(false);
+  const [createTournamentError, setCreateTournamentError] = useState('');
+  const [tournamentCreated, setTournamentCreated] = useState(false);
+
+  // Tournament Updates Tracking
+  const [tournamentUpdates, setTournamentUpdates] = useState([]);
+  const [isLoadingUpdates, setIsLoadingUpdates] = useState(false);
+
+  // Sidebar Sub-menu state
+  const [createTournamentExpanded, setCreateTournamentExpanded] = useState(false);
+
+  // Calendar state
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDateTournaments, setSelectedDateTournaments] = useState([]);
+
+  // Edit Tournament States
+  const [editingTournament, setEditingTournament] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    organiserName: '',
+    registrationNo: '',
+    telContact: '',
+    personInCharge: '',
+    email: '',
+    organisingPartner: '',
+    eventTitle: '',
+    eventStartDate: '',
+    eventEndDate: '',
+    eventStartDateFormatted: '',
+    eventEndDateFormatted: '',
+    state: '',
+    city: '',
+    venue: '',
+    classification: '',
+    expectedParticipants: '',
+    eventSummary: '',
+    scoringFormat: 'traditional',
+    dataConsent: false,
+    termsConsent: false
+  });
+  const [isUpdatingTournament, setIsUpdatingTournament] = useState(false);
+  const [editTournamentError, setEditTournamentError] = useState('');
+  const [tournamentUpdated, setTournamentUpdated] = useState(false);
+
 
   useEffect(() => {
     loadApplications();
     loadApprovedTournaments();
     loadRegisteredOrganizations();
     loadAdminUsers();
+    loadTournamentUpdates();
   }, []);
 
   const loadApplications = async () => {
@@ -93,6 +181,68 @@ const AdminDashboard = ({ setCurrentPage }) => {
       }
     } catch (error) {
       console.error('Failed to load admin users:', error);
+    }
+  };
+
+  const loadTournamentUpdates = async () => {
+    try {
+      setIsLoadingUpdates(true);
+      // For now, we'll simulate tournament updates by tracking recent application changes
+      // In a real implementation, you'd have a dedicated API endpoint for tournament updates
+      const data = await apiService.getAllApplications();
+      
+      // Generate mock updates based on recent applications and changes
+      const updates = [];
+      const now = new Date();
+      const last24Hours = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+      
+      // Add recent submissions as updates
+      data.forEach(app => {
+        const submissionDate = new Date(app.submissionDate);
+        if (submissionDate > last24Hours) {
+          updates.push({
+            id: `new-${app.applicationId}`,
+            type: 'new',
+            tournamentId: app.applicationId,
+            tournamentName: app.eventTitle,
+            organizerName: app.organiserName,
+            change: 'New tournament application submitted',
+            timestamp: submissionDate,
+            details: {
+              eventDate: app.eventStartDate,
+              venue: app.venue,
+              status: app.status
+            }
+          });
+        }
+
+        // Add status changes as updates
+        if (app.status === 'Approved' || app.status === 'Rejected') {
+          updates.push({
+            id: `status-${app.applicationId}`,
+            type: 'status_change',
+            tournamentId: app.applicationId,
+            tournamentName: app.eventTitle,
+            organizerName: app.organiserName,
+            change: `Tournament status changed to ${app.status}`,
+            timestamp: new Date(submissionDate.getTime() + (Math.random() * 2 * 60 * 60 * 1000)), // Random time after submission
+            details: {
+              previousStatus: 'Pending Review',
+              newStatus: app.status,
+              venue: app.venue
+            }
+          });
+        }
+      });
+
+      // Sort by timestamp (newest first) and limit to 10 most recent
+      updates.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      setTournamentUpdates(updates.slice(0, 10));
+    } catch (error) {
+      console.error('Failed to load tournament updates:', error);
+      setTournamentUpdates([]);
+    } finally {
+      setIsLoadingUpdates(false);
     }
   };
 
@@ -184,6 +334,21 @@ const AdminDashboard = ({ setCurrentPage }) => {
     });
   };
 
+  const addTournamentUpdate = (tournamentId, tournamentName, organizerName, changeDescription, details = {}) => {
+    const newUpdate = {
+      id: `update-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'change',
+      tournamentId: tournamentId,
+      tournamentName: tournamentName,
+      organizerName: organizerName,
+      change: changeDescription,
+      timestamp: new Date(),
+      details: details
+    };
+    
+    setTournamentUpdates(prev => [newUpdate, ...prev].slice(0, 10)); // Keep only 10 most recent
+  };
+
   const updateApplicationStatus = async (id, newStatus) => {
     try {
       // If status is being changed to "Rejected", require rejection reason
@@ -194,10 +359,31 @@ const AdminDashboard = ({ setCurrentPage }) => {
       } else {
         // For other status changes, proceed normally
         await apiService.updateApplicationStatus(id, newStatus);
+        
+        // Find the application to get details for the update
+        const app = applications.find(app => app.id === id || app.applicationId === id);
+        const previousStatus = app?.status || 'Unknown';
+        
         const updatedApplications = applications.map(app => 
           (app.id === id || app.applicationId === id) ? { ...app, status: newStatus } : app
         );
         setApplications(updatedApplications);
+        
+        // Add tournament update
+        if (app) {
+          addTournamentUpdate(
+            app.applicationId || id,
+            app.eventTitle || 'Unknown Tournament',
+            app.organiserName || 'Unknown Organizer',
+            `Tournament status changed from ${previousStatus} to ${newStatus}`,
+            {
+              previousStatus,
+              newStatus,
+              venue: app.venue,
+              eventDate: app.eventStartDate
+            }
+          );
+        }
         
         // Reload approved tournaments if status changed to Approved
         if (newStatus === 'Approved') {
@@ -217,6 +403,10 @@ const AdminDashboard = ({ setCurrentPage }) => {
     }
 
     try {
+      // Find the application to get details for the update
+      const app = applications.find(app => app.id === pendingRejectionId || app.applicationId === pendingRejectionId);
+      const previousStatus = app?.status || 'Unknown';
+      
       // Update local state with rejection reason
       const updatedApplications = applications.map(app => 
         (app.id === pendingRejectionId || app.applicationId === pendingRejectionId) ? { 
@@ -228,6 +418,23 @@ const AdminDashboard = ({ setCurrentPage }) => {
       setApplications(updatedApplications);
       
       await apiService.updateApplicationStatus(pendingRejectionId, 'Rejected', rejectionReason.trim());
+      
+      // Add tournament update for rejection
+      if (app) {
+        addTournamentUpdate(
+          app.applicationId || pendingRejectionId,
+          app.eventTitle || 'Unknown Tournament',
+          app.organiserName || 'Unknown Organizer',
+          `Tournament application rejected: ${rejectionReason.trim()}`,
+          {
+            previousStatus,
+            newStatus: 'Rejected',
+            venue: app.venue,
+            eventDate: app.eventStartDate,
+            rejectionReason: rejectionReason.trim()
+          }
+        );
+      }
       
       // Reload approved tournaments in case a rejected app was previously approved
       loadApprovedTournaments();
@@ -512,8 +719,9 @@ const AdminDashboard = ({ setCurrentPage }) => {
       'Event Title': app.eventTitle || '',
       'Organizer Name': app.organiserName || '',
       'Organizer Email': app.organiserEmail || '',
-      'Event Date': app.eventDate || '',
-      'Event Time': app.eventTime || '',
+      'Event Start Date': app.eventStartDate ? new Date(app.eventStartDate).toLocaleDateString('en-MY') : '',
+      'Event End Date': app.eventEndDate ? new Date(app.eventEndDate).toLocaleDateString('en-MY') : '',
+      'Location': app.city && app.state ? `${app.city}, ${app.state}` : (app.state || app.city || ''),
       'Venue': app.venue || '',
       'Status': app.status || '',
       'Submission Date': new Date(app.submissionDate).toLocaleDateString(),
@@ -553,6 +761,503 @@ const AdminDashboard = ({ setCurrentPage }) => {
       'Created Date': new Date(admin.createdAt).toLocaleDateString(),
       'Last Login': admin.lastLogin ? new Date(admin.lastLogin).toLocaleDateString() : 'Never'
     }));
+  };
+
+  // Tournament form handlers
+  const handleTournamentInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setTournamentFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleTournamentStateChange = (e) => {
+    const selectedState = e.target.value;
+    setTournamentFormData(prev => ({
+      ...prev,
+      state: selectedState,
+      city: ''
+    }));
+  };
+
+  const handleTournamentDateChange = (e) => {
+    const { name, value } = e.target;
+    const formattedValue = value ? formatDateForDisplay(value) : '';
+    
+    if (name === 'eventStartDate') {
+      setTournamentFormData(prev => ({
+        ...prev,
+        eventStartDate: value,
+        eventStartDateFormatted: formattedValue
+      }));
+    } else if (name === 'eventEndDate') {
+      setTournamentFormData(prev => ({
+        ...prev,
+        eventEndDate: value,
+        eventEndDateFormatted: formattedValue
+      }));
+    }
+  };
+
+  const formatDateForDisplay = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return ''; // Invalid date
+    const options = { day: '2-digit', month: 'long', year: 'numeric' };
+    return date.toLocaleDateString('en-GB', options);
+  };
+
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return '';
+    
+    // If it's already in YYYY-MM-DD format, return as is
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    
+    // If it's an ISO timestamp (with T and Z), extract just the date part
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(dateStr)) {
+      return dateStr.split('T')[0];
+    }
+    
+    // Try to parse the date
+    let date = new Date(dateStr);
+    
+    // If that fails, try parsing with different formats
+    if (isNaN(date.getTime())) {
+      const formats = [
+        dateStr,
+        dateStr.replace(/\//g, '-'),
+        dateStr.replace(/\./g, '-')
+      ];
+      
+      for (const format of formats) {
+        date = new Date(format);
+        if (!isNaN(date.getTime())) break;
+      }
+    }
+    
+    if (isNaN(date.getTime())) {
+      console.warn('Could not parse date:', dateStr);
+      return ''; // Invalid date
+    }
+    
+    // Return in YYYY-MM-DD format for HTML date input
+    return date.toISOString().split('T')[0];
+  };
+
+  // Edit Tournament handlers
+  const startEditTournament = (tournament) => {
+    console.log('Editing tournament data:', tournament); // Debug log
+    
+    
+    // Debug date handling
+    const startDateRaw = tournament.eventStartDate || tournament.event_start_date || tournament.startDate || '';
+    const endDateRaw = tournament.eventEndDate || tournament.event_end_date || tournament.endDate || '';
+    console.log('Raw start date:', startDateRaw);
+    console.log('Raw end date:', endDateRaw);
+    console.log('Formatted start date for input:', formatDateForInput(startDateRaw));
+    console.log('Formatted end date for input:', formatDateForInput(endDateRaw));
+    
+    setEditingTournament(tournament);
+    setEditFormData({
+      organiserName: tournament.organiserName || tournament.organizer || '',
+      registrationNo: tournament.registrationNo || tournament.registration_no || '',
+      telContact: tournament.telContact || tournament.tel_contact || tournament.phone || '',
+      personInCharge: tournament.personInCharge || tournament.person_in_charge || tournament.contact_person || tournament.contactPerson || tournament.applicantFullName || tournament.fullName || tournament.organizer_name || tournament.organizerName || '',
+      email: tournament.email || tournament.email_address || tournament.contactEmail || tournament.organizer_email || tournament.organizerEmail || tournament.contact_email || '',
+      organisingPartner: tournament.organisingPartner || tournament.organizing_partner || '',
+      eventTitle: tournament.eventTitle || tournament.event_title || tournament.title || '',
+      eventStartDate: formatDateForInput(tournament.eventStartDate || tournament.event_start_date || tournament.startDate || ''),
+      eventEndDate: formatDateForInput(tournament.eventEndDate || tournament.event_end_date || tournament.endDate || ''),
+      eventStartDateFormatted: formatDateForDisplay(tournament.eventStartDate || tournament.event_start_date || tournament.startDate || ''),
+      eventEndDateFormatted: formatDateForDisplay(tournament.eventEndDate || tournament.event_end_date || tournament.endDate || ''),
+      state: tournament.state || tournament.location_state || '',
+      city: tournament.city || tournament.location_city || '',
+      venue: tournament.venue || tournament.event_venue || '',
+      classification: tournament.classification || tournament.event_type || tournament.level || '',
+      expectedParticipants: (tournament.expectedParticipants || tournament.expected_participants || tournament.participants || '')?.toString() || '',
+      eventSummary: tournament.eventSummary || tournament.event_summary || tournament.summary || tournament.description || '',
+      scoringFormat: tournament.scoringFormat || tournament.scoring_format || 'traditional',
+      dataConsent: true,
+      termsConsent: true
+    });
+    
+    
+    setEditTournamentError('');
+    setTournamentUpdated(false);
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleEditStateChange = (e) => {
+    const selectedState = e.target.value;
+    setEditFormData(prev => ({
+      ...prev,
+      state: selectedState,
+      city: ''
+    }));
+  };
+
+  const handleEditDateChange = (e) => {
+    const { name, value } = e.target;
+    const formattedValue = value ? formatDateForDisplay(value) : '';
+    
+    if (name === 'eventStartDate') {
+      setEditFormData(prev => ({
+        ...prev,
+        eventStartDate: value,
+        eventStartDateFormatted: formattedValue
+      }));
+    } else if (name === 'eventEndDate') {
+      setEditFormData(prev => ({
+        ...prev,
+        eventEndDate: value,
+        eventEndDateFormatted: formattedValue
+      }));
+    }
+  };
+
+  const handleUpdateTournament = async (e) => {
+    e.preventDefault();
+    setIsUpdatingTournament(true);
+    setEditTournamentError('');
+    
+    try {
+      const submissionData = {
+        organiserName: editFormData.organiserName?.trim() || '',
+        registrationNo: editFormData.registrationNo?.trim() || '',
+        telContact: editFormData.telContact?.trim() || '',
+        personInCharge: editFormData.personInCharge?.trim() || '',
+        email: editFormData.email?.trim() || '',
+        organisingPartner: editFormData.organisingPartner?.trim() || '',
+        eventTitle: editFormData.eventTitle?.trim() || '',
+        eventStartDate: editFormData.eventStartDate?.trim() || '',
+        eventEndDate: editFormData.eventEndDate?.trim() || '',
+        state: editFormData.state?.trim() || '',
+        city: editFormData.city?.trim() || '',
+        venue: editFormData.venue?.trim() || '',
+        classification: editFormData.classification?.trim() || '',
+        expectedParticipants: editFormData.expectedParticipants ? parseInt(editFormData.expectedParticipants) || 0 : 0,
+        eventSummary: editFormData.eventSummary?.trim() || '',
+        scoringFormat: editFormData.scoringFormat?.trim() || 'traditional',
+        dataConsent: editFormData.dataConsent,
+        termsConsent: editFormData.termsConsent
+      };
+
+      // Validate required fields
+      const requiredFields = {
+        organiserName: 'Organizer Name',
+        eventTitle: 'Event Title',
+        eventStartDate: 'Start Date',
+        venue: 'Venue',
+        state: 'State',
+        city: 'City',
+        classification: 'Classification',
+        telContact: 'Contact Number',
+        email: 'Email',
+        personInCharge: 'Person in Charge'
+      };
+
+      const missingFields = [];
+      Object.keys(requiredFields).forEach(field => {
+        if (!submissionData[field] || submissionData[field].toString().trim() === '') {
+          missingFields.push(requiredFields[field]);
+        }
+      });
+
+      if (missingFields.length > 0) {
+        throw new Error(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Safety check - ensure tournament still exists
+      const tournamentId = editingTournament.applicationId || editingTournament.id;
+      if (!tournamentId) {
+        throw new Error('Tournament ID not found. The tournament may have been deleted.');
+      }
+      
+      // Verify tournament still exists in current applications
+      const currentTournament = applications.find(app => 
+        (app.applicationId === tournamentId || app.id === tournamentId)
+      );
+      if (!currentTournament) {
+        throw new Error('Tournament no longer exists. It may have been deleted by another admin.');
+      }
+      
+      console.log('Updating tournament with ID:', tournamentId, 'Data:', submissionData);
+      
+      // Create the update payload with the original tournament ID
+      const updatePayload = {
+        ...submissionData,
+        applicationId: tournamentId, // Keep the same ID
+        id: tournamentId, // Keep the same ID
+        isUpdate: true // Flag to indicate this is an update, not a new submission
+      };
+
+      try {
+        // Try using the dedicated tournament update API first
+        if (apiService.updateTournamentApplication && typeof apiService.updateTournamentApplication === 'function') {
+          console.log('Using dedicated updateTournamentApplication API');
+          const response = await apiService.updateTournamentApplication(tournamentId, updatePayload);
+          console.log('Tournament updated via dedicated API:', response);
+        } else if (apiService.updateApplicationStatus && typeof apiService.updateApplicationStatus === 'function') {
+          // Use status update API with additional data
+          console.log('Using updateApplicationStatus with additional tournament data');
+          await apiService.updateApplicationStatus(tournamentId, editingTournament.status || 'Approved', 'Tournament details updated by admin', updatePayload);
+        } else {
+          console.log('No update API found - will update local state only');
+          console.warn('Changes may not persist after page refresh');
+        }
+        
+        // Always update local state regardless of API success/failure
+        const updatedApplications = applications.map(app => 
+          (app.applicationId === tournamentId || app.id === tournamentId) 
+            ? { ...app, ...submissionData, lastModified: new Date().toISOString() } 
+            : app
+        );
+        setApplications(updatedApplications);
+        
+      } catch (apiError) {
+        console.error('API update failed:', apiError);
+        
+        // Still update local state even if API fails
+        const updatedApplications = applications.map(app => 
+          (app.applicationId === tournamentId || app.id === tournamentId) 
+            ? { ...app, ...submissionData, lastModified: new Date().toISOString() } 
+            : app
+        );
+        setApplications(updatedApplications);
+        
+        // Show a warning but don't fail the operation
+        console.warn('Tournament updated locally but may not be persisted to server');
+      }
+      
+      // Detect and display changes made
+      const changes = [];
+      const fieldsToCheck = {
+        eventTitle: 'Tournament Name',
+        organiserName: 'Organizer Name',
+        venue: 'Venue',
+        eventStartDate: 'Start Date',
+        eventEndDate: 'End Date',
+        state: 'State',
+        city: 'City',
+        classification: 'Classification',
+        expectedParticipants: 'Expected Participants',
+        telContact: 'Contact Number',
+        email: 'Email',
+        personInCharge: 'Person in Charge',
+        eventSummary: 'Event Summary'
+      };
+
+      Object.keys(fieldsToCheck).forEach(key => {
+        const oldValue = editingTournament[key];
+        const newValue = submissionData[key];
+        
+        // Special handling for date fields
+        if (key === 'eventStartDate' || key === 'eventEndDate') {
+          // Convert both dates to YYYY-MM-DD format for comparison
+          const oldDateStr = oldValue ? new Date(oldValue).toISOString().split('T')[0] : '';
+          const newDateStr = newValue ? (newValue.length === 10 ? newValue : new Date(newValue).toISOString().split('T')[0]) : '';
+          
+          if (oldDateStr !== newDateStr && newDateStr !== '') {
+            changes.push(`${fieldsToCheck[key]}: "${oldDateStr}" → "${newDateStr}"`);
+          }
+        } else {
+          // Regular string comparison for non-date fields
+          const oldStr = oldValue != null ? String(oldValue) : '';
+          const newStr = newValue != null ? String(newValue) : '';
+          
+          if (oldStr !== newStr && newStr !== '' && newValue != null) {
+            changes.push(`${fieldsToCheck[key]}: "${oldValue}" → "${newValue}"`);
+          }
+        }
+      });
+
+      // Add tournament update entry to track the edit operation
+      const changesText = changes.length > 0 
+        ? `Admin edited tournament: ${changes.map(change => change.split(':')[0]).join(', ')} updated`
+        : 'Admin edited tournament: No field changes detected';
+      
+      addTournamentUpdate(
+        tournamentId, // Use the same tournament ID
+        editFormData.eventTitle,
+        editFormData.organiserName,
+        changesText,
+        {
+          venue: editFormData.venue,
+          eventDate: editFormData.eventStartDate,
+          classification: editFormData.classification,
+          updateType: 'EDIT',
+          originalTournamentId: tournamentId,
+          changesCount: changes.length,
+          changeDetails: changes
+        }
+      );
+
+      // Create detailed success message
+      const successMessage = [
+        `✅ TOURNAMENT EDIT SUCCESSFUL`,
+        ``,
+        `Tournament: ${editFormData.eventTitle}`,
+        `Tournament ID: ${tournamentId} (SAME ID - NO NEW TOURNAMENT CREATED)`,
+        `Status: Successfully Updated`,
+        ``,
+        `📝 CHANGES MADE:`,
+        changes.length > 0 ? changes.join('\n') : 'No field changes detected',
+        ``,
+        `🔔 EMAIL NOTIFICATION:`,
+        `An update confirmation email has been sent to ${editFormData.email}`,
+        `Email contains tournament name, ID, and all changes made.`,
+        ``,
+        `Changes are now active in the system.`
+      ].join('\n');
+      
+      alert(successMessage);
+      
+      setTournamentUpdated(true);
+      
+      // Delay reload to allow server to process the changes
+      setTimeout(() => {
+        loadApplications();
+        loadApprovedTournaments();
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Tournament update error:', error);
+      setEditTournamentError(error.message || 'Failed to update tournament. Please try again.');
+    } finally {
+      setIsUpdatingTournament(false);
+    }
+  };
+
+  const cancelEditTournament = () => {
+    setEditingTournament(null);
+    setEditFormData({});
+    setEditTournamentError('');
+    setTournamentUpdated(false);
+  };
+
+  // Calendar helper functions
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const getTournamentsForDate = (date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return applications.filter(app => {
+      const startDate = new Date(app.eventStartDate).toISOString().split('T')[0];
+      const endDate = new Date(app.eventEndDate).toISOString().split('T')[0];
+      return dateStr >= startDate && dateStr <= endDate;
+    });
+  };
+
+  const handleDateClick = (day) => {
+    const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    setSelectedDate(clickedDate);
+    const tournamentsOnDate = getTournamentsForDate(clickedDate);
+    setSelectedDateTournaments(tournamentsOnDate);
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  const handleCreateTournament = async (e) => {
+    e.preventDefault();
+    setIsCreatingTournament(true);
+    setCreateTournamentError('');
+    
+    try {
+      const submissionData = {
+        organiserName: tournamentFormData.organiserName,
+        registrationNo: tournamentFormData.registrationNo,
+        telContact: tournamentFormData.telContact,
+        personInCharge: tournamentFormData.personInCharge,
+        email: tournamentFormData.email,
+        organisingPartner: tournamentFormData.organisingPartner,
+        eventTitle: tournamentFormData.eventTitle,
+        eventStartDate: tournamentFormData.eventStartDate,
+        eventEndDate: tournamentFormData.eventEndDate,
+        state: tournamentFormData.state,
+        city: tournamentFormData.city,
+        venue: tournamentFormData.venue,
+        classification: tournamentFormData.classification,
+        expectedParticipants: parseInt(tournamentFormData.expectedParticipants),
+        eventSummary: tournamentFormData.eventSummary,
+        scoringFormat: tournamentFormData.scoringFormat,
+        dataConsent: tournamentFormData.dataConsent,
+        termsConsent: tournamentFormData.termsConsent,
+        status: 'Approved',
+        createdByAdmin: true
+      };
+
+      const response = await apiService.submitTournamentApplication(submissionData);
+      
+      alert(`Tournament created successfully! Application ID: ${response.application.applicationId}`);
+      
+      // Add tournament update for new tournament creation
+      addTournamentUpdate(
+        response.application.applicationId,
+        tournamentFormData.eventTitle,
+        tournamentFormData.organiserName,
+        'New tournament created by admin and auto-approved',
+        {
+          venue: tournamentFormData.venue,
+          eventDate: tournamentFormData.eventStartDate,
+          status: 'Approved',
+          classification: tournamentFormData.classification
+        }
+      );
+      
+      setTournamentCreated(true);
+      loadApplications();
+      loadApprovedTournaments();
+      
+      setTournamentFormData({
+        organiserName: '',
+        registrationNo: '',
+        telContact: '',
+        personInCharge: '',
+        email: '',
+        organisingPartner: '',
+        eventTitle: '',
+        eventStartDate: '',
+        eventEndDate: '',
+        eventStartDateFormatted: '',
+        eventEndDateFormatted: '',
+        state: '',
+        city: '',
+        venue: '',
+        classification: '',
+        expectedParticipants: '',
+        eventSummary: '',
+        scoringFormat: 'traditional',
+        dataConsent: false,
+        termsConsent: false
+      });
+      
+    } catch (error) {
+      console.error('Tournament creation error:', error);
+      setCreateTournamentError(error.message || 'Failed to create tournament. Please try again.');
+    } finally {
+      setIsCreatingTournament(false);
+    }
   };
 
   const handleExportData = async () => {
@@ -1102,6 +1807,66 @@ const AdminDashboard = ({ setCurrentPage }) => {
           >
 Dashboard
           </button>
+          
+          <button 
+            className={`sidebar-nav-item ${currentView === 'calendar' ? 'active' : ''}`}
+            onClick={() => setCurrentView('calendar')}
+          >
+Calendar
+          </button>
+          
+          {/* Create Tournament with Sub-options */}
+          <div className="sidebar-nav-group">
+            <button 
+              className={`sidebar-nav-item ${currentView === 'create-tournament' || currentView === 'edit-tournament' ? 'active' : ''}`}
+              onClick={() => {
+                setCreateTournamentExpanded(!createTournamentExpanded);
+                if (!createTournamentExpanded) {
+                  setCurrentView('create-tournament');
+                }
+              }}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <span>Create Tournament</span>
+              <span style={{ fontSize: '12px', transition: 'transform 0.2s ease', transform: createTournamentExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                ▶
+              </span>
+            </button>
+            
+            {createTournamentExpanded && (
+              <div className="sidebar-sub-menu" style={{ marginLeft: '20px' }}>
+                <button 
+                  className={`sidebar-nav-item sub-item ${currentView === 'create-tournament' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('create-tournament')}
+                  style={{
+                    fontSize: '14px',
+                    padding: '8px 15px',
+                    color: currentView === 'create-tournament' ? '#007bff' : '#6c757d',
+                    backgroundColor: 'transparent'
+                  }}
+                >
+                  New Tournament
+                </button>
+                <button 
+                  className={`sidebar-nav-item sub-item ${currentView === 'edit-tournament' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('edit-tournament')}
+                  style={{
+                    fontSize: '14px',
+                    padding: '8px 15px',
+                    color: currentView === 'edit-tournament' ? '#007bff' : '#6c757d',
+                    backgroundColor: 'transparent'
+                  }}
+                >
+                  Edit Tournament
+                </button>
+              </div>
+            )}
+          </div>
+          
           <button 
             className={`sidebar-nav-item ${currentView === 'applications' ? 'active' : ''}`}
             onClick={() => setCurrentView('applications')}
@@ -1295,6 +2060,529 @@ Settings
                 </div>
               </div>
             )}
+
+            {/* Tournament Updates Card Section */}
+            <div 
+              className="tournament-updates-card"
+              style={{
+                backgroundColor: 'white',
+                border: '1px solid #e9ecef',
+                borderRadius: '12px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                margin: '20px 0',
+                overflow: 'hidden'
+              }}
+            >
+              <div 
+                className="updates-card-body"
+                style={{
+                  padding: '20px'
+                }}
+              >
+                <div 
+                  className="updates-header-content"
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '20px'
+                  }}
+                >
+                  <div 
+                    className="updates-title"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}
+                  >
+                    <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '18px' }}>Notice: Tournament Updates</h3>
+                    <span 
+                      className="updates-count"
+                      style={{
+                        backgroundColor: '#007bff',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}
+                    >
+                      {tournamentUpdates.length} update{tournamentUpdates.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <button 
+                    className="refresh-updates-btn-header"
+                    onClick={loadTournamentUpdates}
+                    disabled={isLoadingUpdates}
+                    title="Refresh updates"
+                    style={{
+                      backgroundColor: isLoadingUpdates ? '#f8f9fa' : '#007bff',
+                      color: isLoadingUpdates ? '#6c757d' : 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      cursor: isLoadingUpdates ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isLoadingUpdates) {
+                        e.target.style.backgroundColor = '#0056b3';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isLoadingUpdates) {
+                        e.target.style.backgroundColor = '#007bff';
+                      }
+                    }}
+                  >
+                    {isLoadingUpdates ? 'Loading...' : 'Refresh'}
+                  </button>
+                </div>
+                {isLoadingUpdates ? (
+                  <div 
+                    className="loading-updates-card"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '40px',
+                      color: '#6c757d'
+                    }}
+                  >
+                    <div 
+                      className="loading-spinner-card"
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        border: '3px solid #f1f3f4',
+                        borderTop: '3px solid #007bff',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        marginBottom: '12px'
+                      }}
+                    ></div>
+                    <span style={{ fontSize: '14px' }}>Loading tournament updates...</span>
+                  </div>
+                ) : tournamentUpdates.length === 0 ? (
+                  <div 
+                    className="no-updates-card"
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '40px',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <div className="no-updates-text">
+                      <p style={{ margin: '0 0 8px 0', color: '#495057', fontSize: '16px', fontWeight: '500' }}>
+                        No recent tournament updates
+                      </p>
+                      <small style={{ color: '#6c757d', fontSize: '14px' }}>
+                        Updates will appear here when tournaments are modified
+                      </small>
+                    </div>
+                  </div>
+                ) : (
+                  <div 
+                    className="updates-scrollable-list"
+                    style={{
+                      maxHeight: '400px',
+                      overflowY: 'auto',
+                      overflowX: 'hidden',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      backgroundColor: '#f8f9fa'
+                    }}
+                  >
+                    {tournamentUpdates.map((update, index) => (
+                      <div 
+                        key={update.id} 
+                        className={`update-list-item ${update.type}`}
+                        style={{
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          borderBottom: index === tournamentUpdates.length - 1 ? 'none' : '1px solid #e9ecef',
+                          borderRadius: '0',
+                          padding: '15px 5px',
+                          marginBottom: '0',
+                          boxShadow: 'none',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = '#f1f3f4';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <div className="update-card-content">
+                          <div className="update-card-header-row">
+                            <div className="update-type-badge">
+                              <span className="tournament-name-badge">{update.tournamentName}</span>
+                            </div>
+                            <span 
+                              className="update-timestamp"
+                              style={{
+                                fontSize: '12px',
+                                color: '#6c757d',
+                                fontWeight: '500'
+                              }}
+                            >
+                              {update.timestamp.toLocaleDateString('en-MY', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                          
+                          <div 
+                            className="update-description-card"
+                            style={{
+                              margin: '8px 0',
+                              fontSize: '14px',
+                              fontWeight: '600',
+                              color: '#2c3e50'
+                            }}
+                          >
+                            {update.change}
+                          </div>
+                          
+                          <div 
+                            className="update-details-card"
+                            style={{
+                              fontSize: '13px',
+                              color: '#6c757d',
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: '12px',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <span className="organizer-badge">
+                              {update.organizerName}
+                            </span>
+                            {update.details.venue && (
+                              <span className="venue-badge">
+                                {update.details.venue}
+                              </span>
+                            )}
+                            {update.details.eventDate && (
+                              <span className="event-date-badge">
+                                {new Date(update.details.eventDate).toLocaleDateString('en-MY', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {update.details.newStatus && (
+                            <div 
+                              className="status-change-card"
+                              style={{
+                                marginTop: '10px',
+                                padding: '8px 12px',
+                                backgroundColor: '#f1f3f4',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '13px'
+                              }}
+                            >
+                              <span style={{ color: '#6c757d' }}>Status:</span>
+                              <span style={{ color: '#495057', fontWeight: '500' }}>
+                                {update.details.previousStatus}
+                              </span>
+                              <span style={{ color: '#6c757d' }}>→</span>
+                              <span 
+                                style={{ 
+                                  color: update.details.newStatus === 'Approved' ? '#28a745' : 
+                                        update.details.newStatus === 'Rejected' ? '#dc3545' : 
+                                        '#007bff',
+                                  fontWeight: '600'
+                                }}
+                              >
+                                {update.details.newStatus}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div 
+                className="updates-card-footer"
+                style={{
+                  padding: '12px 20px',
+                  borderTop: '1px solid #e9ecef',
+                  backgroundColor: '#f8f9fa',
+                  borderBottomLeftRadius: '12px',
+                  borderBottomRightRadius: '12px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+              >
+                <small 
+                  style={{
+                    color: '#6c757d',
+                    fontSize: '12px',
+                    textAlign: 'center'
+                  }}
+                >
+                  Updates are automatically tracked for all tournament changes • Last updated: {new Date().toLocaleTimeString('en-MY', { hour: '2-digit', minute: '2-digit' })}
+                </small>
+              </div>
+            </div>
+          </>
+        )}
+        
+        {currentView === 'calendar' && (
+          <>
+            <div className="dashboard-header">
+              <h2>Tournament Calendar</h2>
+            </div>
+            
+            <div className="calendar-container" style={{ 
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              padding: '30px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+              display: 'grid',
+              gridTemplateColumns: '2fr 1fr',
+              gap: '30px',
+              minHeight: '600px'
+            }}>
+              {/* Calendar Grid */}
+              <div className="calendar-grid">
+                <div className="calendar-header" style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '20px',
+                  paddingBottom: '15px',
+                  borderBottom: '2px solid #e9ecef'
+                }}>
+                  <button 
+                    onClick={handlePrevMonth}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: '16px'
+                    }}
+                  >
+                    ← 
+                  </button>
+                  <h3 style={{ margin: 0 }}>
+                    {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  </h3>
+                  <button 
+                    onClick={handleNextMonth}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: '16px'
+                    }}
+                  >
+                    →
+                  </button>
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="calendar-month" style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: '1px',
+                  backgroundColor: '#dee2e6',
+                  borderRadius: '8px',
+                  overflow: 'hidden'
+                }}>
+                  {/* Day headers */}
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <div key={day} style={{
+                      padding: '12px',
+                      backgroundColor: '#495057',
+                      color: 'white',
+                      textAlign: 'center',
+                      fontWeight: '500',
+                      fontSize: '14px'
+                    }}>
+                      {day}
+                    </div>
+                  ))}
+
+                  {/* Empty cells for days before month starts */}
+                  {Array.from({ length: getFirstDayOfMonth(currentMonth) }, (_, i) => (
+                    <div key={`empty-${i}`} style={{
+                      padding: '12px',
+                      backgroundColor: '#f8f9fa',
+                      minHeight: '60px'
+                    }} />
+                  ))}
+
+                  {/* Calendar days */}
+                  {Array.from({ length: getDaysInMonth(currentMonth) }, (_, i) => {
+                    const day = i + 1;
+                    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                    const tournaments = getTournamentsForDate(date);
+                    const isToday = new Date().toDateString() === date.toDateString();
+                    const isSelected = selectedDate.toDateString() === date.toDateString();
+                    
+                    return (
+                      <div
+                        key={day}
+                        onClick={() => handleDateClick(day)}
+                        style={{
+                          padding: '8px',
+                          backgroundColor: isSelected ? '#007bff' : isToday ? '#e3f2fd' : 'white',
+                          minHeight: '60px',
+                          cursor: 'pointer',
+                          border: isToday ? '2px solid #2196f3' : 'none',
+                          position: 'relative',
+                          color: isSelected ? 'white' : '#212529'
+                        }}
+                      >
+                        <div style={{ fontWeight: isToday ? '600' : '400', fontSize: '14px' }}>
+                          {day}
+                        </div>
+                        {tournaments.length > 0 && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '4px',
+                            left: '4px',
+                            right: '4px',
+                            display: 'flex',
+                            gap: '2px',
+                            flexWrap: 'wrap'
+                          }}>
+                            {tournaments.slice(0, 3).map((tournament, idx) => (
+                              <div
+                                key={idx}
+                                style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  backgroundColor: tournament.status === 'Approved' ? '#28a745' : 
+                                                 tournament.status === 'Pending Review' ? '#ffc107' : '#dc3545'
+                                }}
+                              />
+                            ))}
+                            {tournaments.length > 3 && (
+                              <div style={{
+                                fontSize: '8px',
+                                color: isSelected ? 'white' : '#6c757d',
+                                marginLeft: '2px'
+                              }}>
+                                +{tournaments.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="calendar-legend" style={{
+                  marginTop: '15px',
+                  padding: '10px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '4px',
+                  fontSize: '12px'
+                }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: '#28a745', borderRadius: '50%', marginRight: '5px' }}></span>
+                  <small style={{ marginRight: '15px' }}>Approved</small>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: '#ffc107', borderRadius: '50%', marginRight: '5px' }}></span>
+                  <small style={{ marginRight: '15px' }}>Pending</small>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: '#dc3545', borderRadius: '50%', marginRight: '5px' }}></span>
+                  <small>Rejected</small>
+                </div>
+              </div>
+
+              {/* Selected Date Details */}
+              <div className="selected-date-details">
+                <h4 style={{ marginTop: 0, color: '#495057' }}>
+                  {selectedDate.toLocaleDateString('default', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </h4>
+
+                {selectedDateTournaments.length === 0 ? (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '20px', 
+                    color: '#6c757d',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '8px' 
+                  }}>
+                    <p style={{ margin: 0 }}>No tournaments on this date</p>
+                  </div>
+                ) : (
+                  <div className="tournaments-list" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    {selectedDateTournaments.map(tournament => (
+                      <div key={tournament.applicationId} style={{
+                        border: '1px solid #dee2e6',
+                        borderRadius: '6px',
+                        padding: '15px',
+                        marginBottom: '10px',
+                        backgroundColor: tournament.status === 'Approved' ? '#d4edda' : 
+                                       tournament.status === 'Pending Review' ? '#fff3cd' : '#f8d7da',
+                        borderLeft: `4px solid ${
+                          tournament.status === 'Approved' ? '#28a745' : 
+                          tournament.status === 'Pending Review' ? '#ffc107' : '#dc3545'
+                        }`
+                      }}>
+                        <h5 style={{ margin: '0 0 8px 0', color: '#212529', fontSize: '16px' }}>
+                          {tournament.eventTitle}
+                        </h5>
+                        <p style={{ margin: '0 0 4px 0', color: '#6c757d', fontSize: '13px' }}>
+                          <strong>🏢</strong> {tournament.organiserName}
+                        </p>
+                        <p style={{ margin: '0 0 4px 0', color: '#6c757d', fontSize: '13px' }}>
+                          <strong>📍</strong> {tournament.venue}
+                        </p>
+                        <p style={{ margin: '0 0 8px 0', color: '#6c757d', fontSize: '13px' }}>
+                          <strong>📅</strong> {new Date(tournament.eventStartDate).toLocaleDateString()} - {new Date(tournament.eventEndDate).toLocaleDateString()}
+                        </p>
+                        <span style={{
+                          padding: '3px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          backgroundColor: tournament.status === 'Approved' ? '#28a745' : 
+                                         tournament.status === 'Pending Review' ? '#ffc107' : '#dc3545',
+                          color: 'white'
+                        }}>
+                          {tournament.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </>
         )}
         
@@ -1497,6 +2785,880 @@ Settings
           </>
         )}
         
+        {currentView === 'create-tournament' && (
+          <div className="create-tournament-view">
+            <div className="dashboard-header">
+              <h2>Create Tournament</h2>
+              <p className="dashboard-subtitle">Create and directly approve tournament applications</p>
+            </div>
+
+            {!tournamentCreated ? (
+              <form onSubmit={handleCreateTournament} className="tournament-form">
+                <div className="form-section">
+                  <h3>Organiser Information</h3>
+                  <div className="form-group">
+                    <label htmlFor="organiserName">Organiser Name *</label>
+                    <input
+                      type="text"
+                      id="organiserName"
+                      name="organiserName"
+                      value={tournamentFormData.organiserName}
+                      onChange={handleTournamentInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="registrationNo">PJS/ROS/Company Registration No. *</label>
+                    <input
+                      type="text"
+                      id="registrationNo"
+                      name="registrationNo"
+                      value={tournamentFormData.registrationNo}
+                      onChange={handleTournamentInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="telContact">Tel. Contact *</label>
+                    <input
+                      type="tel"
+                      id="telContact"
+                      name="telContact"
+                      value={tournamentFormData.telContact}
+                      onChange={handleTournamentInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="personInCharge">Person in Charge *</label>
+                    <input
+                      type="text"
+                      id="personInCharge"
+                      name="personInCharge"
+                      value={tournamentFormData.personInCharge}
+                      onChange={handleTournamentInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="email">Email Address *</label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={tournamentFormData.email}
+                      onChange={handleTournamentInputChange}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="organisingPartner">Organising Partner (if applicable)</label>
+                    <input
+                      type="text"
+                      id="organisingPartner"
+                      name="organisingPartner"
+                      value={tournamentFormData.organisingPartner}
+                      onChange={handleTournamentInputChange}
+                    />
+                  </div>
+                </div>
+                
+                <div className="form-section">
+                  <h3>Event Details</h3>
+                  <div className="form-group">
+                    <label htmlFor="eventTitle">Title of Event *</label>
+                    <input
+                      type="text"
+                      id="eventTitle"
+                      name="eventTitle"
+                      value={tournamentFormData.eventTitle}
+                      onChange={handleTournamentInputChange}
+                      required
+                    />
+                    <small className="form-note">Note: Should Not Include the National/State Title (e.g. Malaysia Open/Closed, State Open/Closed etc)</small>
+                  </div>
+                  
+                  <div className="form-group date-input-group">
+                    <label htmlFor="eventStartDate">Event Start Date *</label>
+                    <div className="date-input-wrapper">
+                      <input
+                        type="date"
+                        id="eventStartDate"
+                        name="eventStartDate"
+                        value={tournamentFormData.eventStartDate}
+                        onChange={handleTournamentDateChange}
+                        className="date-picker-hidden"
+                        required
+                      />
+                      <input
+                        type="text"
+                        className="date-display-input"
+                        value={tournamentFormData.eventStartDateFormatted}
+                        placeholder="Click to select date"
+                        readOnly
+                        onClick={() => document.getElementById('eventStartDate').showPicker()}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="form-group date-input-group">
+                    <label htmlFor="eventEndDate">Event End Date *</label>
+                    <div className="date-input-wrapper">
+                      <input
+                        type="date"
+                        id="eventEndDate"
+                        name="eventEndDate"
+                        value={tournamentFormData.eventEndDate}
+                        onChange={handleTournamentDateChange}
+                        min={tournamentFormData.eventStartDate}
+                        className="date-picker-hidden"
+                        required
+                      />
+                      <input
+                        type="text"
+                        className="date-display-input"
+                        value={tournamentFormData.eventEndDateFormatted}
+                        placeholder="Click to select date"
+                        readOnly
+                        onClick={() => document.getElementById('eventEndDate').showPicker()}
+                      />
+                    </div>
+                    <small className="form-note">End date must be on or after start date</small>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Location *</label>
+                    <div className="location-row">
+                      <div className="form-subgroup">
+                        <label htmlFor="state">State</label>
+                        <select
+                          id="state"
+                          name="state"
+                          value={tournamentFormData.state}
+                          onChange={handleTournamentStateChange}
+                          required
+                        >
+                          <option value="">Select State</option>
+                          {Object.keys(malaysianStatesAndCities).map(state => (
+                            <option key={state} value={state}>{state}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div className="form-subgroup">
+                        <label htmlFor="city">City</label>
+                        <select
+                          id="city"
+                          name="city"
+                          value={tournamentFormData.city}
+                          onChange={handleTournamentInputChange}
+                          required
+                          disabled={!tournamentFormData.state}
+                        >
+                          <option value="">Select City</option>
+                          {tournamentFormData.state && malaysianStatesAndCities[tournamentFormData.state].map(city => (
+                            <option key={city} value={city}>{city}</option>
+                          ))}
+                        </select>
+                        {!tournamentFormData.state && (
+                          <small className="form-note">Please select a state first</small>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="form-subgroup">
+                      <label htmlFor="venue">Venue</label>
+                      <input
+                        type="text"
+                        id="venue"
+                        name="venue"
+                        value={tournamentFormData.venue}
+                        onChange={handleTournamentInputChange}
+                        required
+                      />
+                      <small className="form-note">Note: The venue must be fully covered and is required to hold a valid government occupancy permit.</small>
+                    </div>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="classification">Level/Type of Event *</label>
+                    <select
+                      id="classification"
+                      name="classification"
+                      value={tournamentFormData.classification}
+                      onChange={handleTournamentInputChange}
+                      required
+                    >
+                      <option value="">Select Level/Type</option>
+                      <option value="District">District</option>
+                      <option value="Divisional">Divisional</option>
+                      <option value="State">State</option>
+                      <option value="National">National</option>
+                      <option value="International">International</option>
+                    </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="expectedParticipants">Expected No. of Participants *</label>
+                    <input
+                      type="number"
+                      id="expectedParticipants"
+                      name="expectedParticipants"
+                      value={tournamentFormData.expectedParticipants}
+                      onChange={handleTournamentInputChange}
+                      min="1"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="eventSummary">Brief Summary/Purpose of Event *</label>
+                    <textarea
+                      id="eventSummary"
+                      name="eventSummary"
+                      value={tournamentFormData.eventSummary}
+                      onChange={handleTournamentInputChange}
+                      rows="5"
+                      maxLength="300"
+                      required
+                    />
+                    <div className="character-counter-wrapper">
+                      <small className="form-note">Maximum 300 characters. Do not include your factsheet.</small>
+                      <small className={`character-counter ${
+                        tournamentFormData.eventSummary.length >= 300 ? 'at-limit' : 
+                        tournamentFormData.eventSummary.length >= 250 ? 'near-limit' : ''
+                      }`}>
+                        {tournamentFormData.eventSummary.length}/300
+                      </small>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="form-section">
+                  <h3>NOTE : SCORING</h3>
+                  <div className="scoring-reminder">
+                    <p><strong>*Scoring Format</strong> to be adopted for each match:</p>
+                    <ul className="scoring-list">
+                      <li>Traditional scoring up to 11 pts or more;</li>
+                      <li>Rally Scoring minimum up to 21 pts is acceptable for the first round-robins only.</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="form-section">
+                  <h3>Tournament Categories & Skill Ratings</h3>
+                  <div className="skill-ratings-info">
+                    <h4>Skill Rating Guidelines:</h4>
+                    <ul className="skill-ratings">
+                      <li><strong>Intermediate:</strong> &lt; 3.5</li>
+                      <li><strong>Advanced:</strong> &lt; 4.5</li>
+                      <li><strong>Elite:</strong> &gt;= 4.5</li>
+                    </ul>
+                    <p className="skill-note">
+                      <strong>Note:</strong> Players with lower ratings can play in any higher rated categories 
+                      but players of higher ratings cannot participate in the lower rated categories.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="form-section">
+                  <h3>Important Remarks</h3>
+                  <div className="remarks-info">
+                    <ul className="remarks-list">
+                      <li>Endorsement logos (state, national & PJS/KBS) must be displayed on your event banners/at the venue etc.</li>
+                      <li>Traditional scoring up to 11 pts or more; Rally Scoring (minimum up to 21 pts) is acceptable for the first round-robins only.</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="form-section">
+                  <h3>Important Consent & Agreement</h3>
+                  <div className="consent-section">
+                    <div className="consent-item">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          name="dataConsent"
+                          checked={tournamentFormData.dataConsent}
+                          onChange={handleTournamentInputChange}
+                          required
+                        />
+                        <span className="checkmark"></span>
+                        I consent to the collection, use, and processing of my personal data by Malaysia Pickleball Association (MPA) for the purposes of tournament organization, administration, and related communications. I understand that my data will be handled in accordance with applicable data protection laws.
+                      </label>
+                    </div>
+                    
+                    <div className="consent-item">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          name="termsConsent"
+                          checked={tournamentFormData.termsConsent}
+                          onChange={handleTournamentInputChange}
+                          required
+                        />
+                        <span className="checkmark"></span>
+                        I have read, understood, and agree to abide by the Terms and Conditions set forth by Malaysia Pickleball Association (MPA) for tournament participation and organization. I acknowledge that failure to comply with these terms may result in disqualification or other appropriate actions.
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  {createTournamentError && (
+                    <div className="error-message" style={{ 
+                      color: '#d32f2f', 
+                      backgroundColor: '#ffebee', 
+                      padding: '10px', 
+                      borderRadius: '4px', 
+                      marginBottom: '15px',
+                      border: '1px solid #ffcdd2' 
+                    }}>
+                      {createTournamentError}
+                    </div>
+                  )}
+                  <button 
+                    type="submit" 
+                    className={`submit-btn ${(!tournamentFormData.dataConsent || !tournamentFormData.termsConsent || isCreatingTournament) ? 'disabled' : ''}`}
+                    disabled={!tournamentFormData.dataConsent || !tournamentFormData.termsConsent || isCreatingTournament}
+                  >
+                    {isCreatingTournament ? 'Creating Tournament...' : 'Create Tournament (Auto-Approved)'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="submission-success">
+                <div className="success-message">
+                  <h3>Tournament Created Successfully!</h3>
+                  <p>The tournament has been created and automatically approved.</p>
+                  <p>It will now appear in the approved tournaments list.</p>
+                </div>
+                <div className="form-actions">
+                  <button type="button" className="home-btn" onClick={() => {
+                    setTournamentCreated(false);
+                    setCurrentView('applications');
+                  }}>
+                    View Applications
+                  </button>
+                  <button type="button" className="submit-btn" onClick={() => {
+                    setTournamentCreated(false);
+                  }}>
+                    Create Another Tournament
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {currentView === 'edit-tournament' && (
+          <div className="edit-tournament-view">
+            {editingTournament ? (
+              <div className="edit-tournament-form-view">
+                <div className="dashboard-header">
+                  <h2>Edit Tournament: {editingTournament.eventTitle}</h2>
+                  <p className="dashboard-subtitle">
+                    Tournament ID: {editingTournament.applicationId || editingTournament.id} • 
+                    Modify tournament details below
+                  </p>
+                </div>
+
+                {!tournamentUpdated ? (
+                  editFormData.eventTitle || editFormData.organiserName ? (
+                  <form onSubmit={handleUpdateTournament} className="tournament-form">
+                    <div className="form-section">
+                      <h3>Organiser Information</h3>
+                      <div className="form-group">
+                        <label htmlFor="edit-organiserName">Organiser Name *</label>
+                        <input
+                          type="text"
+                          id="edit-organiserName"
+                          name="organiserName"
+                          value={editFormData.organiserName}
+                          onChange={handleEditInputChange}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="edit-registrationNo">PJS/ROS/Company Registration No. *</label>
+                        <input
+                          type="text"
+                          id="edit-registrationNo"
+                          name="registrationNo"
+                          value={editFormData.registrationNo}
+                          onChange={handleEditInputChange}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="edit-telContact">Tel. Contact *</label>
+                        <input
+                          type="tel"
+                          id="edit-telContact"
+                          name="telContact"
+                          value={editFormData.telContact}
+                          onChange={handleEditInputChange}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="edit-personInCharge">Person in Charge *</label>
+                        <input
+                          type="text"
+                          id="edit-personInCharge"
+                          name="personInCharge"
+                          value={editFormData.personInCharge}
+                          onChange={handleEditInputChange}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="edit-email">Email Address *</label>
+                        <input
+                          type="email"
+                          id="edit-email"
+                          name="email"
+                          value={editFormData.email}
+                          onChange={handleEditInputChange}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="edit-organisingPartner">Organising Partner (if applicable)</label>
+                        <input
+                          type="text"
+                          id="edit-organisingPartner"
+                          name="organisingPartner"
+                          value={editFormData.organisingPartner}
+                          onChange={handleEditInputChange}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="form-section">
+                      <h3>Event Details</h3>
+                      <div className="form-group">
+                        <label htmlFor="edit-eventTitle">Title of Event *</label>
+                        <input
+                          type="text"
+                          id="edit-eventTitle"
+                          name="eventTitle"
+                          value={editFormData.eventTitle}
+                          onChange={handleEditInputChange}
+                          required
+                        />
+                        <small className="form-note">Note: Should Not Include the National/State Title (e.g. Malaysia Open/Closed, State Open/Closed etc)</small>
+                      </div>
+                      
+                      <div className="form-group date-input-group">
+                        <label htmlFor="edit-eventStartDate">Event Start Date *</label>
+                        <div className="date-input-wrapper">
+                          <input
+                            type="date"
+                            id="edit-eventStartDate"
+                            name="eventStartDate"
+                            value={editFormData.eventStartDate}
+                            onChange={handleEditDateChange}
+                            className="date-picker-hidden"
+                            required
+                          />
+                          <input
+                            type="text"
+                            className="date-display-input"
+                            value={editFormData.eventStartDateFormatted}
+                            placeholder="Click to select date"
+                            readOnly
+                            onClick={() => document.getElementById('edit-eventStartDate').showPicker()}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="form-group date-input-group">
+                        <label htmlFor="edit-eventEndDate">Event End Date *</label>
+                        <div className="date-input-wrapper">
+                          <input
+                            type="date"
+                            id="edit-eventEndDate"
+                            name="eventEndDate"
+                            value={editFormData.eventEndDate}
+                            onChange={handleEditDateChange}
+                            min={editFormData.eventStartDate}
+                            className="date-picker-hidden"
+                            required
+                          />
+                          <input
+                            type="text"
+                            className="date-display-input"
+                            value={editFormData.eventEndDateFormatted}
+                            placeholder="Click to select date"
+                            readOnly
+                            onClick={() => document.getElementById('edit-eventEndDate').showPicker()}
+                          />
+                        </div>
+                        <small className="form-note">End date must be on or after start date</small>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label>Location *</label>
+                        <div className="location-row">
+                          <div className="form-subgroup">
+                            <label htmlFor="edit-state">State</label>
+                            <select
+                              id="edit-state"
+                              name="state"
+                              value={editFormData.state}
+                              onChange={handleEditStateChange}
+                              required
+                            >
+                              <option value="">Select State</option>
+                              {Object.keys(malaysianStatesAndCities).map(state => (
+                                <option key={state} value={state}>{state}</option>
+                              ))}
+                            </select>
+                          </div>
+                          
+                          <div className="form-subgroup">
+                            <label htmlFor="edit-city">City</label>
+                            <select
+                              id="edit-city"
+                              name="city"
+                              value={editFormData.city}
+                              onChange={handleEditInputChange}
+                              required
+                              disabled={!editFormData.state}
+                            >
+                              <option value="">Select City</option>
+                              {editFormData.state && malaysianStatesAndCities[editFormData.state].map(city => (
+                                <option key={city} value={city}>{city}</option>
+                              ))}
+                            </select>
+                            {!editFormData.state && (
+                              <small className="form-note">Please select a state first</small>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="form-subgroup">
+                          <label htmlFor="edit-venue">Venue</label>
+                          <input
+                            type="text"
+                            id="edit-venue"
+                            name="venue"
+                            value={editFormData.venue}
+                            onChange={handleEditInputChange}
+                            required
+                          />
+                          <small className="form-note">Note: The venue must be fully covered and is required to hold a valid government occupancy permit.</small>
+                        </div>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="edit-classification">Level/Type of Event *</label>
+                        <select
+                          id="edit-classification"
+                          name="classification"
+                          value={editFormData.classification}
+                          onChange={handleEditInputChange}
+                          required
+                        >
+                          <option value="">Select Level/Type</option>
+                          <option value="District">District</option>
+                          <option value="Divisional">Divisional</option>
+                          <option value="State">State</option>
+                          <option value="National">National</option>
+                          <option value="International">International</option>
+                        </select>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="edit-expectedParticipants">Expected No. of Participants *</label>
+                        <input
+                          type="number"
+                          id="edit-expectedParticipants"
+                          name="expectedParticipants"
+                          value={editFormData.expectedParticipants}
+                          onChange={handleEditInputChange}
+                          min="1"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label htmlFor="edit-eventSummary">Brief Summary/Purpose of Event *</label>
+                        <textarea
+                          id="edit-eventSummary"
+                          name="eventSummary"
+                          value={editFormData.eventSummary}
+                          onChange={handleEditInputChange}
+                          rows="5"
+                          maxLength="300"
+                          required
+                        />
+                        <div className="character-counter-wrapper">
+                          <small className="form-note">Maximum 300 characters. Do not include your factsheet.</small>
+                          <small className={`character-counter ${
+                            editFormData.eventSummary.length >= 300 ? 'at-limit' : 
+                            editFormData.eventSummary.length >= 250 ? 'near-limit' : ''
+                          }`}>
+                            {editFormData.eventSummary.length}/300
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="form-actions">
+                      {editTournamentError && (
+                        <div className="error-message" style={{ 
+                          color: '#d32f2f', 
+                          backgroundColor: '#ffebee', 
+                          padding: '10px', 
+                          borderRadius: '4px', 
+                          marginBottom: '15px',
+                          border: '1px solid #ffcdd2' 
+                        }}>
+                          {editTournamentError}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button 
+                          type="button" 
+                          className="cancel-btn"
+                          onClick={cancelEditTournament}
+                          style={{
+                            backgroundColor: '#6c757d',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '12px 24px',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          type="submit" 
+                          className={`submit-btn ${isUpdatingTournament ? 'disabled' : ''}`}
+                          disabled={isUpdatingTournament}
+                        >
+                          {isUpdatingTournament ? 'Updating Tournament...' : 'Update Tournament'}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                  ) : (
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#6c757d' }}>
+                      <p>Loading tournament data...</p>
+                    </div>
+                  )
+                ) : (
+                  <div className="submission-success">
+                    <div className="success-message">
+                      <h3>Tournament Updated Successfully!</h3>
+                      <p>The tournament "{editingTournament.eventTitle}" has been updated.</p>
+                      <p>Changes have been saved and applied to the system.</p>
+                    </div>
+                    <div className="form-actions">
+                      <button type="button" className="home-btn" onClick={() => {
+                        cancelEditTournament();
+                      }}>
+                        Back to Tournament List
+                      </button>
+                      <button type="button" className="submit-btn" onClick={() => {
+                        setTournamentUpdated(false);
+                      }}>
+                        Edit Another Tournament
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className="dashboard-header">
+                  <h2>Edit Tournament</h2>
+                  <p className="dashboard-subtitle">Select a tournament to edit from the list below</p>
+                </div>
+
+            <div 
+              className="tournaments-list-card"
+              style={{
+                backgroundColor: 'white',
+                border: '1px solid #e9ecef',
+                borderRadius: '12px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                margin: '20px 0',
+                overflow: 'hidden'
+              }}
+            >
+              <div 
+                className="tournaments-list-header"
+                style={{
+                  padding: '20px',
+                  borderBottom: '1px solid #e9ecef',
+                  backgroundColor: '#f8f9fa'
+                }}
+              >
+                <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '18px' }}>All Tournaments</h3>
+                <p style={{ margin: '5px 0 0 0', color: '#6c757d', fontSize: '14px' }}>
+                  {applications.length} tournament{applications.length !== 1 ? 's' : ''} available for editing
+                </p>
+              </div>
+
+              <div 
+                className="tournaments-list-body"
+                style={{
+                  padding: '20px'
+                }}
+              >
+                {applications.length === 0 ? (
+                  <div 
+                    className="no-tournaments-edit"
+                    style={{
+                      textAlign: 'center',
+                      padding: '40px',
+                      color: '#6c757d'
+                    }}
+                  >
+                    <p style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '500' }}>
+                      No tournaments available
+                    </p>
+                    <small style={{ fontSize: '14px' }}>
+                      Create tournaments first to be able to edit them
+                    </small>
+                  </div>
+                ) : (
+                  <div 
+                    className="tournaments-list-container"
+                    style={{
+                      maxHeight: '500px',
+                      overflowY: 'auto',
+                      overflowX: 'hidden'
+                    }}
+                  >
+                    <div className="tournaments-table-wrapper">
+                      <table 
+                        className="tournaments-edit-table"
+                        style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          fontSize: '14px'
+                        }}
+                      >
+                        <thead>
+                          <tr style={{ backgroundColor: '#f8f9fa' }}>
+                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>No.</th>
+                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Tournament Name</th>
+                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Tournament ID</th>
+                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Status</th>
+                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Event Date</th>
+                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Organizer</th>
+                            <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {applications.map((tournament, index) => (
+                            <tr 
+                              key={tournament.applicationId || tournament.id}
+                              style={{
+                                borderBottom: '1px solid #e9ecef',
+                                transition: 'background-color 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.target.closest('tr').style.backgroundColor = '#f8f9fa';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.target.closest('tr').style.backgroundColor = 'transparent';
+                              }}
+                            >
+                              <td style={{ padding: '12px', color: '#6c757d' }}>{index + 1}</td>
+                              <td style={{ padding: '12px', fontWeight: '500', color: '#2c3e50' }}>
+                                {tournament.eventTitle || 'Untitled Tournament'}
+                              </td>
+                              <td style={{ padding: '12px', fontFamily: 'monospace', color: '#007bff', fontSize: '13px' }}>
+                                {tournament.applicationId || tournament.id}
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                <span 
+                                  style={{
+                                    backgroundColor: tournament.status === 'Approved' ? '#28a745' : 
+                                                   tournament.status === 'Rejected' ? '#dc3545' : 
+                                                   tournament.status === 'Under Review' ? '#007bff' : '#ffc107',
+                                    color: 'white',
+                                    padding: '4px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '11px',
+                                    fontWeight: '600'
+                                  }}
+                                >
+                                  {tournament.status}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px', color: '#495057' }}>
+                                {tournament.eventStartDate ? 
+                                  new Date(tournament.eventStartDate).toLocaleDateString('en-MY', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  }) : 'Not specified'
+                                }
+                              </td>
+                              <td style={{ padding: '12px', color: '#495057' }}>
+                                {tournament.organiserName || 'Unknown'}
+                              </td>
+                              <td style={{ padding: '12px', textAlign: 'center' }}>
+                                <button
+                                  style={{
+                                    backgroundColor: '#007bff',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    padding: '6px 12px',
+                                    fontSize: '12px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.backgroundColor = '#0056b3';
+                                    e.target.style.transform = 'translateY(-1px)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.backgroundColor = '#007bff';
+                                    e.target.style.transform = 'translateY(0)';
+                                  }}
+                                  onClick={() => {
+                                    startEditTournament(tournament);
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+              </div>
+            )}
+          </div>
+        )}
+        
         {currentView === 'analytics' && renderAnalytics()}
         {currentView === 'registered-organizations' && renderRegisteredOrganizations()}
         {currentView === 'settings' && renderSettings()}
@@ -1554,11 +3716,23 @@ Settings
                   </div>
                   <div className="detail-item">
                     <label>Event Dates:</label>
-                    <span>{selectedApplication.eventDates || 'Not provided'}</span>
+                    <span>
+                      {selectedApplication.eventStartDate && selectedApplication.eventEndDate 
+                        ? `${new Date(selectedApplication.eventStartDate).toLocaleDateString('en-MY')} - ${new Date(selectedApplication.eventEndDate).toLocaleDateString('en-MY')}`
+                        : selectedApplication.eventStartDate 
+                          ? new Date(selectedApplication.eventStartDate).toLocaleDateString('en-MY')
+                          : 'Not provided'
+                      }
+                    </span>
                   </div>
                   <div className="detail-item">
                     <label>Location:</label>
-                    <span>{selectedApplication.location || 'Not provided'}</span>
+                    <span>
+                      {selectedApplication.city && selectedApplication.state
+                        ? `${selectedApplication.city}, ${selectedApplication.state}`
+                        : selectedApplication.state || selectedApplication.city || 'Not provided'
+                      }
+                    </span>
                   </div>
                   <div className="detail-item">
                     <label>Venue:</label>

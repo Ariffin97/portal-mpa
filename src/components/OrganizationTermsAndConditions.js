@@ -183,7 +183,7 @@ const OrganizationTermsAndConditions = ({ setCurrentPage }) => {
         </button>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .terms-and-conditions {
           max-width: 800px;
           margin: 0 auto;

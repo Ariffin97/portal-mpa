@@ -95,14 +95,26 @@ class ApiService {
     return this.makeRequest(`/applications/${applicationId}`);
   }
 
-  async updateApplicationStatus(applicationId, status, rejectionReason = null) {
+  async updateApplicationStatus(applicationId, status, rejectionReason = null, additionalData = null) {
     const body = { status };
     if (rejectionReason && status === 'Rejected') {
       body.rejectionReason = rejectionReason;
     }
+    // Include additional tournament data if provided (for admin edits)
+    if (additionalData) {
+      body.updateData = additionalData;
+    }
     return this.makeRequest(`/applications/${applicationId}/status`, {
       method: 'PATCH',
       body: JSON.stringify(body),
+    });
+  }
+
+  // Dedicated tournament update method
+  async updateTournamentApplication(applicationId, tournamentData) {
+    return this.makeRequest(`/applications/${applicationId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(tournamentData),
     });
   }
 

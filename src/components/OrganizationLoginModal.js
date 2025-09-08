@@ -132,7 +132,7 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .modal-overlay {
           position: fixed;
           top: 0;

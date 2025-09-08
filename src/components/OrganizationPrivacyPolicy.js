@@ -270,7 +270,7 @@ const OrganizationPrivacyPolicy = ({ setCurrentPage }) => {
         </button>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .privacy-policy {
           max-width: 800px;
           margin: 0 auto;

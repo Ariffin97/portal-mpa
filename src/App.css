@@ -84,7 +84,11 @@ body {
   font-size: 0.875rem;
   border-bottom: 2px solid #00ffff;
   box-shadow: 0 2px 10px rgba(0, 255, 255, 0.2);
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
 }
 
 .top-bar::before {
@@ -174,6 +178,8 @@ button.utility-link {
   flex: 1;
   padding: 0;
   background: var(--light-gray);
+  margin-top: 58px; /* Account for fixed header height (40px + 16px + 2px) */
+  margin-bottom: 200px; /* Account for fixed footer height */
 }
 
 /* ===== HOME PAGE STYLES ===== */
@@ -188,11 +194,13 @@ button.utility-link {
     radial-gradient(circle at 80% 20%, rgba(0, 255, 127, 0.1) 0%, transparent 50%),
     linear-gradient(135deg, #0a0e27 0%, #1a1f3a  30%, #162447 70%, #0f3460 100%);
   color: var(--white);
-  min-height: 100vh;
+  min-height: 100vh; /* Full viewport height */
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  margin-top: -58px; /* Pull up to fill the gap from App-main margin */
+  margin-bottom: -200px; /* Pull up to fill the gap from App-main bottom margin */
   overflow: hidden;
 }
 
@@ -547,7 +555,11 @@ button.utility-link {
   background: linear-gradient(135deg, #1a1f3a 0%, #0a0e27 100%);
   color: var(--white);
   margin-top: auto;
-  position: relative;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
   overflow: hidden;
 }
 
@@ -2466,8 +2478,36 @@ button.utility-link {
 .dashboard-sidebar {
   width: 250px;
   background: #2c3e50;
-  padding: 20px 0;
+  padding: 0;
   border-right: 1px solid #34495e;
+  position: fixed;
+  top: 0; /* Start from very top */
+  left: 0;
+  height: 100vh; /* Full viewport height */
+  overflow-y: auto;
+  z-index: 997; /* Below navbar */
+  padding-top: 78px; /* Push content below navbar (58px navbar + 20px original padding) */
+  padding-bottom: 20px;
+}
+
+/* Force sidebar positioning fix with higher specificity - Updated 2025-09-08 */
+.admin-dashboard .dashboard-sidebar {
+  top: 0 !important;
+  height: 100vh !important;
+  padding-top: 78px !important;
+  z-index: 997 !important;
+}
+
+/* Add shadow to fill any potential gap */
+.dashboard-sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 78px;
+  background: #2c3e50;
+  z-index: -1;
 }
 
 .sidebar-nav {
@@ -2601,20 +2641,37 @@ button.utility-link {
   background: linear-gradient(135deg, #2c3e50, #34495e);
   color: white;
   padding: 0;
-  position: sticky;
+  position: fixed;
   top: 0;
-  min-height: 100vh;
-  height: auto;
+  left: 0;
+  height: 100vh;
+  padding-top: 58px;
+  padding-bottom: 200px;
   overflow-y: auto;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+  z-index: 998;
+}
+
+/* Fill gap above tournament sidebar like admin dashboard */
+.tournament-sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 58px;
+  background: linear-gradient(135deg, #2c3e50, #34495e);
+  z-index: -1;
 }
 
 .tournament-main-content {
   flex: 1;
   padding: 20px;
-  max-width: calc(100% - 320px);
+  margin-left: 320px;
+  padding-top: 78px;
+  padding-bottom: 220px;
 }
 
 .sidebar-section {
@@ -2697,6 +2754,27 @@ button.utility-link {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 300px);
+  min-height: 300px;
+}
+
+/* Custom scrollbar for tournaments section */
+.tournaments-section::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tournaments-section::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.tournaments-section::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.tournaments-section::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .tournaments-section h3 {
@@ -2809,7 +2887,8 @@ button.utility-link {
   }
   
   .tournaments-section {
-    max-height: 300px;
+    max-height: calc(100vh - 400px);
+    min-height: 200px;
   }
 }
 
@@ -2817,6 +2896,7 @@ button.utility-link {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
+  margin-left: 250px; /* Account for fixed sidebar width */
 }
 
 .dashboard-header {
@@ -4660,8 +4740,10 @@ button.utility-link {
   
   /* Hero Responsive */
   .hero-banner {
-    min-height: 100vh;
+    min-height: 100vh; /* Full viewport height */
     padding: 2rem 0;
+    margin-top: -48px; /* Pull up to fill the gap from App-main margin */
+    margin-bottom: -150px; /* Pull up to fill the gap from App-main bottom margin */
   }
   
   .hero-content {
@@ -5500,5 +5582,53 @@ button.utility-link {
 @media (max-width: 768px) {
   .image-caption {
     font-size: 13px;
+  }
+}
+
+/* ===== RESPONSIVE FIXES FOR FIXED ELEMENTS ===== */
+@media (max-width: 768px) {
+  /* Hide sidebar on mobile or make it collapsible */
+  .dashboard-sidebar {
+    width: 60px; /* Collapsed width */
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 68px; /* Push content below navbar (48px navbar + 20px original padding) */
+    padding-bottom: 10px;
+  }
+  
+  .dashboard-content {
+    margin-left: 60px; /* Account for collapsed sidebar */
+  }
+  
+  /* Adjust margins for mobile */
+  .App-main {
+    margin-top: 48px; /* Smaller header on mobile (adjusted for actual mobile navbar height) */
+    margin-bottom: 150px; /* Smaller footer on mobile */
+  }
+  
+  .dashboard-sidebar {
+    top: 0; /* Start from very top */
+    height: 100vh; /* Full height */
+  }
+}
+
+@media (max-width: 480px) {
+  /* Further mobile optimizations */
+  .dashboard-sidebar {
+    transform: translateX(-100%); /* Hide completely on very small screens */
+    transition: transform 0.3s ease;
+  }
+  
+  .dashboard-sidebar.open {
+    transform: translateX(0); /* Show when opened */
+  }
+  
+  .dashboard-content {
+    margin-left: 0; /* No margin when sidebar is hidden */
+  }
+  
+  .App-main {
+    margin-top: 42px;
+    margin-bottom: 120px;
   }
 }

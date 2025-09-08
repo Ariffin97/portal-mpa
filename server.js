@@ -5,7 +5,15 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const fs = require('fs');
-require('dotenv').config();
+
+// Load environment variables - check for .env.local first (for local development)
+if (fs.existsSync('.env.local')) {
+  require('dotenv').config({ path: '.env.local' });
+  console.log('📁 Using .env.local (local development mode)');
+} else {
+  require('dotenv').config();
+  console.log('📁 Using .env (production mode)');
+}
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -17,12 +25,459 @@ app.use(express.json());
 // Serve static files from the React app build directory
 app.use(express.static(path.join(__dirname, 'build')));
 
-// MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/malaysia-pickleball-portal';
+// Import database configuration
+const { getDatabaseConfig, getOldDatabaseConfig, displayEnvironmentInfo, isLocalDevelopment } = require('./config/database');
+
+// Get database configurations
+const dbConfig = getDatabaseConfig();
+const oldDbConfig = getOldDatabaseConfig();
+const MONGODB_URI = dbConfig.uri;
+const OLD_MONGODB_URI = oldDbConfig.uri;
+
+// Sync configuration
+const ENABLE_SYNC = process.env.ENABLE_DATABASE_SYNC !== 'false';
+const IS_LOCAL_DEV = isLocalDevelopment();
+
+// Display environment info
+displayEnvironmentInfo();
+
+// Log sync configuration
+if (IS_LOCAL_DEV && ENABLE_SYNC) {
+  console.log('🔄 Local Development: Database sync ENABLED (local-to-local only)');
+} else if (IS_LOCAL_DEV && !ENABLE_SYNC) {
+  console.log('⏸️  Local Development: Database sync DISABLED');
+} else {
+  console.log('🔄 Production: Database sync ENABLED (Atlas-to-Atlas)');
+}
 
 mongoose.connect(MONGODB_URI)
-.then(() => console.log('Connected to MongoDB'))
+.then(() => console.log(`✅ Connected to MongoDB (${dbConfig.type})`))
 .catch((err) => console.error('MongoDB connection error:', err));
+
+// Function to sync tournament changes back from old database to portal
+async function syncTournamentFromOldDatabase(oldTournament) {
+  if (!ENABLE_SYNC) {
+    console.log(`⏸️  Sync disabled - skipping tournament sync: ${oldTournament.name}`);
+    return { success: false, error: 'Sync disabled in configuration' };
+  }
+  
+  try {
+    console.log(`🔄 Syncing tournament from old database: ${oldTournament.name}`);
+    
+    // Map old type back to new classification
+    const typeToClassification = {
+      'local': 'District',
+      'wmalaysia': 'Divisional', 
+      'sarawak': 'State',
+      'state': 'State',
+      'national': 'National',
+      'international': 'International'
+    };
+    
+    // Map old type to state
+    const typeToState = {
+      'sarawak': 'Sarawak',
+      'wmalaysia': 'Kuala Lumpur',
+      'national': 'Kuala Lumpur'
+    };
+    
+    // Find corresponding tournament application in portal
+    // Try to find by portal application ID first (most reliable)
+    let application = null;
+    
+    if (oldTournament.portalApplicationId) {
+      console.log(`   🔍 Looking for application by portal ID: ${oldTournament.portalApplicationId}`);
+      application = await TournamentApplication.findOne({ 
+        applicationId: oldTournament.portalApplicationId 
+      });
+    }
+    
+    // If not found by ID, try by tournament name
+    if (!application) {
+      console.log(`   🔍 Looking for application by tournament name: ${oldTournament.name}`);
+      application = await TournamentApplication.findOne({ 
+        eventTitle: oldTournament.name,
+        status: 'Approved'
+      });
+      
+      // If found by name, update the old tournament with the portal ID for future syncs
+      if (application && !oldTournament.portalApplicationId) {
+        console.log(`   🔗 Linking old tournament to portal application: ${application.applicationId}`);
+        // We'll need to update this in the old database connection later
+      }
+    }
+    
+    if (!application) {
+      console.log(`⚠️  No matching application found for: ${oldTournament.name}`);
+      console.log(`   ❌ Not found by portal ID: ${oldTournament.portalApplicationId || 'None'}`);
+      console.log(`   ❌ Not found by tournament name (approved status)`);
+      return { success: false, error: 'No matching application found' };
+    }
+    
+    console.log(`   ✅ Found matching application: ${application.applicationId}`);
+    
+    // Prepare update data - only sync fields that make sense to sync
+    const updateData = {
+      eventTitle: oldTournament.name,
+      eventStartDate: oldTournament.startDate,
+      eventEndDate: oldTournament.endDate,
+      venue: oldTournament.venue || application.venue,
+      city: oldTournament.city || application.city,
+      organiserName: oldTournament.organizer || application.organiserName,
+      organisingPartner: oldTournament.personInCharge || application.organisingPartner,
+      telContact: oldTournament.phoneNumber || application.telContact,
+      classification: typeToClassification[oldTournament.type] || application.classification,
+      state: typeToState[oldTournament.type] || oldTournament.city === 'Kuching' ? 'Sarawak' : application.state,
+      lastUpdated: new Date(),
+      remarks: application.remarks + (application.remarks ? ' | ' : '') + 'Synced from legacy database'
+    };
+    
+    // Update the tournament application
+    const updatedApplication = await TournamentApplication.findByIdAndUpdate(
+      application._id,
+      updateData,
+      { new: true }
+    );
+    
+    if (updatedApplication) {
+      console.log(`✅ Successfully synced tournament to portal: ${oldTournament.name}`);
+      
+      // If we found the application by name but the old tournament doesn't have the portal ID,
+      // update the old tournament with the portal application ID for future syncs
+      if (!oldTournament.portalApplicationId && application.applicationId) {
+        try {
+          console.log(`   🔗 Updating old database with portal application ID: ${application.applicationId}`);
+          const oldConnection = await mongoose.createConnection(OLD_MONGODB_URI);
+          const OldTournament = oldConnection.model('Tournament', new mongoose.Schema({}, { strict: false }));
+          
+          await OldTournament.findByIdAndUpdate(oldTournament._id, {
+            portalApplicationId: application.applicationId,
+            lastModifiedBy: 'mpa-portal-link'
+          });
+          
+          await oldConnection.close();
+          console.log(`   ✅ Successfully linked old tournament to portal application`);
+        } catch (linkError) {
+          console.error(`   ❌ Failed to link old tournament to portal: ${linkError.message}`);
+          // Don't fail the sync if linking fails
+        }
+      }
+      
+      return { success: true, message: 'Tournament synced to portal', applicationId: updatedApplication.applicationId };
+    } else {
+      return { success: false, error: 'Failed to update application' };
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error syncing tournament from old database: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
+// Function to update tournament in old database when portal is updated
+async function updateTournamentInOldDatabase(application) {
+  if (!ENABLE_SYNC) {
+    console.log(`⏸️  Sync disabled - skipping tournament update: ${application.eventTitle}`);
+    return { success: false, error: 'Sync disabled in configuration' };
+  }
+  
+  let oldConnection = null;
+  try {
+    console.log(`🔄 Updating tournament in old database: ${application.eventTitle}`);
+    
+    // Create connection to old database
+    oldConnection = await mongoose.createConnection(OLD_MONGODB_URI);
+    
+    // Define old tournament schema
+    const oldTournamentSchema = new mongoose.Schema({
+      name: String,
+      startDate: Date,
+      endDate: Date,
+      type: String,
+      venue: String,
+      city: String,
+      organizer: String,
+      personInCharge: String,
+      phoneNumber: String,
+      registrationOpen: Boolean,
+      months: [String],
+      version: { type: Number, default: 0 },
+      lastModifiedBy: { type: String, default: 'mpa-portal' }
+    }, { timestamps: true });
+    
+    const OldTournament = oldConnection.model('Tournament', oldTournamentSchema);
+    
+    // Map new classification to old type
+    const classificationToType = {
+      'District': 'local',
+      'Divisional': 'wmalaysia',
+      'State': application.state === 'Sarawak' ? 'sarawak' : 'state',
+      'National': 'national',
+      'International': 'international'
+    };
+    
+    // Find existing tournament in old database
+    const existingTournament = await OldTournament.findOne({ name: application.eventTitle });
+    
+    if (!existingTournament) {
+      console.log(`⚠️  Tournament not found in old database, creating new: ${application.eventTitle}`);
+      // If not found, create it (same as migration)
+      return await migrateTournamentToOldDatabase(application);
+    }
+    
+    // Update tournament data in old database
+    const updateData = {
+      name: application.eventTitle,
+      startDate: application.eventStartDate,
+      endDate: application.eventEndDate,
+      type: classificationToType[application.classification] || 'local',
+      venue: application.venue,
+      city: application.city,
+      organizer: application.organiserName,
+      personInCharge: application.organisingPartner || application.organiserName,
+      phoneNumber: application.telContact,
+      registrationOpen: application.status === 'Approved',
+      version: (existingTournament.version || 0) + 1,
+      lastModifiedBy: 'mpa-portal',
+      updatedAt: new Date()
+    };
+    
+    // Update the tournament
+    const updatedTournament = await OldTournament.findByIdAndUpdate(
+      existingTournament._id,
+      updateData,
+      { new: true }
+    );
+    
+    if (updatedTournament) {
+      console.log(`✅ Successfully updated tournament in old database: ${application.eventTitle}`);
+      return { success: true, message: 'Tournament updated in old database', tournamentId: updatedTournament._id };
+    } else {
+      return { success: false, error: 'Failed to update tournament in old database' };
+    }
+    
+  } catch (error) {
+    console.error(`❌ Error updating tournament in old database: ${error.message}`);
+    return { success: false, error: error.message };
+  } finally {
+    if (oldConnection) {
+      await oldConnection.close();
+    }
+  }
+}
+
+// Function to generate unique application ID
+function generateApplicationId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return 'MPA' + result;
+}
+
+// Function to create tournament application from old database tournament
+async function createApplicationFromOldTournament(oldTournament, options = {}) {
+  try {
+    console.log(`🔄 Creating portal application from old tournament: ${oldTournament.name}`);
+    
+    // Map old tournament type to new classification
+    const typeToClassification = {
+      'local': 'District',
+      'wmalaysia': 'Divisional',
+      'sarawak': 'State',
+      'state': 'State',
+      'national': 'National',
+      'international': 'International'
+    };
+    
+    // Map old tournament type to state
+    const typeToState = {
+      'sarawak': 'Sarawak',
+      'wmalaysia': 'Kuala Lumpur',
+      'national': 'Kuala Lumpur'
+    };
+    
+    // Generate unique application ID
+    let applicationId;
+    let isUnique = false;
+    let attempts = 0;
+    
+    while (!isUnique && attempts < 10) {
+      applicationId = generateApplicationId();
+      const existing = await TournamentApplication.findOne({ applicationId });
+      if (!existing) {
+        isUnique = true;
+      }
+      attempts++;
+    }
+    
+    if (!isUnique) {
+      throw new Error('Failed to generate unique application ID after 10 attempts');
+    }
+    
+    // Create application data from old tournament
+    const applicationData = {
+      applicationId,
+      // Organiser Information (use provided data or defaults)
+      organiserName: oldTournament.organizer || options.organiserName || 'Tournament Organizer',
+      registrationNo: options.registrationNo || 'REG-' + applicationId.slice(-6),
+      telContact: oldTournament.phoneNumber || options.telContact || '+60-11-1234567',
+      email: options.email || 'tournaments@malaysiapickleballassociation.org',
+      organisingPartner: oldTournament.personInCharge || options.organisingPartner || '',
+      
+      // Event Details
+      eventTitle: oldTournament.name,
+      eventStartDate: oldTournament.startDate || new Date(),
+      eventEndDate: oldTournament.endDate || new Date(),
+      state: typeToState[oldTournament.type] || oldTournament.city === 'Kuching' ? 'Sarawak' : options.state || 'Selangor',
+      city: oldTournament.city || options.city || 'Kuala Lumpur',
+      venue: oldTournament.venue || options.venue || 'Venue TBA',
+      classification: typeToClassification[oldTournament.type] || options.classification || 'District',
+      expectedParticipants: options.expectedParticipants || 100,
+      eventSummary: options.eventSummary || `Tournament registered from legacy system. Original type: ${oldTournament.type}. This tournament has been automatically approved.`,
+      
+      // Tournament Settings
+      scoringFormat: options.scoringFormat || 'traditional',
+      
+      // Consent (auto-approved for old database tournaments)
+      dataConsent: true,
+      termsConsent: true,
+      
+      // Application Metadata - SET AS APPROVED
+      status: 'Approved',
+      submissionDate: oldTournament.createdAt || new Date(),
+      lastUpdated: new Date(),
+      remarks: options.remarks || 'Registered from legacy tournament system and auto-approved'
+    };
+    
+    // Create the tournament application
+    const newApplication = new TournamentApplication(applicationData);
+    const savedApplication = await newApplication.save();
+    
+    console.log(`✅ Created portal application: ${savedApplication.eventTitle}`);
+    console.log(`   📋 Application ID: ${savedApplication.applicationId}`);
+    console.log(`   🎯 Status: ${savedApplication.status}`);
+    
+    // CRITICAL: Link the portal application ID back to the old tournament to prevent duplicates
+    try {
+      const oldDbConfig = getOldDatabaseConfig();
+      const oldConnection = await mongoose.createConnection(oldDbConfig.uri);
+      const OldTournament = oldConnection.model('Tournament', new mongoose.Schema({}, { strict: false }));
+      
+      const updateResult = await OldTournament.findByIdAndUpdate(
+        oldTournament._id,
+        { portalApplicationId: savedApplication.applicationId },
+        { new: true }
+      );
+      
+      if (updateResult) {
+        console.log(`🔗 Linked old tournament to portal ID: ${savedApplication.applicationId}`);
+      } else {
+        console.warn(`⚠️  Failed to link old tournament to portal ID`);
+      }
+      
+      await oldConnection.close();
+    } catch (linkError) {
+      console.error(`❌ Error linking tournament to portal: ${linkError.message}`);
+      // Don't fail the whole operation for linking errors
+    }
+    
+    return {
+      success: true,
+      application: savedApplication,
+      applicationId: savedApplication.applicationId
+    };
+    
+  } catch (error) {
+    console.error(`❌ Error creating application from old tournament: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+}
+
+// Function to migrate approved tournament to old database
+async function migrateTournamentToOldDatabase(application) {
+  if (!ENABLE_SYNC) {
+    console.log(`⏸️  Sync disabled - skipping tournament migration: ${application.eventTitle}`);
+    return { success: false, error: 'Sync disabled in configuration' };
+  }
+  
+  let oldConnection = null;
+  try {
+    console.log(`🚀 Migrating approved tournament: ${application.eventTitle}`);
+    
+    // Create connection to old database
+    oldConnection = await mongoose.createConnection(OLD_MONGODB_URI);
+    
+    // Define old tournament schema
+    const oldTournamentSchema = new mongoose.Schema({
+      name: String,
+      startDate: Date,
+      endDate: Date,
+      type: String,
+      venue: String,
+      city: String,
+      organizer: String,
+      personInCharge: String,
+      phoneNumber: String,
+      registrationOpen: Boolean,
+      months: [String],
+      version: { type: Number, default: 0 },
+      lastModifiedBy: { type: String, default: 'mpa-portal' }
+    }, { timestamps: true });
+    
+    const OldTournament = oldConnection.model('Tournament', oldTournamentSchema);
+    
+    // Map new classification to old type
+    const classificationToType = {
+      'District': 'local',
+      'Divisional': 'wmalaysia',
+      'State': application.state === 'Sarawak' ? 'sarawak' : 'state',
+      'National': 'national',
+      'International': 'international'
+    };
+    
+    // Check if tournament already exists in old database
+    const existingTournament = await OldTournament.findOne({ name: application.eventTitle });
+    
+    if (existingTournament) {
+      console.log(`⏭️  Tournament already exists in old database: ${application.eventTitle}`);
+      return { success: true, message: 'Tournament already exists in old database' };
+    }
+    
+    // Create tournament data for old database
+    const tournamentData = {
+      name: application.eventTitle,
+      startDate: application.eventStartDate,
+      endDate: application.eventEndDate,
+      type: classificationToType[application.classification] || 'local',
+      venue: application.venue,
+      city: application.city,
+      organizer: application.organiserName,
+      personInCharge: application.organisingPartner || application.organiserName,
+      phoneNumber: application.telContact,
+      registrationOpen: true,
+      months: [],
+      version: 0,
+      lastModifiedBy: 'mpa-portal'
+    };
+    
+    // Save to old database
+    const newTournament = new OldTournament(tournamentData);
+    await newTournament.save();
+    
+    console.log(`✅ Successfully migrated tournament to old database: ${application.eventTitle}`);
+    return { success: true, message: 'Tournament migrated successfully', tournamentId: newTournament._id };
+    
+  } catch (error) {
+    console.error(`❌ Error migrating tournament: ${error.message}`);
+    return { success: false, error: error.message };
+  } finally {
+    if (oldConnection) {
+      await oldConnection.close();
+    }
+  }
+}
 
 // Email Configuration
 const transporter = nodemailer.createTransport({
@@ -633,6 +1088,10 @@ const tournamentApplicationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  personInCharge: {
+    type: String,
+    required: false
+  },
   email: {
     type: String,
     required: true,
@@ -712,6 +1171,11 @@ const tournamentApplicationSchema = new mongoose.Schema({
   remarks: {
     type: String,
     default: ''
+  },
+  // Flag to identify admin-created tournaments
+  createdByAdmin: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
@@ -1193,10 +1657,53 @@ app.get('/api/applications', async (req, res) => {
 app.get('/api/applications/organization/:email', async (req, res) => {
   try {
     const { email } = req.params;
-    const applications = await TournamentApplication.find({ email }).sort({ submissionDate: -1 });
+    // Exclude admin-created tournaments from organization's applied tournaments list
+    const applications = await TournamentApplication.find({ 
+      email, 
+      createdByAdmin: { $ne: true } 
+    }).sort({ submissionDate: -1 });
     res.json(applications);
   } catch (error) {
     console.error('Get organization applications error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update existing admin-created tournaments (one-time fix)
+app.post('/api/admin/fix-admin-tournaments', async (req, res) => {
+  try {
+    // Find tournaments that were likely created by admin (approved status and no createdByAdmin flag)
+    const adminTournaments = await TournamentApplication.find({
+      status: 'Approved',
+      createdByAdmin: { $ne: true },
+      // Additional criteria: tournaments created with admin-like characteristics
+      $or: [
+        { submissionDate: { $gte: new Date('2025-01-01') } }, // Recent tournaments
+        { organiserName: { $regex: /admin|test|system/i } } // Admin-like names
+      ]
+    });
+    
+    console.log(`Found ${adminTournaments.length} potential admin-created tournaments to update`);
+    
+    // Update them to mark as admin-created
+    const updateResult = await TournamentApplication.updateMany(
+      {
+        _id: { $in: adminTournaments.map(t => t._id) }
+      },
+      {
+        $set: { createdByAdmin: true }
+      }
+    );
+    
+    res.json({
+      success: true,
+      message: `Updated ${updateResult.modifiedCount} tournaments`,
+      foundTournaments: adminTournaments.length,
+      updatedCount: updateResult.modifiedCount
+    });
+    
+  } catch (error) {
+    console.error('Fix admin tournaments error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1326,6 +1833,57 @@ app.patch('/api/applications/:id/status', async (req, res) => {
       return res.status(404).json({ error: 'Application not found' });
     }
     
+    // INSTANT WEBHOOK - Notify main site of status change immediately
+    try {
+      console.log('🚨 Sending INSTANT status change webhook to main site...');
+      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhook/tournament-status-changed' : 'https://your-main-site.com/api/webhook/tournament-status-changed';
+      
+      const webhookPayload = {
+        applicationId: application.applicationId,
+        eventTitle: application.eventTitle,
+        newStatus: status,
+        oldStatus: req.body.oldStatus || 'Unknown',
+        action: 'status-changed',
+        timestamp: new Date().toISOString()
+      };
+      
+      const https = require('https');
+      const http = require('http');
+      const url = require('url');
+      
+      const parsedUrl = url.parse(webhookUrl);
+      const postData = JSON.stringify(webhookPayload);
+      
+      const options = {
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port,
+        path: parsedUrl.path,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      };
+      
+      const client = parsedUrl.protocol === 'https:' ? https : http;
+      
+      const webhookReq = client.request(options, (webhookRes) => {
+        console.log(`⚡ INSTANT status webhook response: ${webhookRes.statusCode}`);
+      });
+      
+      webhookReq.on('error', (error) => {
+        console.error('❌ Status webhook failed:', error.message);
+      });
+      
+      webhookReq.write(postData);
+      webhookReq.end();
+      
+      console.log(`🚀 INSTANT status webhook sent: ${application.eventTitle} → ${status}`);
+      
+    } catch (webhookError) {
+      console.error('❌ Status webhook error:', webhookError.message);
+    }
+    
     // Send approval email if status is changed to 'Approved'
     if (status === 'Approved' && application.email) {
       const emailTemplate = emailTemplates.applicationApproved(application);
@@ -1334,6 +1892,36 @@ app.patch('/api/applications/:id/status', async (req, res) => {
       if (!emailResult.success) {
         console.error('Failed to send approval email:', emailResult.error);
         // Still return success for the status update, even if email fails
+      }
+      
+      // Migrate approved tournament to old database (malaysia-pickleball/tournament)
+      try {
+        console.log(`🔄 Starting migration for approved tournament: ${application.eventTitle}`);
+        const migrationResult = await migrateTournamentToOldDatabase(application);
+        
+        if (migrationResult.success) {
+          console.log(`✅ Tournament migration successful: ${migrationResult.message}`);
+        } else {
+          console.error(`❌ Tournament migration failed: ${migrationResult.error}`);
+        }
+      } catch (migrationError) {
+        console.error('Migration process error:', migrationError.message);
+      }
+    }
+    
+    // For any status change of approved tournaments, sync to old database
+    if (application.status === 'Approved') {
+      try {
+        console.log(`🔄 Syncing tournament update to old database: ${application.eventTitle}`);
+        const syncResult = await updateTournamentInOldDatabase(application);
+        
+        if (syncResult.success) {
+          console.log(`✅ Tournament sync successful: ${syncResult.message}`);
+        } else {
+          console.error(`❌ Tournament sync failed: ${syncResult.error}`);
+        }
+      } catch (syncError) {
+        console.error('Tournament sync error:', syncError.message);
       }
     }
     
@@ -1354,6 +1942,54 @@ app.patch('/api/applications/:id/status', async (req, res) => {
   }
 });
 
+// Update tournament application details (admin only)  
+app.patch('/api/applications/:id', async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const updateData = req.body;
+    
+    // Add lastUpdated timestamp
+    updateData.lastUpdated = new Date();
+    
+    // Find and update the application
+    const application = await TournamentApplication.findOneAndUpdate(
+      { applicationId: req.params.id },
+      updateData,
+      { new: true }
+    );
+    
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+    
+    // If this is an approved tournament, sync changes to old database
+    if (application.status === 'Approved') {
+      try {
+        console.log(`🔄 Syncing tournament update to old database: ${application.eventTitle}`);
+        const syncResult = await updateTournamentInOldDatabase(application);
+        
+        if (syncResult.success) {
+          console.log(`✅ Tournament sync successful: ${syncResult.message}`);
+        } else {
+          console.error(`❌ Tournament sync failed: ${syncResult.error}`);
+          // Don't fail the update if sync fails, just log it
+        }
+      } catch (syncError) {
+        console.error('Tournament sync error:', syncError.message);
+        // Don't fail the update if sync fails, just log it
+      }
+    }
+    
+    res.json({
+      message: 'Application updated successfully',
+      application: application
+    });
+  } catch (error) {
+    console.error('Update application error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Delete tournament application (admin only)
 app.delete('/api/applications/:id', async (req, res) => {
   try {
@@ -1368,6 +2004,94 @@ app.delete('/api/applications/:id', async (req, res) => {
     }
     
     console.log('Application deleted successfully:', application.applicationId);
+    
+    // INSTANT WEBHOOK - Notify main site immediately
+    try {
+      console.log('🚨 Sending INSTANT deletion webhook to main site...');
+      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhook/tournament-deleted' : 'https://your-main-site.com/api/webhook/tournament-deleted';
+      
+      const webhookPayload = {
+        applicationId: application.applicationId,
+        eventTitle: application.eventTitle,
+        action: 'deleted',
+        timestamp: new Date().toISOString()
+      };
+      
+      // Use axios or built-in fetch for webhook call
+      const https = require('https');
+      const http = require('http');
+      const url = require('url');
+      
+      const parsedUrl = url.parse(webhookUrl);
+      const postData = JSON.stringify(webhookPayload);
+      
+      const options = {
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port,
+        path: parsedUrl.path,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      };
+      
+      const client = parsedUrl.protocol === 'https:' ? https : http;
+      
+      const req = client.request(options, (webhookRes) => {
+        console.log(`⚡ INSTANT webhook response: ${webhookRes.statusCode}`);
+        webhookRes.on('data', (chunk) => {
+          console.log('📡 Webhook response:', chunk.toString());
+        });
+      });
+      
+      req.on('error', (error) => {
+        console.error('❌ Webhook failed (tournament still deleted from portal):', error.message);
+      });
+      
+      req.write(postData);
+      req.end();
+      
+      console.log('🚀 INSTANT deletion webhook sent - no 2-minute wait!');
+      
+    } catch (webhookError) {
+      console.error('❌ Webhook error (portal deletion still successful):', webhookError.message);
+    }
+    
+    // Sync deletion to old database if sync is enabled
+    if (ENABLE_SYNC) {
+      try {
+        console.log(`🔄 Syncing deletion to old database for: ${application.applicationId}`);
+        
+        const oldDbConfig = getOldDatabaseConfig();
+        const oldConnection = await mongoose.createConnection(oldDbConfig.uri);
+        const OldTournament = oldConnection.model('Tournament', new mongoose.Schema({}, { strict: false }));
+        
+        // Find and remove the portal link from the old tournament
+        const linkedTournament = await OldTournament.findOne({ 
+          portalApplicationId: application.applicationId 
+        });
+        
+        if (linkedTournament) {
+          // Option 1: Unlink the portal ID (keep tournament but remove link)
+          await OldTournament.findByIdAndUpdate(linkedTournament._id, {
+            $unset: { portalApplicationId: 1 },
+            portalSyncDate: new Date(),
+            syncNote: 'Portal tournament was deleted'
+          });
+          console.log(`✅ Unlinked tournament "${linkedTournament.name}" from deleted portal`);
+        } else {
+          console.log(`⚠️  No linked tournament found for portal ID: ${application.applicationId}`);
+        }
+        
+        await oldConnection.close();
+        
+      } catch (syncError) {
+        console.error(`❌ Error syncing deletion to old database:`, syncError);
+        // Don't fail the deletion if sync fails
+      }
+    }
+    
     res.json({ 
       message: 'Application deleted successfully',
       deletedApplication: {
@@ -1379,6 +2103,546 @@ app.delete('/api/applications/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting application:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Sync tournament from old database to portal
+app.post('/api/sync/tournament/:tournamentId', async (req, res) => {
+  try {
+    const { tournamentId } = req.params;
+    
+    // Connect to old database and fetch tournament
+    let oldConnection = null;
+    try {
+      oldConnection = await mongoose.createConnection(OLD_MONGODB_URI);
+      
+      const oldTournamentSchema = new mongoose.Schema({}, { strict: false });
+      const OldTournament = oldConnection.model('Tournament', oldTournamentSchema);
+      
+      const oldTournament = await OldTournament.findById(tournamentId);
+      
+      if (!oldTournament) {
+        return res.status(404).json({ error: 'Tournament not found in old database' });
+      }
+      
+      // Sync the tournament
+      const syncResult = await syncTournamentFromOldDatabase(oldTournament);
+      
+      if (syncResult.success) {
+        res.json({
+          message: 'Tournament synced successfully',
+          result: syncResult
+        });
+      } else {
+        res.status(400).json({
+          error: 'Sync failed',
+          details: syncResult.error
+        });
+      }
+      
+    } finally {
+      if (oldConnection) {
+        await oldConnection.close();
+      }
+    }
+    
+  } catch (error) {
+    console.error('Sync endpoint error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Sync all tournaments from old database to portal
+app.post('/api/sync/all-tournaments', async (req, res) => {
+  try {
+    console.log('🔄 Starting full tournament sync...');
+    
+    let oldConnection = null;
+    let results = {
+      synced: 0,
+      errors: 0,
+      skipped: 0,
+      details: []
+    };
+    
+    try {
+      oldConnection = await mongoose.createConnection(OLD_MONGODB_URI);
+      
+      const oldTournamentSchema = new mongoose.Schema({}, { strict: false });
+      const OldTournament = oldConnection.model('Tournament', oldTournamentSchema);
+      
+      // Get all tournaments from old database
+      const oldTournaments = await OldTournament.find({}).sort({ updatedAt: -1 });
+      
+      console.log(`📋 Found ${oldTournaments.length} tournaments to sync`);
+      
+      // Sync each tournament
+      for (const tournament of oldTournaments) {
+        try {
+          const syncResult = await syncTournamentFromOldDatabase(tournament);
+          
+          if (syncResult.success) {
+            results.synced++;
+            results.details.push({
+              tournament: tournament.name,
+              status: 'success',
+              applicationId: syncResult.applicationId
+            });
+          } else {
+            if (syncResult.error === 'No matching application found') {
+              results.skipped++;
+              results.details.push({
+                tournament: tournament.name,
+                status: 'skipped',
+                reason: 'No matching approved application in portal'
+              });
+            } else {
+              results.errors++;
+              results.details.push({
+                tournament: tournament.name,
+                status: 'error',
+                error: syncResult.error
+              });
+            }
+          }
+        } catch (error) {
+          results.errors++;
+          results.details.push({
+            tournament: tournament.name,
+            status: 'error',
+            error: error.message
+          });
+        }
+      }
+      
+      console.log(`✅ Sync completed: ${results.synced} synced, ${results.skipped} skipped, ${results.errors} errors`);
+      
+      res.json({
+        message: 'Bulk sync completed',
+        summary: {
+          total: oldTournaments.length,
+          synced: results.synced,
+          skipped: results.skipped,
+          errors: results.errors
+        },
+        details: results.details
+      });
+      
+    } finally {
+      if (oldConnection) {
+        await oldConnection.close();
+      }
+    }
+    
+  } catch (error) {
+    console.error('Bulk sync error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get sync status - compare tournaments between databases
+app.get('/api/sync/status', async (req, res) => {
+  try {
+    let oldConnection = null;
+    let status = {
+      portalTournaments: 0,
+      oldDatabaseTournaments: 0,
+      matchedTournaments: 0,
+      unmatchedInPortal: [],
+      unmatchedInOldDb: []
+    };
+    
+    try {
+      // Get approved tournaments from portal
+      const portalTournaments = await TournamentApplication.find({ status: 'Approved' });
+      status.portalTournaments = portalTournaments.length;
+      
+      // Connect to old database
+      oldConnection = await mongoose.createConnection(OLD_MONGODB_URI);
+      const oldTournamentSchema = new mongoose.Schema({}, { strict: false });
+      const OldTournament = oldConnection.model('Tournament', oldTournamentSchema);
+      
+      const oldTournaments = await OldTournament.find({});
+      status.oldDatabaseTournaments = oldTournaments.length;
+      
+      // Find matches
+      const portalNames = new Set(portalTournaments.map(t => t.eventTitle));
+      const oldNames = new Set(oldTournaments.map(t => t.name));
+      
+      // Count matches
+      portalTournaments.forEach(tournament => {
+        if (oldNames.has(tournament.eventTitle)) {
+          status.matchedTournaments++;
+        } else {
+          status.unmatchedInPortal.push({
+            applicationId: tournament.applicationId,
+            title: tournament.eventTitle,
+            status: tournament.status
+          });
+        }
+      });
+      
+      // Find tournaments in old db that don't have portal applications
+      oldTournaments.forEach(tournament => {
+        if (!portalNames.has(tournament.name)) {
+          status.unmatchedInOldDb.push({
+            id: tournament._id,
+            name: tournament.name,
+            type: tournament.type,
+            lastModifiedBy: tournament.lastModifiedBy
+          });
+        }
+      });
+      
+      res.json(status);
+      
+    } finally {
+      if (oldConnection) {
+        await oldConnection.close();
+      }
+    }
+    
+  } catch (error) {
+    console.error('Sync status error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Register tournament from old database to portal (generates unique ID)
+app.post('/api/register/tournament', async (req, res) => {
+  try {
+    console.log('🔄 Tournament registration request from old database');
+    
+    if (!ENABLE_SYNC) {
+      return res.status(400).json({ 
+        error: 'Tournament registration disabled', 
+        message: 'Sync functionality is disabled in configuration' 
+      });
+    }
+    
+    const { tournament, options = {} } = req.body;
+    
+    if (!tournament) {
+      return res.status(400).json({ error: 'Tournament data required' });
+    }
+    
+    if (!tournament.name) {
+      return res.status(400).json({ error: 'Tournament name is required' });
+    }
+    
+    // Check if tournament already exists in portal
+    const existingApplication = await TournamentApplication.findOne({ 
+      eventTitle: tournament.name 
+    });
+    
+    if (existingApplication) {
+      console.log(`⚠️  Tournament already exists in portal: ${tournament.name}`);
+      return res.json({
+        success: true,
+        message: 'Tournament already registered',
+        applicationId: existingApplication.applicationId,
+        application: existingApplication,
+        isNew: false
+      });
+    }
+    
+    // Create new application from old tournament
+    const result = await createApplicationFromOldTournament(tournament, options);
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Tournament registered successfully',
+        applicationId: result.applicationId,
+        application: result.application,
+        isNew: true
+      });
+    } else {
+      res.status(400).json({
+        error: 'Registration failed',
+        details: result.error
+      });
+    }
+    
+  } catch (error) {
+    console.error('Tournament registration error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Generate unique application ID (utility endpoint)
+app.post('/api/generate/application-id', async (req, res) => {
+  try {
+    console.log('🆔 Application ID generation request');
+    
+    // Generate unique application ID
+    let applicationId;
+    let isUnique = false;
+    let attempts = 0;
+    
+    while (!isUnique && attempts < 10) {
+      applicationId = generateApplicationId();
+      const existing = await TournamentApplication.findOne({ applicationId });
+      if (!existing) {
+        isUnique = true;
+      }
+      attempts++;
+    }
+    
+    if (!isUnique) {
+      return res.status(500).json({ 
+        error: 'Failed to generate unique ID',
+        message: 'Unable to generate unique application ID after 10 attempts' 
+      });
+    }
+    
+    console.log(`✅ Generated unique application ID: ${applicationId}`);
+    
+    res.json({
+      success: true,
+      applicationId: applicationId,
+      message: 'Unique application ID generated successfully'
+    });
+    
+  } catch (error) {
+    console.error('ID generation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Register multiple tournaments from old database
+app.post('/api/register/tournaments/batch', async (req, res) => {
+  try {
+    console.log('🔄 Batch tournament registration from old database');
+    
+    if (!ENABLE_SYNC) {
+      return res.status(400).json({ 
+        error: 'Batch registration disabled', 
+        message: 'Sync functionality is disabled in configuration' 
+      });
+    }
+    
+    const { tournaments } = req.body;
+    
+    if (!tournaments || !Array.isArray(tournaments) || tournaments.length === 0) {
+      return res.status(400).json({ error: 'Array of tournaments required' });
+    }
+    
+    let results = {
+      registered: 0,
+      existed: 0,
+      errors: 0,
+      details: []
+    };
+    
+    for (const tournamentData of tournaments) {
+      try {
+        const { tournament, options = {} } = tournamentData;
+        
+        if (!tournament || !tournament.name) {
+          results.errors++;
+          results.details.push({
+            tournament: 'Unknown',
+            status: 'error',
+            error: 'Missing tournament data or name'
+          });
+          continue;
+        }
+        
+        // Check if already exists
+        const existingApplication = await TournamentApplication.findOne({ 
+          eventTitle: tournament.name 
+        });
+        
+        if (existingApplication) {
+          results.existed++;
+          results.details.push({
+            tournament: tournament.name,
+            status: 'existed',
+            applicationId: existingApplication.applicationId
+          });
+          continue;
+        }
+        
+        // Create new application
+        const result = await createApplicationFromOldTournament(tournament, options);
+        
+        if (result.success) {
+          results.registered++;
+          results.details.push({
+            tournament: tournament.name,
+            status: 'registered',
+            applicationId: result.applicationId
+          });
+        } else {
+          results.errors++;
+          results.details.push({
+            tournament: tournament.name,
+            status: 'error',
+            error: result.error
+          });
+        }
+        
+      } catch (error) {
+        results.errors++;
+        results.details.push({
+          tournament: tournamentData.tournament?.name || 'Unknown',
+          status: 'error',
+          error: error.message
+        });
+      }
+    }
+    
+    console.log(`✅ Batch registration completed: ${results.registered} registered, ${results.existed} existed, ${results.errors} errors`);
+    
+    res.json({
+      success: true,
+      message: 'Batch registration completed',
+      summary: {
+        total: tournaments.length,
+        registered: results.registered,
+        existed: results.existed,
+        errors: results.errors
+      },
+      details: results.details
+    });
+    
+  } catch (error) {
+    console.error('Batch registration error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update tournament from malaysia-pickleball (dedicated push endpoint)
+app.put('/api/sync/tournament/update/:applicationId', async (req, res) => {
+  try {
+    console.log('🔄 Tournament update request from malaysia-pickleball');
+    
+    if (!ENABLE_SYNC) {
+      return res.status(400).json({ 
+        error: 'Tournament updates disabled', 
+        message: 'Sync functionality is disabled in configuration' 
+      });
+    }
+    
+    const { applicationId } = req.params;
+    const { tournamentData } = req.body;
+    
+    if (!applicationId) {
+      return res.status(400).json({ error: 'Application ID is required' });
+    }
+    
+    if (!tournamentData) {
+      return res.status(400).json({ error: 'Tournament data is required' });
+    }
+    
+    console.log(`📝 Updating portal tournament: ${applicationId}`);
+    
+    // Find the existing tournament application
+    const existingApplication = await TournamentApplication.findOne({ 
+      applicationId: applicationId 
+    });
+    
+    if (!existingApplication) {
+      return res.status(404).json({ 
+        error: 'Tournament not found',
+        message: `No tournament found with application ID: ${applicationId}`
+      });
+    }
+    
+    // Map the tournament data to portal fields
+    const updateData = {
+      eventTitle: tournamentData.name || existingApplication.eventTitle,
+      eventStartDate: tournamentData.startDate || existingApplication.eventStartDate,
+      eventEndDate: tournamentData.endDate || existingApplication.eventEndDate,
+      venue: tournamentData.venue || existingApplication.venue,
+      city: tournamentData.city || existingApplication.city,
+      organiserName: tournamentData.organizer || existingApplication.organiserName,
+      lastUpdated: new Date()
+    };
+    
+    // Update the tournament application
+    const updatedApplication = await TournamentApplication.findByIdAndUpdate(
+      existingApplication._id,
+      updateData,
+      { new: true }
+    );
+    
+    if (updatedApplication) {
+      console.log(`✅ Successfully updated portal tournament: ${updatedApplication.eventTitle}`);
+      console.log(`   📋 Application ID: ${updatedApplication.applicationId}`);
+      console.log(`   🎯 Status: ${updatedApplication.status}`);
+      
+      res.json({
+        success: true,
+        message: 'Tournament updated successfully',
+        applicationId: updatedApplication.applicationId,
+        application: updatedApplication
+      });
+    } else {
+      throw new Error('Failed to update tournament application');
+    }
+    
+  } catch (error) {
+    console.error('Tournament update error:', error);
+    res.status(500).json({ 
+      error: 'Failed to update tournament',
+      message: error.message 
+    });
+  }
+});
+
+// Delete tournament notification from malaysia-pickleball (dedicated endpoint)
+app.delete('/api/sync/tournament/:applicationId', async (req, res) => {
+  try {
+    console.log('🗑️ Tournament deletion request from malaysia-pickleball');
+    
+    if (!ENABLE_SYNC) {
+      return res.status(400).json({ 
+        error: 'Tournament deletion sync disabled', 
+        message: 'Sync functionality is disabled in configuration' 
+      });
+    }
+    
+    const { applicationId } = req.params;
+    
+    if (!applicationId) {
+      return res.status(400).json({ error: 'Application ID is required' });
+    }
+    
+    console.log(`🗑️ Deleting portal tournament: ${applicationId}`);
+    
+    // Find and delete the tournament from portal
+    const deletedTournament = await TournamentApplication.findOneAndDelete({ 
+      applicationId: applicationId 
+    });
+    
+    if (deletedTournament) {
+      console.log(`✅ Successfully deleted portal tournament: ${deletedTournament.eventTitle}`);
+      console.log(`   📋 Application ID: ${deletedTournament.applicationId}`);
+      
+      res.json({
+        success: true,
+        message: 'Tournament deleted successfully from portal',
+        deletedTournament: {
+          applicationId: deletedTournament.applicationId,
+          eventTitle: deletedTournament.eventTitle,
+          organiserName: deletedTournament.organiserName
+        }
+      });
+    } else {
+      res.status(404).json({ 
+        error: 'Tournament not found',
+        message: `No tournament found with application ID: ${applicationId}`
+      });
+    }
+    
+  } catch (error) {
+    console.error('Tournament deletion error:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete tournament',
+      message: error.message 
+    });
   }
 });
 

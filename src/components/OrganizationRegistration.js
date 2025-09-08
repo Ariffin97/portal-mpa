@@ -519,7 +519,7 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
         </div>
       )}
       
-      <style jsx>{`
+      <style>{`
         .password-strength-container {
           margin-top: 8px;
           margin-bottom: 12px;
