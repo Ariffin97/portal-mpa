@@ -1836,7 +1836,7 @@ app.patch('/api/applications/:id/status', async (req, res) => {
     // INSTANT WEBHOOK - Notify main site of status change immediately
     try {
       console.log('🚨 Sending INSTANT status change webhook to main site...');
-      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhook/tournament-status-changed' : 'https://your-main-site.com/api/webhook/tournament-status-changed';
+      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhook/tournament-status-changed' : 'https://malaysiapickleball.my/api/webhook/tournament-status-changed';
       
       const webhookPayload = {
         applicationId: application.applicationId,
