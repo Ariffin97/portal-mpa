@@ -45,6 +45,18 @@ const AdminDashboard = ({ setCurrentPage }) => {
     isExporting: false
   });
 
+  // API Key Management States
+  const [apiKeys, setApiKeys] = useState([]);
+  const [newApiKey, setNewApiKey] = useState({
+    name: '',
+    permission: '',
+    expiration: '90',
+    ipRestrictions: ''
+  });
+  const [generatedKey, setGeneratedKey] = useState(null);
+  const [showGeneratedKey, setShowGeneratedKey] = useState(false);
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+
   // Create Tournament Form States
   const malaysianStatesAndCities = {
     'Johor': ['Johor Bahru', 'Batu Pahat', 'Muar', 'Kluang', 'Pontian', 'Segamat', 'Mersing', 'Kota Tinggi', 'Kulai', 'Skudai'],
@@ -1334,6 +1346,138 @@ const AdminDashboard = ({ setCurrentPage }) => {
     }
   };
 
+  // API Key Management Functions
+  const generateApiKey = () => {
+    const prefix = 'mpa_sk_';
+    const randomPart = Math.random().toString(36).substring(2, 15) + 
+                      Math.random().toString(36).substring(2, 15) +
+                      Math.random().toString(36).substring(2, 15);
+    return prefix + randomPart;
+  };
+
+  const handleApiKeyInputChange = (field, value) => {
+    setNewApiKey(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleGenerateApiKey = async () => {
+    if (!newApiKey.name.trim() || !newApiKey.permission) {
+      alert('Please fill in Key Name and Permission Level');
+      return;
+    }
+
+    setIsGeneratingKey(true);
+    
+    try {
+      // Generate the API key
+      const keyValue = generateApiKey();
+      const newKey = {
+        id: Date.now().toString(),
+        name: newApiKey.name,
+        key: keyValue,
+        permission: newApiKey.permission,
+        expiration: newApiKey.expiration,
+        ipRestrictions: newApiKey.ipRestrictions,
+        createdAt: new Date().toISOString(),
+        status: 'active',
+        lastUsed: null
+      };
+
+      // Add to API keys list
+      setApiKeys(prev => [...prev, newKey]);
+      
+      // Show the generated key
+      setGeneratedKey(newKey);
+      setShowGeneratedKey(true);
+      
+      // Reset form
+      setNewApiKey({
+        name: '',
+        permission: '',
+        expiration: '90',
+        ipRestrictions: ''
+      });
+
+      // Here you would typically make an API call to save the key
+      // await apiService.createApiKey(newKey);
+      
+    } catch (error) {
+      console.error('Error generating API key:', error);
+      alert('Failed to generate API key: ' + error.message);
+    } finally {
+      setIsGeneratingKey(false);
+    }
+  };
+
+  const handleCopyApiKey = (keyValue) => {
+    navigator.clipboard.writeText(keyValue).then(() => {
+      alert('API key copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+      alert('Failed to copy API key');
+    });
+  };
+
+  const handleRegenerateApiKey = async (keyId) => {
+    if (!window.confirm('Are you sure you want to regenerate this API key? The old key will stop working immediately.')) {
+      return;
+    }
+
+    try {
+      const newKeyValue = generateApiKey();
+      setApiKeys(prev => prev.map(key => 
+        key.id === keyId 
+          ? { ...key, key: newKeyValue, createdAt: new Date().toISOString(), lastUsed: null }
+          : key
+      ));
+      
+      // Show the regenerated key
+      const updatedKey = apiKeys.find(k => k.id === keyId);
+      if (updatedKey) {
+        setGeneratedKey({ ...updatedKey, key: newKeyValue });
+        setShowGeneratedKey(true);
+      }
+      
+      alert('API key regenerated successfully!');
+      
+      // Here you would typically make an API call to update the key
+      // await apiService.regenerateApiKey(keyId, newKeyValue);
+      
+    } catch (error) {
+      console.error('Error regenerating API key:', error);
+      alert('Failed to regenerate API key: ' + error.message);
+    }
+  };
+
+  const handleRevokeApiKey = async (keyId, keyName) => {
+    if (!window.confirm(`Are you sure you want to revoke the API key "${keyName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setApiKeys(prev => prev.filter(key => key.id !== keyId));
+      alert('API key revoked successfully!');
+      
+      // Here you would typically make an API call to revoke the key
+      // await apiService.revokeApiKey(keyId);
+      
+    } catch (error) {
+      console.error('Error revoking API key:', error);
+      alert('Failed to revoke API key: ' + error.message);
+    }
+  };
+
+  const getPermissionDisplayName = (permission) => {
+    switch (permission) {
+      case 'read': return 'Read Only';
+      case 'write': return 'Read/Write';
+      case 'admin': return 'Admin';
+      default: return permission;
+    }
+  };
+
   const renderAnalytics = () => (
     <div className="analytics-view">
       <div className="dashboard-header">
@@ -1605,6 +1749,108 @@ const AdminDashboard = ({ setCurrentPage }) => {
             >
               Create Account
             </button>
+          </div>
+        )}
+
+        {currentUserAuthority === 'super_admin' && (
+          <div className="settings-card">
+            <h3>Create API Key</h3>
+            <p className="settings-description">Generate secure API keys for external integrations and third-party applications</p>
+            <div className="setting-item">
+              <label>Key Name *</label>
+              <input 
+                type="text" 
+                placeholder="Enter descriptive name (e.g., External Tournament System)"
+                value={newApiKey.name}
+                onChange={(e) => handleApiKeyInputChange('name', e.target.value)}
+              />
+            </div>
+            <div className="setting-item">
+              <label>Permission Level *</label>
+              <select
+                value={newApiKey.permission}
+                onChange={(e) => handleApiKeyInputChange('permission', e.target.value)}
+              >
+                <option value="">Select Permission Level</option>
+                <option value="read">Read Only - View tournament data</option>
+                <option value="write">Read/Write - Manage applications</option>
+                <option value="admin">Admin - Full access (Super Admin only)</option>
+              </select>
+              <small className="api-info">
+                • <strong>Read Only:</strong> Can retrieve tournament and application data<br/>
+                • <strong>Read/Write:</strong> Can create and update tournament applications<br/>
+                • <strong>Admin:</strong> Full API access including user management
+              </small>
+            </div>
+            <div className="setting-item">
+              <label>Expiration</label>
+              <select
+                value={newApiKey.expiration}
+                onChange={(e) => handleApiKeyInputChange('expiration', e.target.value)}
+              >
+                <option value="30">30 days</option>
+                <option value="90">90 days</option>
+                <option value="365">1 year</option>
+                <option value="never">Never expires</option>
+              </select>
+            </div>
+            <div className="setting-item">
+              <label>IP Restrictions (Optional)</label>
+              <input 
+                type="text" 
+                placeholder="e.g., 192.168.1.0/24, 10.0.0.1 (comma separated)"
+                value={newApiKey.ipRestrictions}
+                onChange={(e) => handleApiKeyInputChange('ipRestrictions', e.target.value)}
+              />
+              <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '5px' }}>
+                Leave empty for no IP restrictions
+              </small>
+            </div>
+            <button 
+              className="settings-btn api-key-btn"
+              onClick={handleGenerateApiKey}
+              disabled={isGeneratingKey}
+            >
+              {isGeneratingKey ? 'Generating...' : 'Generate API Key'}
+            </button>
+            
+
+            {/* Existing API Keys List */}
+            <div className="existing-api-keys" style={{ marginTop: '25px' }}>
+              <h4>Existing API Keys ({apiKeys.length})</h4>
+              {apiKeys.length === 0 ? (
+                <p style={{ color: '#6b7280', fontStyle: 'italic' }}>
+                  No API keys created yet. Generate your first API key above.
+                </p>
+              ) : (
+                <div className="api-keys-list">
+                  {apiKeys.map((key) => (
+                    <div key={key.id} className="api-key-item">
+                      <div className="key-info">
+                        <span className="key-name">{key.name}</span>
+                        <span className="key-permission">{getPermissionDisplayName(key.permission)}</span>
+                        <span className="key-created">Created: {formatDate(key.createdAt)}</span>
+                        <span className={`key-status ${key.status}`}>{key.status.toUpperCase()}</span>
+                      </div>
+                      <div className="key-actions">
+                        <button 
+                          className="key-action-btn"
+                          onClick={() => handleRegenerateApiKey(key.id)}
+                        >
+                          Regenerate
+                        </button>
+                        <button 
+                          className="key-action-btn danger"
+                          onClick={() => handleRevokeApiKey(key.id, key.name)}
+                        >
+                          Revoke
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -4040,6 +4286,197 @@ Settings
                   Send Reset Email
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* API Key Generated Modal */}
+      {showGeneratedKey && generatedKey && (
+        <div className="modal-overlay" onClick={() => setShowGeneratedKey(false)}>
+          <div className="modal-content api-key-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>API Key Generated Successfully</h2>
+              <button className="close-btn" onClick={() => setShowGeneratedKey(false)}>×</button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="api-key-result">
+                <div className="api-key-display">
+                  <label>API Key:</label>
+                  <div className="key-container">
+                    <input type="text" value={generatedKey.key} readOnly />
+                    <button className="copy-btn" onClick={() => handleCopyApiKey(generatedKey.key)}>
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                <div className="api-key-display">
+                  <label>Key Name:</label>
+                  <input type="text" value={generatedKey.name} readOnly />
+                </div>
+                <div className="api-key-display">
+                  <label>Permission Level:</label>
+                  <input type="text" value={getPermissionDisplayName(generatedKey.permission)} readOnly />
+                </div>
+                <div className="api-warning">
+                  <strong>⚠️ Important:</strong> Save this key securely. For security reasons, you won't be able to view it again.
+                </div>
+                
+                {/* API Usage Guide */}
+                <div className="api-usage-guide" style={{ marginTop: '20px' }}>
+                  <h4 style={{ color: '#374151', borderBottom: '2px solid #e5e7eb', paddingBottom: '8px', marginBottom: '15px' }}>
+                    API Usage Guide
+                  </h4>
+                  
+                  <div className="guide-section">
+                    <h5 style={{ color: '#1f2937', marginBottom: '10px' }}>Base URL</h5>
+                    <div className="code-block">
+                      <strong>Production:</strong> https://portalmpa.com/api<br/>
+                      <strong>Development:</strong> http://localhost:5001/api
+                    </div>
+                  </div>
+
+                  <div className="guide-section">
+                    <h5 style={{ color: '#1f2937', marginBottom: '10px' }}>Authentication</h5>
+                    <div className="code-block">
+                      <strong>Header:</strong> Authorization: Bearer {generatedKey.key}
+                    </div>
+                  </div>
+
+                  <div className="guide-section">
+                    <h5 style={{ color: '#1f2937', marginBottom: '10px' }}>Available Endpoints ({getPermissionDisplayName(generatedKey.permission)})</h5>
+                    {generatedKey.permission === 'read' && (
+                      <div className="endpoints-list">
+                        <div className="endpoint">GET /api/tournaments - Get all tournaments</div>
+                        <div className="endpoint">GET /api/tournaments/{`{id}`} - Get tournament by ID</div>
+                        <div className="endpoint">GET /api/organizations - Get all organizations</div>
+                        <div className="endpoint">GET /api/applications - Get tournament applications</div>
+                      </div>
+                    )}
+                    {generatedKey.permission === 'write' && (
+                      <div className="endpoints-list">
+                        <div className="endpoint">GET /api/tournaments - Get all tournaments</div>
+                        <div className="endpoint">GET /api/organizations - Get all organizations</div>
+                        <div className="endpoint">POST /api/applications - Create tournament application</div>
+                        <div className="endpoint">PUT /api/applications/{`{id}`} - Update tournament application</div>
+                        <div className="endpoint">POST /api/organizations - Create organization</div>
+                      </div>
+                    )}
+                    {generatedKey.permission === 'admin' && (
+                      <div className="endpoints-list">
+                        <div className="endpoint">All Read/Write endpoints plus:</div>
+                        <div className="endpoint">GET /api/admin/users - Get admin users</div>
+                        <div className="endpoint">POST /api/admin/users - Create admin user</div>
+                        <div className="endpoint">DELETE /api/admin/users/{`{id}`} - Delete admin user</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="guide-section">
+                    <h5 style={{ color: '#1f2937', marginBottom: '10px' }}>Example Usage (JavaScript)</h5>
+                    <div className="code-block">
+{`const apiKey = '${generatedKey.key}';
+const baseURL = 'https://portalmpa.com/api';
+
+// Fetch tournaments
+const response = await fetch(\`$\{baseURL}/tournaments\`, {
+  method: 'GET',
+  headers: {
+    'Authorization': \`Bearer $\{apiKey}\`,
+    'Content-Type': 'application/json'
+  }
+});
+
+const tournaments = await response.json();
+console.log(tournaments);`}
+                    </div>
+                  </div>
+
+                  <div className="guide-section">
+                    <h5 style={{ color: '#1f2937', marginBottom: '10px' }}>Example Usage (Python)</h5>
+                    <div className="code-block">
+{`import requests
+
+api_key = '${generatedKey.key}'
+headers = {
+    'Authorization': f'Bearer {api_key}',
+    'Content-Type': 'application/json'
+}
+
+response = requests.get('https://portalmpa.com/api/tournaments', headers=headers)
+tournaments = response.json()
+print(tournaments)`}
+                    </div>
+                  </div>
+
+                  <div className="guide-section">
+                    <h5 style={{ color: '#1f2937', marginBottom: '10px' }}>Security Best Practices</h5>
+                    <ul className="security-list">
+                      <li>Store API keys in environment variables, not in code</li>
+                      <li>Use HTTPS only in production</li>
+                      <li>Monitor API usage regularly</li>
+                      <li>Set IP restrictions if accessing from fixed servers</li>
+                      <li>Regenerate keys periodically for security</li>
+                    </ul>
+                  </div>
+
+                  <div className="guide-section">
+                    <h5 style={{ color: '#1f2937', marginBottom: '10px' }}>Error Handling</h5>
+                    <div className="code-block">
+{`// Handle common API errors
+if (response.status === 401) {
+  throw new Error('Invalid API key');
+}
+if (response.status === 403) {
+  throw new Error('Insufficient permissions');
+}
+if (response.status === 429) {
+  throw new Error('Rate limit exceeded');
+}`}
+                    </div>
+                  </div>
+
+                  {generatedKey.ipRestrictions && (
+                    <div className="guide-section">
+                      <h5 style={{ color: '#1f2937', marginBottom: '10px' }}>IP Restrictions</h5>
+                      <div className="code-block">
+                        <strong>Allowed IPs:</strong> {generatedKey.ipRestrictions}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="guide-section">
+                    <h5 style={{ color: '#1f2937', marginBottom: '10px' }}>Key Details</h5>
+                    <div className="key-details">
+                      <div><strong>Created:</strong> {formatDate(generatedKey.createdAt)}</div>
+                      <div><strong>Expires:</strong> {generatedKey.expiration === 'never' ? 'Never' : `${generatedKey.expiration} days from creation`}</div>
+                      <div><strong>Status:</strong> <span style={{color: '#16a34a', textTransform: 'uppercase'}}>{generatedKey.status}</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                className="settings-btn"
+                onClick={() => {
+                  const guideText = document.querySelector('.api-usage-guide').innerText;
+                  navigator.clipboard.writeText(`API Key: ${generatedKey.key}\n\n${guideText}`);
+                  alert('API key and guide copied to clipboard!');
+                }}
+                style={{ background: '#059669', marginRight: '10px' }}
+              >
+                Copy Key + Guide
+              </button>
+              <button 
+                className="settings-btn" 
+                onClick={() => setShowGeneratedKey(false)}
+                style={{ background: '#6b7280' }}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

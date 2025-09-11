@@ -9,34 +9,48 @@ This guide shows you how to run the MPA Portal on localhost using a local databa
 - Production MongoDB Atlas is never touched
 - Test tournament applications, approvals, rejections safely
 
-**✅ Real Data for Testing**
-- Copy of your production data in local database
-- All 26 migrated tournaments available for testing
-- Identical functionality to production
+**✅ Independent Development**
+- Portal runs completely independently
+- No external database dependencies
+- Full tournament management functionality
 
 ## 🚀 Quick Start
 
-### Step 1: Copy Production Data to Local (One-time setup)
+### Step 1: Set Up Local Environment
+Create a `.env.local` file for development:
 ```bash
-npm run copy-to-local
+cp .env.local.template .env.local
 ```
 
-This safely copies your production data to localhost MongoDB for testing.
+Edit `.env.local` with your local settings:
+```bash
+# Local MongoDB
+MONGODB_URI=mongodb://localhost:27017/malaysia-pickleball-portal-dev
+USE_LOCAL_DB=true
+NODE_ENV=development
+
+# Local API URL
+REACT_APP_API_URL=http://localhost:5001/api
+
+# Email settings (optional for testing)
+EMAIL_USER=your-email@example.com
+EMAIL_PASSWORD=your-app-password
+```
 
 ### Step 2: Start Local Development Server
 ```bash
-# Option A: Backend only (port 5002)
+# Backend only (port 5001)
 npm run server:dev
 
-# Option B: Full development (backend + frontend)
-npm run dev:local
+# Or full development (backend + frontend)
+npm run dev
 ```
 
 ### Step 3: Access Your Local MPA Portal
 ```
 🌐 Frontend: http://localhost:3000
-🔌 Backend API: http://localhost:5002
-🏥 Health Check: http://localhost:5002/api/health
+🔌 Backend API: http://localhost:5001
+🏥 Health Check: http://localhost:5001/api/health
 ```
 
 ## 📊 Database Status
@@ -51,16 +65,16 @@ Status: ✅ Protected (not affected by localhost)
 ```
 🏠 mongodb://localhost:27017/malaysia-pickleball-portal-dev
 Status: 🧪 Testing environment
-Data: Copy of production (26 tournaments)
+Data: Independent development database
 ```
 
 ## 🔍 Verification
 
-Test that everything works without affecting production:
+Test that everything works:
 
 ### 1. Check Health Status
 ```bash
-curl http://localhost:5002/api/health
+curl http://localhost:5001/api/health
 ```
 
 Expected response:
@@ -72,26 +86,18 @@ Expected response:
 }
 ```
 
-### 2. Check Tournament Count
-```bash
-curl http://localhost:5002/api/approved-tournaments | wc -l
-```
-
-Should return: `26` (your migrated tournaments)
-
-### 3. Test Application Submission
+### 2. Test Application Submission
 - Go to http://localhost:3000
 - Submit a test tournament application
-- Application ID will have "DEV" prefix (e.g., `DEVAB1234`)
-- Email notifications are mocked (won't send real emails)
+- Application ID will have standard format (e.g., `MPA123ABC`)
+- Check that data is saved in your local database
 
 ## 🛡️ Safety Features
 
 ### Automatic Protection
-- **Database URI Check**: Server refuses to start if pointing to production
-- **Safe Mode**: Only starts when `USE_LOCAL_DB=true` or localhost URI detected
-- **DEV Prefix**: All test applications get "DEV" prefix in ID
-- **Mock Emails**: No real emails sent during testing
+- **Database URI Check**: Server uses local database when `USE_LOCAL_DB=true`
+- **Safe Mode**: Only uses local MongoDB when in development
+- **Environment Isolation**: Separate config files for development and production
 
 ### Environment Isolation
 ```bash
@@ -109,26 +115,18 @@ NODE_ENV=development
 ### Test Tournament Applications
 1. **Submit New Application**
    - Fill out tournament form
-   - Gets ID like `DEVMPA123ABC`
+   - Gets standard ID like `MPA123ABC`
    - Status: "Pending Review"
 
 2. **Admin Approval Workflow**
    - Login to admin dashboard
    - Approve/reject applications
-   - See them appear in "Approved Tournaments" folder
+   - See them appear in "Approved Tournaments"
 
 3. **Status Updates**
    - Change tournament status
-   - Mock emails logged to console
+   - Email notifications (if configured)
    - Verify data consistency
-
-### Test Compatibility Layer
-```bash
-# Test old system compatibility
-node legacy-tournament-endpoints.js
-```
-
-Access: http://localhost:5002/api/tournaments/compatibility-test
 
 ## 🔧 File Structure
 
@@ -136,11 +134,10 @@ Access: http://localhost:5002/api/tournaments/compatibility-test
 📁 malaysia-pickleball-portal/
 ├── 📄 .env                     # Production config
 ├── 📄 .env.local               # Local development config  
-├── 📄 server.js                # Production server
-├── 📄 server-dev.js            # Development server (local DB)
-├── 📄 copy-to-local.js         # Data copying script
+├── 📄 server.js                # Main server file
 ├── 📁 config/
-│   └── 📄 database.js          # Environment switching logic
+│   └── 📄 database.js          # Database configuration
+├── 📁 src/                     # Frontend React app
 └── 📄 LOCAL_DEVELOPMENT_GUIDE.md
 ```
 
@@ -164,16 +161,7 @@ brew services start mongodb-community
 pkill -f "node server"
 
 # Or use different port
-PORT=5003 npm run server:dev
-```
-
-### Data Not Copying
-```bash
-# Re-run data copy
-npm run copy-to-local
-
-# Check local database
-mongosh mongodb://localhost:27017/malaysia-pickleball-portal-dev
+PORT=5002 npm start
 ```
 
 ### Environment Variables Not Loading
@@ -187,36 +175,31 @@ cat .env.local
 
 ## 🎉 Benefits
 
-**✅ Safe Development**
+**✅ Independent Development**
+- No external database dependencies
+- Self-contained portal system
+- Full control over your data
+
+**✅ Safe Testing**
 - Zero risk to production data
 - Test all features thoroughly
 - Debug without consequences
 
-**✅ Realistic Testing**
-- Same data as production
-- Complete tournament workflow
-- Admin dashboard functionality
-
-**✅ Easy Reset**
-- Delete local database anytime
-- Re-copy production data
-- Fresh testing environment
+**✅ Easy Setup**
+- Simple local MongoDB setup
+- Standard development workflow
+- No complex sync processes
 
 ## 🔄 Regular Workflow
 
 ### Daily Development
-1. Start local server: `npm run server:dev`
+1. Start local server: `npm start` or `npm run server:dev`
 2. Make changes and test
 3. Data stays local, production safe
 
-### Fresh Data (Weekly)
-1. Re-copy production data: `npm run copy-to-local`
-2. Get latest tournaments for testing
-3. Clear out old test data
-
 ### Deploy to Production
 1. Test thoroughly on localhost
-2. Push code changes (not data)
+2. Push code changes
 3. Production uses production database automatically
 
 ## 📚 Next Steps
