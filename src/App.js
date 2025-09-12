@@ -14,12 +14,16 @@ import TermsAndConditions from './components/TermsAndConditions';
 import mpaLogo from './assets/images/mpa.png';
 import ref1Image from './assets/images/ref1.png';
 import safeSportCodePDF from './assets/documents/safesportcode.pdf';
+import { useNotices } from './contexts/NoticeContext';
 
 function App() {
+  // Use shared notices context
+  const { getActiveNotices } = useNotices();
   const [currentPage, setCurrentPage] = useState('home');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showTournamentGuidelines, setShowTournamentGuidelines] = useState(false);
+  const [isNoticePortalExpanded, setIsNoticePortalExpanded] = useState(false);
   const [showImportantNotice, setShowImportantNotice] = useState(false);
 
   // Check login status on app load
@@ -456,6 +460,108 @@ function App() {
               </div>
             </section>
 
+            {/* Collapsible Notice Portal */}
+            <section className={`notice-portal ${isNoticePortalExpanded ? 'expanded' : 'collapsed'}`}>
+              {!isNoticePortalExpanded ? (
+                // Collapsed state - just the button
+                <button 
+                  className="notice-portal-toggle"
+                  onClick={() => setIsNoticePortalExpanded(true)}
+                  title="View Notices"
+                >
+                  <span className="notice-icon">I</span>
+                  {getActiveNotices().length > 0 && (
+                    <span className="notice-count">{getActiveNotices().length}</span>
+                  )}
+                </button>
+              ) : (
+                // Expanded state - full portal
+                <>
+                  <div className="notice-portal-header">
+                    <div className="notice-header-content">
+                      <h2>📢 Notice Portal</h2>
+                      <p>Important announcements and updates from Malaysia Pickleball Association</p>
+                    </div>
+                    <button 
+                      className="notice-portal-close"
+                      onClick={() => setIsNoticePortalExpanded(false)}
+                      title="Collapse"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="notice-board">
+                {getActiveNotices().length === 0 ? (
+                  <div className="notice-item info">
+                    <div className="notice-badge">📢 INFO</div>
+                    <div className="notice-date">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                    <h3>No Active Notices</h3>
+                    <p>There are currently no active notices. Check back later for important announcements and updates.</p>
+                  </div>
+                ) : (
+                  getActiveNotices().map((notice) => {
+                    const getBadgeIcon = (type) => {
+                      switch(type) {
+                        case 'urgent': return '🚨 URGENT';
+                        case 'important': return '⚠️ IMPORTANT';
+                        case 'info': return 'ℹ️ INFO';
+                        case 'general': return '📋 GENERAL';
+                        default: return '📢 NOTICE';
+                      }
+                    };
+
+                    const formatDate = (dateString) => {
+                      const date = new Date(dateString);
+                      return date.toLocaleDateString('en-GB', { 
+                        day: '2-digit', 
+                        month: 'short', 
+                        year: 'numeric' 
+                      });
+                    };
+
+                    return (
+                      <div key={notice.id} className={`notice-item ${notice.type}`}>
+                        <div className="notice-badge">{getBadgeIcon(notice.type)}</div>
+                        <div className="notice-date">{formatDate(notice.date)}</div>
+                        <h3>{notice.title}</h3>
+                        <p>{notice.content}</p>
+                        {notice.actions && notice.actions.length > 0 && (
+                          <div className="notice-actions">
+                            {notice.actions.map((action, index) => (
+                              <button 
+                                key={index}
+                                className={`notice-btn-${action.type}`}
+                                onClick={() => {
+                                  // Handle different action types
+                                  if (action.action === 'showLoginModal') {
+                                    setShowLoginModal(true);
+                                  } else if (action.action === 'goToStatus') {
+                                    setCurrentPage('status');
+                                  } else if (action.action === 'showTournamentGuidelines') {
+                                    setShowTournamentGuidelines(true);
+                                  } else if (action.action === 'downloadSafeSportCode') {
+                                    window.open(safeSportCodePDF, '_blank');
+                                  }
+                                }}
+                              >
+                                {action.text}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+
+
+
+                  </div>
+                  <div className="notice-portal-footer">
+                  </div>
+                </>
+              )}
+            </section>
 
           </div>
         );

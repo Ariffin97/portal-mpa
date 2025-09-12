@@ -52,28 +52,28 @@ const TournamentApplication = ({ setCurrentPage }) => {
     city: '',
     venue: '',
     classification: '',
-    eventType: '',
-    category: '',
-    malaysianEntryFee: '',
-    internationalEntryFee: '',
     expectedParticipants: '',
     eventSummary: '',
     
     // Tournament Settings
     scoringFormat: 'traditional',
+    eventType: '',
+    
+    // Categories and Charges
+    categories: [
+      { name: '', charge: '' }
+    ],
     
     // Consent
     dataConsent: false,
     termsConsent: false
   });
 
-  // State for managing multiple categories
-  const [savedCategories, setSavedCategories] = useState([]);
-
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedApplication, setSubmittedApplication] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
 
   // Load organization data on component mount
   useEffect(() => {
@@ -180,13 +180,11 @@ const TournamentApplication = ({ setCurrentPage }) => {
       city: tournament.city || '',
       venue: tournament.venue || '',
       classification: tournament.classification || '',
-      eventType: tournament.eventType || '',
-      category: tournament.category || '',
-      malaysianEntryFee: (tournament.malaysianEntryFee || '').toString(),
-      internationalEntryFee: (tournament.internationalEntryFee || '').toString(),
       expectedParticipants: (tournament.expectedParticipants || '').toString(),
       eventSummary: tournament.eventSummary || '',
       scoringFormat: tournament.scoringFormat || 'traditional',
+      eventType: tournament.eventType || '',
+      categories: tournament.categories || [{ name: '', charge: '' }],
       dataConsent: true,
       termsConsent: true
     });
@@ -210,6 +208,33 @@ const TournamentApplication = ({ setCurrentPage }) => {
       city: '' // Reset city when state changes
     }));
   };
+
+  const handleEditCategoryChange = (index, field, value) => {
+    const updatedCategories = [...editFormData.categories];
+    updatedCategories[index][field] = value;
+    setEditFormData(prev => ({
+      ...prev,
+      categories: updatedCategories
+    }));
+  };
+
+  const addEditCategory = () => {
+    setEditFormData(prev => ({
+      ...prev,
+      categories: [...prev.categories, { name: '', charge: '' }]
+    }));
+  };
+
+  const removeEditCategory = (index) => {
+    if (editFormData.categories.length > 1) {
+      const updatedCategories = editFormData.categories.filter((_, i) => i !== index);
+      setEditFormData(prev => ({
+        ...prev,
+        categories: updatedCategories
+      }));
+    }
+  };
+
 
   const handleUpdateTournament = async (e) => {
     e.preventDefault();
@@ -327,34 +352,30 @@ const TournamentApplication = ({ setCurrentPage }) => {
     }
   };
 
-  // Handle saving category
-  const handleSaveCategory = () => {
-    if (!formData.category || !formData.malaysianEntryFee) {
-      alert('Please fill in Category and Malaysian Entry Fee before saving.');
-      return;
-    }
-
-    const newCategory = {
-      id: Date.now(), // Simple unique ID
-      category: formData.category,
-      malaysianEntryFee: parseFloat(formData.malaysianEntryFee),
-      internationalEntryFee: formData.internationalEntryFee ? parseFloat(formData.internationalEntryFee) : 0
-    };
-
-    setSavedCategories(prev => [...prev, newCategory]);
-
-    // Clear the category fields
+  const handleCategoryChange = (index, field, value) => {
+    const updatedCategories = [...formData.categories];
+    updatedCategories[index][field] = value;
     setFormData(prev => ({
       ...prev,
-      category: '',
-      malaysianEntryFee: '',
-      internationalEntryFee: ''
+      categories: updatedCategories
     }));
   };
 
-  // Handle removing a saved category
-  const handleRemoveCategory = (categoryId) => {
-    setSavedCategories(prev => prev.filter(cat => cat.id !== categoryId));
+  const addCategory = () => {
+    setFormData(prev => ({
+      ...prev,
+      categories: [...prev.categories, { name: '', charge: '' }]
+    }));
+  };
+
+  const removeCategory = (index) => {
+    if (formData.categories.length > 1) {
+      const updatedCategories = formData.categories.filter((_, i) => i !== index);
+      setFormData(prev => ({
+        ...prev,
+        categories: updatedCategories
+      }));
+    }
   };
 
   const generateApplicationId = () => {
@@ -366,7 +387,6 @@ const TournamentApplication = ({ setCurrentPage }) => {
     }
     return 'MPA' + result;
   };
-
 
   const generatePDF = () => {
     const dataToUse = submittedApplication || formData;
@@ -504,28 +524,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
         : 'Not provided';
       yPosition = addInfoRow('Location', locationText, yPosition);
       yPosition = addInfoRow('Venue', dataToUse.venue, yPosition);
-      yPosition = addInfoRow('Level of Event', dataToUse.classification, yPosition);
-      yPosition = addInfoRow('Type of Event', dataToUse.eventType, yPosition);
-      
-      // Display categories
-      if (dataToUse.categories && dataToUse.categories.length > 0) {
-        yPosition = addSectionHeader('TOURNAMENT CATEGORIES & ENTRY FEES', yPosition);
-        dataToUse.categories.forEach((category, index) => {
-          yPosition = addInfoRow(`Category ${index + 1}`, category.category, yPosition);
-          yPosition = addInfoRow('Malaysian Entry Fee (RM)', category.malaysianEntryFee.toFixed(2), yPosition);
-          yPosition = addInfoRow('International Entry Fee (RM)', category.internationalEntryFee.toFixed(2), yPosition);
-          yPosition += 5; // Add some spacing between categories
-        });
-      } else if (savedCategories && savedCategories.length > 0) {
-        yPosition = addSectionHeader('TOURNAMENT CATEGORIES & ENTRY FEES', yPosition);
-        savedCategories.forEach((category, index) => {
-          yPosition = addInfoRow(`Category ${index + 1}`, category.category, yPosition);
-          yPosition = addInfoRow('Malaysian Entry Fee (RM)', category.malaysianEntryFee.toFixed(2), yPosition);
-          yPosition = addInfoRow('International Entry Fee (RM)', category.internationalEntryFee.toFixed(2), yPosition);
-          yPosition += 5; // Add some spacing between categories
-        });
-      }
-      
+      yPosition = addInfoRow('Event Level/Type', dataToUse.classification, yPosition);
       yPosition = addInfoRow('Expected Participants', dataToUse.expectedParticipants, yPosition, true);
       yPosition += 10;
       
@@ -645,13 +644,6 @@ const TournamentApplication = ({ setCurrentPage }) => {
     setIsSubmitting(true);
     setSubmitError('');
     
-    // Validate that at least one category is saved
-    if (savedCategories.length === 0) {
-      alert('Please save at least one tournament category before submitting.');
-      setIsSubmitting(false);
-      return;
-    }
-    
     try {
       // Prepare data for API submission
       const submissionData = {
@@ -668,11 +660,11 @@ const TournamentApplication = ({ setCurrentPage }) => {
         city: formData.city,
         venue: formData.venue,
         classification: formData.classification,
-        eventType: formData.eventType,
-        categories: savedCategories, // Send all saved categories
         expectedParticipants: parseInt(formData.expectedParticipants),
         eventSummary: formData.eventSummary,
         scoringFormat: formData.scoringFormat,
+        eventType: formData.eventType,
+        categories: formData.categories,
         dataConsent: formData.dataConsent,
         termsConsent: formData.termsConsent
       };
@@ -695,7 +687,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
       });
       setIsSubmitted(true);
       
-      // Reset form and clear saved categories
+      // Reset form
       setFormData({
         organiserName: '',
         registrationNo: '',
@@ -712,19 +704,14 @@ const TournamentApplication = ({ setCurrentPage }) => {
         city: '',
         venue: '',
         classification: '',
-        eventType: '',
-        category: '',
-        malaysianEntryFee: '',
-        internationalEntryFee: '',
         expectedParticipants: '',
         eventSummary: '',
         scoringFormat: 'traditional',
+        eventType: '',
+        categories: [{ name: '', charge: '' }],
         dataConsent: false,
         termsConsent: false
       });
-      
-      // Clear saved categories
-      setSavedCategories([]);
       
     } catch (error) {
       console.error('Submission error:', error);
@@ -1057,173 +1044,131 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 required
               >
                 <option value="">Select Type</option>
-                <option value="Open">Open</option>
                 <option value="Closed">Closed</option>
+                <option value="Open">Open</option>
               </select>
             </div>
           </div>
           
-          <div className="form-row">
-            <div className="form-group" style={{ flex: '2' }}>
-              <label htmlFor="category">Category *</label>
-              <input
-                type="text"
-                id="category"
-                name="category"
-                placeholder="e.g., Men's Singles, Women's Doubles, Mixed Doubles"
-                value={formData.category}
-                onChange={handleInputChange}
-              />
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="malaysianEntryFee">Malaysian Entry Fee (RM) per player *</label>
-              <input
-                type="number"
-                id="malaysianEntryFee"
-                name="malaysianEntryFee"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                value={formData.malaysianEntryFee}
-                onChange={handleInputChange}
-              />
-              <small className="form-note" style={{ color: '#dc3545' }}>Note: Not more than RM 200.00</small>
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="internationalEntryFee">International Entry Fee (RM) per player</label>
-              <input
-                type="number"
-                id="internationalEntryFee"
-                name="internationalEntryFee"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                value={formData.internationalEntryFee}
-                onChange={handleInputChange}
-              />
-              <small className="form-note" style={{ color: '#dc3545' }}>Note: Only required if international players are involved</small>
-            </div>
-            
-            <div className="form-group">
-              <label style={{ visibility: 'hidden' }}>Save</label>
-              <button 
-                type="button" 
-                onClick={handleSaveCategory}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  width: 'auto'
-                }}
-              >
-                Save Category
-              </button>
-            </div>
-          </div>
-          
-          {/* Display saved categories */}
-          {savedCategories.length > 0 && (
-            <div className="saved-categories" style={{ marginTop: '15px', marginBottom: '15px' }}>
-              <h4>Tournament Categories:</h4>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  border: '1px solid #ddd',
-                  backgroundColor: 'white'
-                }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f8f9fa' }}>
-                      <th style={{
-                        padding: '12px',
-                        textAlign: 'left',
-                        borderBottom: '2px solid #ddd',
-                        borderRight: '1px solid #ddd',
-                        fontWeight: 'bold',
-                        color: '#333'
-                      }}>Category</th>
-                      <th style={{
-                        padding: '12px',
-                        textAlign: 'center',
-                        borderBottom: '2px solid #ddd',
-                        borderRight: '1px solid #ddd',
-                        fontWeight: 'bold',
-                        color: '#333'
-                      }}>Malaysian Entry Fee (RM) per player</th>
-                      <th style={{
-                        padding: '12px',
-                        textAlign: 'center',
-                        borderBottom: '2px solid #ddd',
-                        borderRight: '1px solid #ddd',
-                        fontWeight: 'bold',
-                        color: '#333'
-                      }}>International Entry Fee (RM) per player</th>
-                      <th style={{
-                        padding: '12px',
-                        textAlign: 'center',
-                        borderBottom: '2px solid #ddd',
-                        fontWeight: 'bold',
-                        color: '#333',
-                        width: '100px'
-                      }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {savedCategories.map((category, index) => (
-                      <tr key={category.id} style={{
-                        backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9'
-                      }}>
-                        <td style={{
-                          padding: '12px',
-                          borderBottom: '1px solid #ddd',
-                          borderRight: '1px solid #ddd'
-                        }}>{category.category}</td>
-                        <td style={{
-                          padding: '12px',
-                          textAlign: 'center',
-                          borderBottom: '1px solid #ddd',
-                          borderRight: '1px solid #ddd'
-                        }}>{category.malaysianEntryFee.toFixed(2)}</td>
-                        <td style={{
-                          padding: '12px',
-                          textAlign: 'center',
-                          borderBottom: '1px solid #ddd',
-                          borderRight: '1px solid #ddd'
-                        }}>{category.internationalEntryFee > 0 ? category.internationalEntryFee.toFixed(2) : '-'}</td>
-                        <td style={{
-                          padding: '12px',
-                          textAlign: 'center',
-                          borderBottom: '1px solid #ddd'
-                        }}>
-                          <button 
-                            type="button"
-                            onClick={() => handleRemoveCategory(category.id)}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: '#dc3545',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '3px',
-                              cursor: 'pointer',
-                              fontSize: '12px',
-                              fontWeight: 'bold'
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div className="form-group">
+            <label>Tournament Categories & Entry Fees</label>
+            <div style={{
+              padding: '20px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px',
+              border: '1px solid #e9ecef'
+            }}>
+              {/* Header Row */}
+              <div style={{
+                display: 'flex',
+                gap: '15px',
+                alignItems: 'center',
+                marginBottom: '15px',
+                paddingBottom: '10px',
+                borderBottom: '2px solid #dee2e6'
+              }}>
+                <div style={{ flex: '2', fontWeight: 'bold', color: '#495057' }}>
+                  Category Name
+                </div>
+                <div style={{ flex: '1', fontWeight: 'bold', color: '#495057' }}>
+                  Entry Fee (RM)
+                </div>
+                <div style={{ width: '80px', fontWeight: 'bold', color: '#495057' }}>
+                  Actions
+                </div>
               </div>
+              
+              {/* Category Rows */}
+              {formData.categories.map((category, index) => (
+                <div key={index} style={{
+                  display: 'flex', 
+                  gap: '15px', 
+                  alignItems: 'center',
+                  marginBottom: '10px'
+                }}>
+                  <div style={{ flex: '2' }}>
+                    <input
+                      type="text"
+                      id={`category-name-${index}`}
+                      name={`category-name-${index}`}
+                      value={category.name}
+                      onChange={(e) => handleCategoryChange(index, 'name', e.target.value)}
+                      placeholder="e.g., Men's Singles, Women's Doubles"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '4px',
+                        border: '1px solid #ced4da',
+                        backgroundColor: 'white'
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: '1' }}>
+                    <input
+                      type="number"
+                      id={`category-charge-${index}`}
+                      name={`category-charge-${index}`}
+                      value={category.charge}
+                      onChange={(e) => handleCategoryChange(index, 'charge', e.target.value)}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        borderRadius: '4px',
+                        border: '1px solid #ced4da',
+                        backgroundColor: 'white'
+                      }}
+                    />
+                  </div>
+                  <div style={{ width: '80px', display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                    {index === formData.categories.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={addCategory}
+                        style={{
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: 'bold'
+                        }}
+                        title="Add Category"
+                      >
+                        +
+                      </button>
+                    )}
+                    {formData.categories.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeCategory(index)}
+                        style={{
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: 'bold'
+                        }}
+                        title="Remove Category"
+                      >
+                        -
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
+            <small className="form-note">Add all tournament categories and their respective entry fees. Examples: Men's Singles, Women's Doubles, Mixed Doubles, etc.</small>
+          </div>
           
           <div className="form-group">
             <label htmlFor="expectedParticipants">Expected No. of Participants *</label>
@@ -1268,7 +1213,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
             <p><strong>*Scoring Format</strong> to be adopted for each match:</p>
             <ul className="scoring-list">
               <li>Traditional scoring up to 11 pts or more;</li>
-              <li>Rally Scoring minimum up to 21 pts is acceptable for the first round-robins and novice only.</li>
+              <li>Rally Scoring minimum up to 21 pts is acceptable for the first round-robins only.</li>
             </ul>
           </div>
         </div>
@@ -1290,18 +1235,17 @@ const TournamentApplication = ({ setCurrentPage }) => {
         </div>
         
         <div className="form-section">
-          <h3>Mandatory Compliance</h3>
+          <h3>Important Remarks</h3>
           <div className="remarks-info">
             <ul className="remarks-list">
               <li>Endorsement logos (state, national & PJS/KBS) must be displayed on your event banners/at the venue etc.</li>
-              <li>Traditional scoring up to 11 pts or more; Rally Scoring (minimum up to 21 pts) is acceptable for the first round-robins and novice only.</li>
-              <li>The fee for each category is capped at RM200 per Malaysian player and must not be exceeded.</li>
+              <li>Traditional scoring up to 11 pts or more; Rally Scoring (minimum up to 21 pts) is acceptable for the first round-robins only.</li>
             </ul>
           </div>
         </div>
         
         <div className="form-section">
-          <h3>Consent & Agreement</h3>
+          <h3>Important Consent & Agreement</h3>
           <div className="consent-section">
             <div className="consent-item">
               <label className="checkbox-label">
@@ -1551,6 +1495,161 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     onChange={handleEditInputChange}
                     required
                   />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-classification">Level of Event *</label>
+                    <select
+                      id="edit-classification"
+                      name="classification"
+                      value={editFormData.classification || ''}
+                      onChange={handleEditInputChange}
+                      required
+                    >
+                      <option value="">Select Level/Type</option>
+                      <option value="District">District</option>
+                      <option value="Divisional">Divisional</option>
+                      <option value="State">State</option>
+                      <option value="National">National</option>
+                      <option value="International">International</option>
+                    </select>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="edit-eventType">Type of Event *</label>
+                    <select
+                      id="edit-eventType"
+                      name="eventType"
+                      value={editFormData.eventType || ''}
+                      onChange={handleEditInputChange}
+                      required
+                    >
+                      <option value="">Select Type</option>
+                      <option value="Closed">Closed</option>
+                      <option value="Open">Open</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Tournament Categories & Entry Fees</label>
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '8px',
+                    border: '1px solid #e9ecef'
+                  }}>
+                    {/* Header Row */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '15px',
+                      alignItems: 'center',
+                      marginBottom: '15px',
+                      paddingBottom: '10px',
+                      borderBottom: '2px solid #dee2e6'
+                    }}>
+                      <div style={{ flex: '2', fontWeight: 'bold', color: '#495057' }}>
+                        Category Name
+                      </div>
+                      <div style={{ flex: '1', fontWeight: 'bold', color: '#495057' }}>
+                        Entry Fee (RM)
+                      </div>
+                      <div style={{ width: '80px', fontWeight: 'bold', color: '#495057' }}>
+                        Actions
+                      </div>
+                    </div>
+                    
+                    {/* Category Rows */}
+                    {editFormData.categories && editFormData.categories.map((category, index) => (
+                      <div key={index} style={{
+                        display: 'flex', 
+                        gap: '15px', 
+                        alignItems: 'center',
+                        marginBottom: '10px'
+                      }}>
+                        <div style={{ flex: '2' }}>
+                          <input
+                            type="text"
+                            id={`edit-category-name-${index}`}
+                            name={`edit-category-name-${index}`}
+                            value={category.name || ''}
+                            onChange={(e) => handleEditCategoryChange(index, 'name', e.target.value)}
+                            placeholder="e.g., Men's Singles, Women's Doubles"
+                            required
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              borderRadius: '4px',
+                              border: '1px solid #ced4da',
+                              backgroundColor: 'white'
+                            }}
+                          />
+                        </div>
+                        <div style={{ flex: '1' }}>
+                          <input
+                            type="number"
+                            id={`edit-category-charge-${index}`}
+                            name={`edit-category-charge-${index}`}
+                            value={category.charge || ''}
+                            onChange={(e) => handleEditCategoryChange(index, 'charge', e.target.value)}
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                            required
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              borderRadius: '4px',
+                              border: '1px solid #ced4da',
+                              backgroundColor: 'white'
+                            }}
+                          />
+                        </div>
+                        <div style={{ width: '80px', display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                          {index === editFormData.categories.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={addEditCategory}
+                              style={{
+                                backgroundColor: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: 'bold'
+                              }}
+                              title="Add Category"
+                            >
+                              +
+                            </button>
+                          )}
+                          {editFormData.categories && editFormData.categories.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeEditCategory(index)}
+                              style={{
+                                backgroundColor: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '8px 12px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                fontWeight: 'bold'
+                              }}
+                              title="Remove Category"
+                            >
+                              -
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <small className="form-note">Add all tournament categories and their respective entry fees.</small>
                 </div>
 
                 <div className="form-group">

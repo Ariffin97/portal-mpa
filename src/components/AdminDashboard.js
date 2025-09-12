@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import apiService from '../services/api';
+import { useNotices } from '../contexts/NoticeContext';
+import mpaLogo from '../assets/images/mpa.png';
 
 const AdminDashboard = ({ setCurrentPage }) => {
+  // Use shared notices context
+  const { 
+    notices, 
+    addNotice, 
+    updateNotice, 
+    deleteNotice, 
+    toggleNoticeActive 
+  } = useNotices();
   const [applications, setApplications] = useState([]);
   const [approvedTournaments, setApprovedTournaments] = useState([]);
   const [registeredOrganizations, setRegisteredOrganizations] = useState([]);
@@ -81,12 +91,19 @@ const AdminDashboard = ({ setCurrentPage }) => {
     city: '',
     venue: '',
     classification: '',
+    eventType: '',
+    category: '',
+    malaysianEntryFee: '',
+    internationalEntryFee: '',
     expectedParticipants: '',
     eventSummary: '',
     scoringFormat: 'traditional',
     dataConsent: false,
     termsConsent: false
   });
+
+  // State for managing multiple categories in admin create tournament
+  const [savedTournamentCategories, setSavedTournamentCategories] = useState([]);
 
   const [isCreatingTournament, setIsCreatingTournament] = useState(false);
   const [createTournamentError, setCreateTournamentError] = useState('');
@@ -98,6 +115,19 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
   // Sidebar Sub-menu state
   const [createTournamentExpanded, setCreateTournamentExpanded] = useState(false);
+
+  // Notice Management States
+  const [editingNotice, setEditingNotice] = useState(null);
+  const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [noticeFormData, setNoticeFormData] = useState({
+    id: null,
+    type: 'info',
+    title: '',
+    content: '',
+    date: new Date().toISOString().split('T')[0],
+    active: true,
+    actions: []
+  });
 
   // Calendar state
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -140,6 +170,84 @@ const AdminDashboard = ({ setCurrentPage }) => {
     loadAdminUsers();
     loadTournamentUpdates();
   }, []);
+
+  // Notice Management Functions
+  const handleCreateNotice = () => {
+    setNoticeFormData({
+      id: null,
+      type: 'info',
+      title: '',
+      content: '',
+      date: new Date().toISOString().split('T')[0],
+      active: true,
+      actions: []
+    });
+    setEditingNotice(null);
+    setShowNoticeModal(true);
+  };
+
+  const handleEditNotice = (notice) => {
+    setNoticeFormData({
+      ...notice,
+      date: notice.date || new Date().toISOString().split('T')[0]
+    });
+    setEditingNotice(notice.id);
+    setShowNoticeModal(true);
+  };
+
+  const handleSaveNotice = () => {
+    if (!noticeFormData.title.trim() || !noticeFormData.content.trim()) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    if (editingNotice) {
+      // Update existing notice
+      updateNotice(editingNotice, noticeFormData);
+    } else {
+      // Create new notice
+      addNotice(noticeFormData);
+    }
+    
+    setShowNoticeModal(false);
+    setEditingNotice(null);
+  };
+
+  const handleDeleteNotice = (noticeId) => {
+    if (window.confirm('Are you sure you want to delete this notice?')) {
+      deleteNotice(noticeId);
+    }
+  };
+
+  const handleToggleNoticeActive = (noticeId) => {
+    toggleNoticeActive(noticeId);
+  };
+
+  // Tournament category management functions
+  const handleSaveTournamentCategory = () => {
+    if (!tournamentFormData.category || !tournamentFormData.malaysianEntryFee) {
+      alert('Please fill in Category and Malaysian Entry Fee before saving.');
+      return;
+    }
+    const newCategory = {
+      id: Date.now(),
+      category: tournamentFormData.category,
+      malaysianEntryFee: parseFloat(tournamentFormData.malaysianEntryFee),
+      internationalEntryFee: tournamentFormData.internationalEntryFee ? parseFloat(tournamentFormData.internationalEntryFee) : 0
+    };
+    setSavedTournamentCategories(prev => [...prev, newCategory]);
+    // Clear the category fields
+    setTournamentFormData(prev => ({
+      ...prev,
+      category: '',
+      malaysianEntryFee: '',
+      internationalEntryFee: ''
+    }));
+  };
+
+  const handleRemoveTournamentCategory = (categoryId) => {
+    setSavedTournamentCategories(prev => prev.filter(cat => cat.id !== categoryId));
+  };
 
   const loadApplications = async () => {
     try {
@@ -1183,6 +1291,13 @@ const AdminDashboard = ({ setCurrentPage }) => {
     setIsCreatingTournament(true);
     setCreateTournamentError('');
     
+    // Validate that at least one category is saved
+    if (savedTournamentCategories.length === 0) {
+      alert('Please save at least one tournament category before submitting.');
+      setIsCreatingTournament(false);
+      return;
+    }
+    
     try {
       const submissionData = {
         organiserName: tournamentFormData.organiserName,
@@ -1198,6 +1313,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
         city: tournamentFormData.city,
         venue: tournamentFormData.venue,
         classification: tournamentFormData.classification,
+        eventType: tournamentFormData.eventType,
+        categories: savedTournamentCategories,
         expectedParticipants: parseInt(tournamentFormData.expectedParticipants),
         eventSummary: tournamentFormData.eventSummary,
         scoringFormat: tournamentFormData.scoringFormat,
@@ -1245,12 +1362,18 @@ const AdminDashboard = ({ setCurrentPage }) => {
         city: '',
         venue: '',
         classification: '',
+        eventType: '',
+        category: '',
+        malaysianEntryFee: '',
+        internationalEntryFee: '',
         expectedParticipants: '',
         eventSummary: '',
         scoringFormat: 'traditional',
         dataConsent: false,
         termsConsent: false
       });
+      
+      setSavedTournamentCategories([]);
       
     } catch (error) {
       console.error('Tournament creation error:', error);
@@ -1333,6 +1456,410 @@ const AdminDashboard = ({ setCurrentPage }) => {
       setExportSettings(prev => ({ ...prev, isExporting: false }));
     }
   };
+
+  const renderNoticeManagement = () => (
+    <div className="notice-management-view">
+      <div className="dashboard-header">
+        <h2>Notice Management</h2>
+        <p className="dashboard-subtitle">Manage announcements and notices for the homepage portal</p>
+        <button 
+          className="create-notice-btn"
+          onClick={handleCreateNotice}
+          style={{
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            marginTop: '10px'
+          }}
+        >
+          + Create New Notice
+        </button>
+      </div>
+
+      <div className="notices-list" style={{ marginTop: '20px' }}>
+        {notices.map((notice) => (
+          <div 
+            key={notice.id} 
+            className="notice-item" 
+            style={{
+              backgroundColor: 'white',
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              padding: '20px',
+              marginBottom: '15px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              position: 'relative'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                  <span 
+                    className={`notice-type-badge ${notice.type}`}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      color: 'white',
+                      backgroundColor: 
+                        notice.type === 'urgent' ? '#dc3545' :
+                        notice.type === 'important' ? '#fd7e14' :
+                        notice.type === 'info' ? '#0dcaf0' : '#6c757d',
+                      marginRight: '10px'
+                    }}
+                  >
+                    {notice.type}
+                  </span>
+                  <span style={{ 
+                    color: notice.active ? '#28a745' : '#dc3545',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    textTransform: 'uppercase'
+                  }}>
+                    {notice.active ? 'ACTIVE' : 'INACTIVE'}
+                  </span>
+                  <span style={{ color: '#6c757d', fontSize: '12px', marginLeft: '10px' }}>
+                    {notice.date}
+                  </span>
+                </div>
+                
+                <h4 style={{ margin: '0 0 10px 0', color: '#212529' }}>{notice.title}</h4>
+                <p style={{ margin: '0', color: '#6c757d', lineHeight: '1.5' }}>{notice.content}</p>
+              </div>
+              
+              <div className="notice-actions" style={{ display: 'flex', gap: '8px', marginLeft: '15px' }}>
+                <button
+                  onClick={() => handleEditNotice(notice)}
+                  style={{
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleToggleNoticeActive(notice.id)}
+                  style={{
+                    backgroundColor: notice.active ? '#ffc107' : '#28a745',
+                    color: notice.active ? '#212529' : 'white',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  {notice.active ? 'Deactivate' : 'Activate'}
+                </button>
+                <button
+                  onClick={() => handleDeleteNotice(notice.id)}
+                  style={{
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        {notices.length === 0 && (
+          <div style={{ 
+            textAlign: 'center', 
+            color: '#6c757d', 
+            padding: '40px',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            border: '1px solid #ddd'
+          }}>
+            No notices found. Create your first notice to get started.
+          </div>
+        )}
+      </div>
+
+      {/* Notice Modal */}
+      {showNoticeModal && (
+        <div 
+          className="modal-overlay" 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+          onClick={() => setShowNoticeModal(false)}
+        >
+          <div 
+            className="modal-content" 
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              padding: '30px',
+              width: '90%',
+              maxWidth: '600px',
+              maxHeight: '85vh',
+              overflow: 'auto',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+              border: '1px solid #ddd'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ 
+              margin: '0 0 25px 0',
+              color: '#333',
+              fontSize: '24px',
+              fontWeight: '600',
+              textAlign: 'center',
+              borderBottom: '2px solid #f0f0f0',
+              paddingBottom: '15px'
+            }}>
+              {editingNotice ? 'Edit Notice' : 'Create New Notice'}
+            </h3>
+            
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '8px', 
+                fontWeight: '500',
+                color: '#333',
+                fontSize: '14px'
+              }}>
+                Notice Type *
+              </label>
+              <select
+                value={noticeFormData.type}
+                onChange={(e) => setNoticeFormData(prev => ({ ...prev, type: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  backgroundColor: 'white'
+                }}
+              >
+                <option value="general">General</option>
+                <option value="info">Info</option>
+                <option value="important">Important</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '8px', 
+                fontWeight: '500',
+                color: '#333',
+                fontSize: '14px'
+              }}>
+                Title *
+              </label>
+              <input
+                type="text"
+                value={noticeFormData.title}
+                onChange={(e) => setNoticeFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Enter notice title"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '8px', 
+                fontWeight: '500',
+                color: '#333',
+                fontSize: '14px'
+              }}>
+                Content *
+              </label>
+              <textarea
+                value={noticeFormData.content}
+                onChange={(e) => setNoticeFormData(prev => ({ ...prev, content: e.target.value }))}
+                placeholder="Enter notice content"
+                rows="5"
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  resize: 'vertical'
+                }}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '8px', 
+                fontWeight: '500',
+                color: '#333',
+                fontSize: '14px'
+              }}>
+                Date
+              </label>
+              <input
+                type="date"
+                value={noticeFormData.date}
+                onChange={(e) => setNoticeFormData(prev => ({ ...prev, date: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '25px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '15px',
+                border: '1px solid #ddd',
+                borderRadius: '6px',
+                backgroundColor: '#f8f9fa'
+              }}>
+                <div>
+                  <label style={{ 
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#333',
+                    margin: 0,
+                    display: 'block'
+                  }}>
+                    Active (visible on homepage)
+                  </label>
+                  <p style={{ 
+                    fontSize: '12px', 
+                    color: '#666', 
+                    margin: '2px 0 0 0' 
+                  }}>
+                    Enable this notice to appear in the homepage portal
+                  </p>
+                </div>
+                <label className="toggle-switch" style={{
+                  position: 'relative',
+                  display: 'inline-block',
+                  width: '50px',
+                  height: '24px',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={noticeFormData.active}
+                    onChange={(e) => setNoticeFormData(prev => ({ ...prev, active: e.target.checked }))}
+                    style={{
+                      opacity: 0,
+                      width: 0,
+                      height: 0
+                    }}
+                  />
+                  <span style={{
+                    position: 'absolute',
+                    cursor: 'pointer',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: noticeFormData.active ? '#007bff' : '#ccc',
+                    transition: '0.3s',
+                    borderRadius: '24px'
+                  }}>
+                    <span style={{
+                      position: 'absolute',
+                      content: '""',
+                      height: '18px',
+                      width: '18px',
+                      left: noticeFormData.active ? '29px' : '3px',
+                      bottom: '3px',
+                      backgroundColor: 'white',
+                      borderRadius: '50%',
+                      transition: '0.3s',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }} />
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div style={{ 
+              display: 'flex', 
+              gap: '10px', 
+              justifyContent: 'flex-end',
+              borderTop: '1px solid #f0f0f0',
+              paddingTop: '20px',
+              marginTop: '20px'
+            }}>
+              <button
+                onClick={() => setShowNoticeModal(false)}
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNotice}
+                style={{
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                {editingNotice ? 'Update Notice' : 'Create Notice'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   const renderAnalytics = () => (
     <div className="analytics-view">
@@ -1884,6 +2411,12 @@ Registered Organizations
             onClick={() => setCurrentView('analytics')}
           >
 Analytics
+          </button>
+          <button 
+            className={`sidebar-nav-item ${currentView === 'notice-management' ? 'active' : ''}`}
+            onClick={() => setCurrentView('notice-management')}
+          >
+Notice Management
           </button>
           <button 
             className={`sidebar-nav-item ${currentView === 'settings' ? 'active' : ''}`}
@@ -2788,12 +3321,19 @@ Settings
         {currentView === 'create-tournament' && (
           <div className="create-tournament-view">
             <div className="dashboard-header">
-              <h2>Create Tournament</h2>
-              <p className="dashboard-subtitle">Create and directly approve tournament applications</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', width: '100%' }}>
+                <img src={mpaLogo} alt="Malaysia Pickleball Association" style={{ height: '100px', width: 'auto' }} />
+                <div style={{ textAlign: 'center' }}>
+                  <h2>Create Tournament</h2>
+                  <p className="dashboard-subtitle">Create and directly approve tournament applications</p>
+                </div>
+              </div>
             </div>
 
             {!tournamentCreated ? (
-              <form onSubmit={handleCreateTournament} className="tournament-form">
+              <>
+                
+                <form onSubmit={handleCreateTournament} className="tournament-form">
                 <div className="form-section">
                   <h3>Organiser Information</h3>
                   <div className="form-group">
@@ -2985,24 +3525,211 @@ Settings
                     </div>
                   </div>
                   
-                  <div className="form-group">
-                    <label htmlFor="classification">Level/Type of Event *</label>
-                    <select
-                      id="classification"
-                      name="classification"
-                      value={tournamentFormData.classification}
-                      onChange={handleTournamentInputChange}
-                      required
-                    >
-                      <option value="">Select Level/Type</option>
-                      <option value="District">District</option>
-                      <option value="Divisional">Divisional</option>
-                      <option value="State">State</option>
-                      <option value="National">National</option>
-                      <option value="International">International</option>
-                    </select>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="classification">Level of Event *</label>
+                      <select
+                        id="classification"
+                        name="classification"
+                        value={tournamentFormData.classification}
+                        onChange={handleTournamentInputChange}
+                        required
+                      >
+                        <option value="">Select Level/Type</option>
+                        <option value="District">District</option>
+                        <option value="Divisional">Divisional</option>
+                        <option value="State">State</option>
+                        <option value="National">National</option>
+                        <option value="International">International</option>
+                      </select>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="eventType">Type of Event *</label>
+                      <select
+                        id="eventType"
+                        name="eventType"
+                        value={tournamentFormData.eventType}
+                        onChange={handleTournamentInputChange}
+                        required
+                      >
+                        <option value="">Select Type</option>
+                        <option value="Open">Open</option>
+                        <option value="Closed">Closed</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="form-section">
+                  <h3>Tournament Categories & Entry Fees</h3>
+                  <p className="section-note">Add tournament categories with their respective entry fees. You can add multiple categories.</p>
+                  
+                  <div className="form-row">
+                    <div className="form-group" style={{ flex: '2' }}>
+                      <label htmlFor="category">Category *</label>
+                      <input
+                        type="text"
+                        id="category"
+                        name="category"
+                        value={tournamentFormData.category}
+                        onChange={handleTournamentInputChange}
+                        placeholder="e.g., Men's Singles, Women's Doubles, Mixed Doubles"
+                      />
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="malaysianEntryFee">Malaysian Entry Fee (RM) per player *</label>
+                      <input
+                        type="number"
+                        id="malaysianEntryFee"
+                        name="malaysianEntryFee"
+                        value={tournamentFormData.malaysianEntryFee}
+                        onChange={handleTournamentInputChange}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                      <small className="form-note" style={{ color: '#dc3545' }}>Note: Not more than RM 200.00</small>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label htmlFor="internationalEntryFee">International Entry Fee (RM) per player</label>
+                      <input
+                        type="number"
+                        id="internationalEntryFee"
+                        name="internationalEntryFee"
+                        value={tournamentFormData.internationalEntryFee}
+                        onChange={handleTournamentInputChange}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                      <small className="form-note" style={{ color: '#dc3545' }}>Note: Only required if international players are involved</small>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label style={{ visibility: 'hidden' }}>Save</label>
+                      <button 
+                        type="button" 
+                        onClick={handleSaveTournamentCategory}
+                        style={{
+                          padding: '10px 20px',
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          width: 'auto'
+                        }}
+                      >
+                        Save Category
+                      </button>
+                    </div>
                   </div>
                   
+                  {savedTournamentCategories.length > 0 && (
+                    <div className="saved-categories" style={{ marginTop: '15px', marginBottom: '15px' }}>
+                      <h4>Tournament Categories:</h4>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          border: '1px solid #ddd',
+                          backgroundColor: 'white'
+                        }}>
+                          <thead>
+                            <tr style={{ backgroundColor: '#f8f9fa' }}>
+                              <th style={{
+                                padding: '12px',
+                                textAlign: 'left',
+                                borderBottom: '2px solid #ddd',
+                                fontWeight: 'bold',
+                                color: '#333'
+                              }}>Category</th>
+                              <th style={{
+                                padding: '12px',
+                                textAlign: 'center',
+                                borderBottom: '2px solid #ddd',
+                                fontWeight: 'bold',
+                                color: '#333',
+                                width: '150px'
+                              }}>Malaysian Fee (RM)</th>
+                              <th style={{
+                                padding: '12px',
+                                textAlign: 'center',
+                                borderBottom: '2px solid #ddd',
+                                fontWeight: 'bold',
+                                color: '#333',
+                                width: '150px'
+                              }}>International Fee (RM)</th>
+                              <th style={{
+                                padding: '12px',
+                                textAlign: 'center',
+                                borderBottom: '2px solid #ddd',
+                                fontWeight: 'bold',
+                                color: '#333',
+                                width: '100px'
+                              }}>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {savedTournamentCategories.map((category, index) => (
+                              <tr key={category.id} style={{
+                                backgroundColor: index % 2 === 0 ? '#fff' : '#f9f9f9'
+                              }}>
+                                <td style={{
+                                  padding: '12px',
+                                  borderBottom: '1px solid #ddd',
+                                  borderRight: '1px solid #ddd'
+                                }}>{category.category}</td>
+                                <td style={{
+                                  padding: '12px',
+                                  textAlign: 'center',
+                                  borderBottom: '1px solid #ddd',
+                                  borderRight: '1px solid #ddd',
+                                  fontWeight: 'bold',
+                                  color: '#007bff'
+                                }}>RM {category.malaysianEntryFee.toFixed(2)}</td>
+                                <td style={{
+                                  padding: '12px',
+                                  textAlign: 'center',
+                                  borderBottom: '1px solid #ddd',
+                                  borderRight: '1px solid #ddd',
+                                  fontWeight: 'bold',
+                                  color: '#28a745'
+                                }}>RM {category.internationalEntryFee.toFixed(2)}</td>
+                                <td style={{
+                                  padding: '12px',
+                                  textAlign: 'center',
+                                  borderBottom: '1px solid #ddd'
+                                }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveTournamentCategory(category.id)}
+                                    style={{
+                                      backgroundColor: '#dc3545',
+                                      color: 'white',
+                                      border: 'none',
+                                      padding: '5px 10px',
+                                      borderRadius: '3px',
+                                      fontSize: '12px',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="form-section">
                   <div className="form-group">
                     <label htmlFor="expectedParticipants">Expected No. of Participants *</label>
                     <input
@@ -3077,7 +3804,18 @@ Settings
                 </div>
                 
                 <div className="form-section">
-                  <h3>Important Consent & Agreement</h3>
+                  <h3>Mandatory Compliance</h3>
+                  <div className="remarks-info">
+                    <ul className="remarks-list">
+                      <li>Endorsement logos (state, national & PJS/KBS) must be displayed on your event banners/at the venue etc.</li>
+                      <li>Traditional scoring up to 11 pts or more; Rally Scoring (minimum up to 21 pts) is acceptable for the first round-robins and novice only.</li>
+                      <li>The fee for each category is capped at RM200 per Malaysian player and must not be exceeded.</li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="form-section">
+                  <h3>Consent & Agreement</h3>
                   <div className="consent-section">
                     <div className="consent-item">
                       <label className="checkbox-label">
@@ -3131,6 +3869,7 @@ Settings
                   </button>
                 </div>
               </form>
+              </>
             ) : (
               <div className="submission-success">
                 <div className="success-message">
@@ -3363,7 +4102,7 @@ Settings
                       </div>
                       
                       <div className="form-group">
-                        <label htmlFor="edit-classification">Level/Type of Event *</label>
+                        <label htmlFor="edit-classification">Level of Event *</label>
                         <select
                           id="edit-classification"
                           name="classification"
@@ -3661,6 +4400,7 @@ Settings
         
         {currentView === 'analytics' && renderAnalytics()}
         {currentView === 'registered-organizations' && renderRegisteredOrganizations()}
+        {currentView === 'notice-management' && renderNoticeManagement()}
         {currentView === 'settings' && renderSettings()}
       </div>
 
