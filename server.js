@@ -97,6 +97,18 @@ const emailTemplates = {
             <li>You can check your application status anytime using your Application ID: <strong>${applicationData.applicationId}</strong></li>
           </ul>
         </div>
+
+        <div style="background-color: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2c5aa0;">
+          <h4 style="color: #2c5aa0; margin-top: 0;">📎 Application PDF Attached</h4>
+          <p style="margin-bottom: 0;">A complete PDF copy of your tournament application is attached to this email, containing all the information you submitted including:</p>
+          <ul style="margin-top: 8px; margin-bottom: 0; padding-left: 20px;">
+            <li>Organiser information and contact details</li>
+            <li>Complete event details and venue information</li>
+            <li>All tournament categories with entry fees</li>
+            <li>Scoring format and tournament settings</li>
+            <li>Consent statements and agreements</li>
+          </ul>
+        </div>
         
         <div style="background-color: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
           <h4 style="color: #0056b3; margin-top: 0;">Important Notes:</h4>
@@ -259,13 +271,13 @@ const generateApplicationPDF = async (applicationData) => {
     
     // Helper function to add a new page with logo background
     const addPageWithLogo = () => {
-      const page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
-      const { width, height } = page.getSize();
-      
+      const newPage = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
+      const { width, height } = newPage.getSize();
+
       // Add logo as background if available
       if (logoImage) {
         const logoSize = 150;
-        page.drawImage(logoImage, {
+        newPage.drawImage(logoImage, {
           x: width / 2 - logoSize / 2,
           y: height / 2 - logoSize / 2,
           width: logoSize,
@@ -273,8 +285,8 @@ const generateApplicationPDF = async (applicationData) => {
           opacity: 0.05 // Very light background
         });
       }
-      
-      return { page, width, height };
+
+      return { page: newPage, width, height };
     };
     
     // Create first page
@@ -350,13 +362,52 @@ const generateApplicationPDF = async (applicationData) => {
     
     // Helper function to check if new page is needed
     const checkNewPage = (requiredSpace = 100) => {
-      if (yPosition < requiredSpace) {
+      const bottomMargin = 80; // Reserve space for footer
+      if (yPosition < (requiredSpace + bottomMargin)) {
         const newPageData = addPageWithLogo();
         page = newPageData.page;
         yPosition = newPageData.height - 50;
         return true;
       }
       return false;
+    };
+
+    // Helper function to add footer to current page
+    const addFooter = () => {
+      const footerY = 80; // Fixed footer position from bottom
+
+      // Footer separator line
+      page.drawLine({
+        start: { x: 50, y: footerY + 40 },
+        end: { x: width - 50, y: footerY + 40 },
+        thickness: 1,
+        color: rgb(0.8, 0.8, 0.8)
+      });
+
+      // Footer content
+      page.drawText('This application is submitted to Malaysia Pickleball Association (MPA) for tournament approval.', {
+        x: 50,
+        y: footerY + 25,
+        size: 10,
+        font: helveticaFont,
+        color: textColor
+      });
+
+      page.drawText('For inquiries, please contact: tournament@malaysiapickleballassociation.org', {
+        x: 50,
+        y: footerY + 10,
+        size: 10,
+        font: helveticaBoldFont,
+        color: headerColor
+      });
+
+      page.drawText(`Generated on: ${new Date().toLocaleString()}`, {
+        x: 50,
+        y: footerY - 5,
+        size: 10,
+        font: helveticaFont,
+        color: textColor
+      });
     };
     
     // HEADER - Page 1
@@ -407,8 +458,8 @@ const generateApplicationPDF = async (applicationData) => {
     
     // Function to add section
     const addSectionContent = (title, items) => {
-      checkNewPage(80);
-      
+      checkNewPage(120); // Increased space check for section headers
+
       // Section header background
       page.drawRectangle({
         x: 50,
@@ -417,7 +468,7 @@ const generateApplicationPDF = async (applicationData) => {
         height: 20,
         color: headerColor
       });
-      
+
       // Section title
       page.drawText(title, {
         x: 60,
@@ -427,12 +478,12 @@ const generateApplicationPDF = async (applicationData) => {
         color: rgb(1, 1, 1)
       });
       yPosition -= 30;
-      
+
       // Section items
       items.forEach(item => {
         if (item.value) {
-          checkNewPage(25);
-          
+          checkNewPage(40); // Better spacing check for each item
+
           page.drawText(`${item.label}:`, {
             x: 60,
             y: yPosition,
@@ -440,10 +491,11 @@ const generateApplicationPDF = async (applicationData) => {
             font: helveticaBoldFont,
             color: labelColor
           });
-          
+
           // Handle long text with wrapping
           if (item.value.length > 50) {
-            yPosition = addWrappedText(item.value, 250, yPosition, width - 300, { size: 11 });
+            const newY = addWrappedText(item.value, 250, yPosition, width - 300, { size: 11 });
+            yPosition = newY - 10; // Add some spacing after wrapped text
           } else {
             page.drawText(item.value, {
               x: 250,
@@ -456,7 +508,7 @@ const generateApplicationPDF = async (applicationData) => {
           }
         }
       });
-      yPosition -= 10;
+      yPosition -= 15; // Increased section spacing
     };
     
     // ORGANISER INFORMATION
@@ -464,32 +516,116 @@ const generateApplicationPDF = async (applicationData) => {
       { label: 'Organiser Name', value: applicationData.organiserName },
       { label: 'Registration Number', value: applicationData.registrationNo },
       { label: 'Contact Number', value: applicationData.telContact },
+      { label: 'Person in Charge', value: applicationData.personInCharge },
       { label: 'Email Address', value: applicationData.email },
-      { label: 'Organising Partner', value: applicationData.organisingPartner }
+      { label: 'Organising Partner', value: applicationData.organisingPartner || 'Not applicable' }
     ]);
     
     // EVENT DETAILS
     addSectionContent('EVENT DETAILS', [
       { label: 'Event Title', value: applicationData.eventTitle },
-      { label: 'Event Start Date', value: applicationData.eventStartDateFormatted },
-      { label: 'Event End Date', value: applicationData.eventEndDateFormatted },
+      { label: 'Event Start Date', value: applicationData.eventStartDateFormatted || new Date(applicationData.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) },
+      { label: 'Event End Date', value: applicationData.eventEndDateFormatted || new Date(applicationData.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }) },
       { label: 'State', value: applicationData.state },
       { label: 'City', value: applicationData.city },
       { label: 'Venue', value: applicationData.venue },
-      { label: 'Classification', value: applicationData.classification },
+      { label: 'Level of Event', value: applicationData.classification },
+      { label: 'Type of Event', value: applicationData.eventType },
       { label: 'Expected Participants', value: applicationData.expectedParticipants?.toString() },
       { label: 'Event Summary', value: applicationData.eventSummary }
     ]);
-    
-    // TOURNAMENT SETTINGS
-    const scoringText = applicationData.scoringFormat === 'traditional' 
-      ? 'Traditional (11 points, win by 2)' 
-      : 'Rally (15 points, win by 2)';
-      
-    addSectionContent('TOURNAMENT SETTINGS', [
-      { label: 'Scoring Format', value: scoringText }
-    ]);
-    
+
+    // TOURNAMENT CATEGORIES & ENTRY FEES
+    if (applicationData.categories && applicationData.categories.length > 0) {
+      checkNewPage(150); // More space for categories section
+
+      // Section header background
+      page.drawRectangle({
+        x: 50,
+        y: yPosition - 15,
+        width: width - 100,
+        height: 20,
+        color: headerColor
+      });
+
+      // Section title
+      page.drawText('TOURNAMENT CATEGORIES & ENTRY FEES', {
+        x: 60,
+        y: yPosition - 10,
+        size: 12,
+        font: helveticaBoldFont,
+        color: rgb(1, 1, 1)
+      });
+      yPosition -= 40;
+
+      // Categories details
+      applicationData.categories.forEach((category, index) => {
+        checkNewPage(100); // Check space for each category
+
+        // Category number header
+        page.drawText(`Category ${index + 1}:`, {
+          x: 60,
+          y: yPosition,
+          size: 11,
+          font: helveticaBoldFont,
+          color: textColor
+        });
+        yPosition -= 20;
+
+        // Category details
+        page.drawText('Category:', {
+          x: 80,
+          y: yPosition,
+          size: 10,
+          font: helveticaBoldFont,
+          color: labelColor
+        });
+        page.drawText(category.category || 'Not specified', {
+          x: 200,
+          y: yPosition,
+          size: 10,
+          font: helveticaFont,
+          color: textColor
+        });
+        yPosition -= 15;
+
+        page.drawText('Malaysian Entry Fee:', {
+          x: 80,
+          y: yPosition,
+          size: 10,
+          font: helveticaBoldFont,
+          color: labelColor
+        });
+        page.drawText(`RM ${category.malaysianEntryFee?.toFixed(2) || '0.00'} per player`, {
+          x: 200,
+          y: yPosition,
+          size: 10,
+          font: helveticaFont,
+          color: textColor
+        });
+        yPosition -= 15;
+
+        page.drawText('International Entry Fee:', {
+          x: 80,
+          y: yPosition,
+          size: 10,
+          font: helveticaBoldFont,
+          color: labelColor
+        });
+        const intlFee = category.internationalEntryFee > 0 ? `RM ${category.internationalEntryFee?.toFixed(2)} per player` : 'Not applicable';
+        page.drawText(intlFee, {
+          x: 200,
+          y: yPosition,
+          size: 10,
+          font: helveticaFont,
+          color: textColor
+        });
+        yPosition -= 30; // Extra space between categories
+      });
+
+      yPosition -= 15;
+    }
+
     // CONSENT STATEMENTS
     checkNewPage(100);
     
@@ -560,44 +696,11 @@ const generateApplicationPDF = async (applicationData) => {
     });
     yPosition -= 30;
     
-    // Footer - ensure proper margin
-    checkNewPage(120);
-    
-    // Add some space before footer
-    yPosition -= 30;
-    
-    page.drawLine({
-      start: { x: 50, y: yPosition },
-      end: { x: width - 50, y: yPosition },
-      thickness: 1,
-      color: rgb(0.8, 0.8, 0.8)
-    });
-    yPosition -= 25;
-    
-    page.drawText('This application is submitted to Malaysia Pickleball Association (MPA) for tournament approval.', {
-      x: 50,
-      y: yPosition,
-      size: 10,
-      font: helveticaFont,
-      color: textColor
-    });
-    yPosition -= 18;
-    
-    page.drawText('For inquiries, please contact: tournament@malaysiapickleballassociation.org', {
-      x: 50,
-      y: yPosition,
-      size: 10,
-      font: helveticaBoldFont,
-      color: headerColor
-    });
-    yPosition -= 18;
-    
-    page.drawText(`Generated on: ${new Date().toLocaleString()}`, {
-      x: 50,
-      y: yPosition,
-      size: 10,
-      font: helveticaFont,
-      color: textColor
+    // Add footer to all pages
+    const pages = pdfDoc.getPages();
+    pages.forEach((currentPage) => {
+      page = currentPage;
+      addFooter();
     });
     
     // Serialize the PDFDocument to bytes
@@ -690,6 +793,14 @@ const tournamentApplicationSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  eventStartDateFormatted: {
+    type: String,
+    required: false
+  },
+  eventEndDateFormatted: {
+    type: String,
+    required: false
+  },
   state: {
     type: String,
     required: true
@@ -707,6 +818,11 @@ const tournamentApplicationSchema = new mongoose.Schema({
     required: true,
     enum: ['District', 'Divisional', 'State', 'National', 'International']
   },
+  eventType: {
+    type: String,
+    required: false,
+    enum: ['Open', 'Closed']
+  },
   expectedParticipants: {
     type: Number,
     required: true
@@ -715,6 +831,23 @@ const tournamentApplicationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // Tournament Categories
+  categories: [{
+    category: {
+      type: String,
+      required: true
+    },
+    malaysianEntryFee: {
+      type: Number,
+      required: true,
+      max: 200
+    },
+    internationalEntryFee: {
+      type: Number,
+      required: false,
+      default: 0
+    }
+  }],
   // Tournament Settings
   scoringFormat: {
     type: String,

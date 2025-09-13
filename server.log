@@ -1,29 +1,87 @@
-[dotenv@17.2.1] injecting env (5) from .env.local -- tip: ⚙️  write to custom object with { processEnv: myObject }
+
+> malaysia-pickleball-portal@0.1.0 server
+> node server.js
+
+[dotenv@17.2.1] injecting env (5) from .env.local -- tip: ⚙️  suppress all logs with { quiet: true }
 📁 Using .env.local (local development mode)
-[dotenv@17.2.1] injecting env (3) from .env -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[dotenv@17.2.1] injecting env (3) from .env -- tip: ⚙️  enable debug logging with { debug: true }
 🏠 Using LOCAL MongoDB for development
-🏠 Old database mapped to LOCAL for testing
 🏠 Using LOCAL MongoDB for development
-🏠 Old database mapped to LOCAL for testing
 
 === DATABASE CONFIGURATION ===
 Environment: development
 Mode: LOCAL
 Safe Mode: ✅ ON (localhost only)
-New DB: mongodb://localhost:27017/malaysia-pickleball-portal-dev
-Old DB: mongodb://localhost:27017/malaysia-pickleball-dev
+Database: mongodb://localhost:27017/malaysia-pickleball-portal-dev
 ===============================
 
-🔄 Local Development: Database sync ENABLED (local-to-local only)
 Server is running on port 5001
 ✅ Connected to MongoDB (local)
-🔄 Syncing tournament update to old database: Fenix Digital
-🔄 Updating tournament in old database: Fenix Digital
-✅ Successfully updated tournament in old database: Fenix Digital
-✅ Tournament sync successful: Tournament updated in old database
-🔄 Syncing tournament update to old database: Test Update Title
-🔄 Updating tournament in old database: Test Update Title
-⚠️  Tournament not found in old database, creating new: Test Update Title
-🚀 Migrating approved tournament: Test Update Title
-✅ Successfully migrated tournament to old database: Test Update Title
-✅ Tournament sync successful: Tournament migrated successfully
+🔄 Generating PDF for application: MPAND7A8G
+[OK] MPA logo loaded successfully
+[OK] Enhanced PDF generated successfully, size: 104798 bytes
+[OK] Includes: MPA logo background, consent statements (data processing & terms acceptance)
+📧 Preparing to send email to: no-settings@test.com
+📧 Attachments count: 1
+📎 Attachment 1: Tournament_Application_MPAND7A8G.pdf (104798 bytes)
+📧 Sending email...
+✅ Email sent successfully: <2f733908-7df5-b12b-f20a-45748abf7301@malaysiapickleballassociation.org>
+🔄 Generating PDF for application: MPABTE8LJ
+[OK] MPA logo loaded successfully
+[OK] Enhanced PDF generated successfully, size: 104435 bytes
+[OK] Includes: MPA logo background, consent statements (data processing & terms acceptance)
+📧 Preparing to send email to: ariffinanuar@gmail.com
+📧 Attachments count: 1
+📎 Attachment 1: Tournament_Application_MPABTE8LJ.pdf (104435 bytes)
+📧 Sending email...
+✅ Email sent successfully: <a5fd2237-7fbe-16f6-9c01-26b8e90bed72@malaysiapickleballassociation.org>
+Admin login attempt: { username: 'admin', password: 'admin123' }
+Checking credentials: { username: 'admin', password: '***' }
+Login successful for hardcoded super admin
+Login record saved
+Delete request received for application ID: MPABTE8LJ
+Application deleted successfully: MPABTE8LJ
+🚨 Sending INSTANT deletion webhook to main site...
+🚀 INSTANT deletion webhook sent - no 2-minute wait!
+❌ Webhook failed (tournament still deleted from portal): connect ECONNREFUSED 127.0.0.1:3001
+Delete request received for application ID: MPAND7A8G
+Application deleted successfully: MPAND7A8G
+🚨 Sending INSTANT deletion webhook to main site...
+🚀 INSTANT deletion webhook sent - no 2-minute wait!
+❌ Webhook failed (tournament still deleted from portal): connect ECONNREFUSED 127.0.0.1:3001
+Delete request received for application ID: MPAOKWQRN
+Application deleted successfully: MPAOKWQRN
+🚨 Sending INSTANT deletion webhook to main site...
+🚀 INSTANT deletion webhook sent - no 2-minute wait!
+❌ Webhook failed (tournament still deleted from portal): connect ECONNREFUSED 127.0.0.1:3001
+Delete request received for application ID: MPAG6881T
+Application deleted successfully: MPAG6881T
+🚨 Sending INSTANT deletion webhook to main site...
+🚀 INSTANT deletion webhook sent - no 2-minute wait!
+❌ Webhook failed (tournament still deleted from portal): connect ECONNREFUSED 127.0.0.1:3001
+Delete request received for application ID: MPAIJKOZL
+Application deleted successfully: MPAIJKOZL
+🚨 Sending INSTANT deletion webhook to main site...
+🚀 INSTANT deletion webhook sent - no 2-minute wait!
+❌ Webhook failed (tournament still deleted from portal): connect ECONNREFUSED 127.0.0.1:3001
+Delete request received for application ID: MPAXR1VQE
+Application deleted successfully: MPAXR1VQE
+🚨 Sending INSTANT deletion webhook to main site...
+🚀 INSTANT deletion webhook sent - no 2-minute wait!
+❌ Webhook failed (tournament still deleted from portal): connect ECONNREFUSED 127.0.0.1:3001
+Delete request received for application ID: MPAKCIW1C
+Application deleted successfully: MPAKCIW1C
+🚨 Sending INSTANT deletion webhook to main site...
+🚀 INSTANT deletion webhook sent - no 2-minute wait!
+❌ Webhook failed (tournament still deleted from portal): connect ECONNREFUSED 127.0.0.1:3001
+Delete request received for application ID: MPAC5Y937
+Application deleted successfully: MPAC5Y937
+🚨 Sending INSTANT deletion webhook to main site...
+🚀 INSTANT deletion webhook sent - no 2-minute wait!
+❌ Webhook failed (tournament still deleted from portal): connect ECONNREFUSED 127.0.0.1:3001
+Organization permanently deleted: MPO28280 - Fenix Digital
+Registration confirmation email sent to: ariffinanuar@gmail.com
+Admin login attempt: { username: 'admin', password: 'admin123' }
+Checking credentials: { username: 'admin', password: '***' }
+Login successful for hardcoded super admin
+Login record saved

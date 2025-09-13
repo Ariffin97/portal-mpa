@@ -4211,12 +4211,18 @@ button.utility-link {
 /* Digital Login Page Styles */
 .digital-login-page {
   min-height: 100vh;
-  position: relative;
+  position: fixed; /* Cover entire viewport */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   overflow: hidden;
+  isolation: isolate; /* Create new stacking context */
+  z-index: 9999; /* Ensure it's above everything else */
 }
 
 .login-background {
@@ -4225,7 +4231,8 @@ button.utility-link {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1;
+  z-index: -2; /* Behind everything */
+  pointer-events: none; /* Don't interfere with interactions */
 }
 
 .login-grid-pattern {
@@ -4234,16 +4241,17 @@ button.utility-link {
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
-    linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px);
-  background-size: 50px 50px;
-  animation: gridMove 20s linear infinite;
+  background-image:
+    linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+  background-size: 60px 60px;
+  animation: gridMove 25s linear infinite;
+  opacity: 0.6;
 }
 
 @keyframes gridMove {
   0% { transform: translate(0, 0); }
-  100% { transform: translate(50px, 50px); }
+  100% { transform: translate(60px, 60px); }
 }
 
 .login-particles {
@@ -4252,13 +4260,16 @@ button.utility-link {
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: -1; /* Behind login container but above grid */
+  pointer-events: none; /* Don't interfere with interactions */
 }
 
 .particle {
   position: absolute;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
-  animation: float 6s ease-in-out infinite;
+  animation: float 8s ease-in-out infinite;
+  will-change: transform; /* Optimize animations */
 }
 
 .particle:nth-child(1) {
@@ -4302,14 +4313,19 @@ button.utility-link {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  33% { transform: translateY(-20px) rotate(120deg); }
-  66% { transform: translateY(10px) rotate(240deg); }
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateY(-30px) rotate(180deg);
+    opacity: 0.4;
+  }
 }
 
 .login-container-digital {
   position: relative;
-  z-index: 2;
+  z-index: 10; /* Ensure it's above background elements */
   width: 100%;
   max-width: 450px;
   padding: 20px;
@@ -4589,23 +4605,39 @@ button.utility-link {
     max-width: 95%;
     padding: 10px;
   }
-  
+
   .login-header-digital {
     padding: 25px 20px;
   }
-  
+
   .login-form-container {
     padding: 30px 20px;
   }
-  
+
   .brand-info h1 {
     font-size: 1.5rem;
   }
-  
+
   .access-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 15px;
+  }
+
+  /* Reduce background animation intensity on mobile */
+  .login-grid-pattern {
+    background-size: 40px 40px;
+    opacity: 0.3;
+  }
+
+  .particle {
+    animation-duration: 10s; /* Slower animation on mobile */
+  }
+
+  /* Hide some particles on mobile for better performance */
+  .particle:nth-child(4),
+  .particle:nth-child(5) {
+    display: none;
   }
   
   .security-badge {

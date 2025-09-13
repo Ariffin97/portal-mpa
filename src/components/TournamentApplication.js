@@ -334,10 +334,17 @@ const TournamentApplication = ({ setCurrentPage }) => {
       return;
     }
 
+    // Check if Malaysian Entry Fee exceeds RM 200
+    const malaysianFee = parseFloat(formData.malaysianEntryFee);
+    if (malaysianFee > 200) {
+      alert('Malaysian Entry Fee cannot exceed RM 200.00 per player. Please enter a valid amount.');
+      return;
+    }
+
     const newCategory = {
       id: Date.now(), // Simple unique ID
       category: formData.category,
-      malaysianEntryFee: parseFloat(formData.malaysianEntryFee),
+      malaysianEntryFee: malaysianFee,
       internationalEntryFee: formData.internationalEntryFee ? parseFloat(formData.internationalEntryFee) : 0
     };
 
@@ -350,6 +357,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
       malaysianEntryFee: '',
       internationalEntryFee: ''
     }));
+  };
+
+  // Check if Save Category button should be disabled
+  const isSaveCategoryDisabled = () => {
+    const malaysianFee = parseFloat(formData.malaysianEntryFee);
+    return !formData.category || !formData.malaysianEntryFee || malaysianFee > 200 || isNaN(malaysianFee);
   };
 
   // Handle removing a saved category
@@ -664,6 +677,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
         eventTitle: formData.eventTitle,
         eventStartDate: formData.eventStartDate,
         eventEndDate: formData.eventEndDate,
+        eventStartDateFormatted: formData.eventStartDateFormatted,
+        eventEndDateFormatted: formData.eventEndDateFormatted,
         state: formData.state,
         city: formData.city,
         venue: formData.venue,
@@ -1084,11 +1099,23 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 name="malaysianEntryFee"
                 placeholder="0.00"
                 min="0"
+                max="200"
                 step="0.01"
                 value={formData.malaysianEntryFee}
                 onChange={handleInputChange}
+                style={{
+                  borderColor: formData.malaysianEntryFee && parseFloat(formData.malaysianEntryFee) > 200 ? '#dc3545' : ''
+                }}
               />
-              <small className="form-note" style={{ color: '#dc3545' }}>Note: Not more than RM 200.00</small>
+              <small className="form-note" style={{
+                color: formData.malaysianEntryFee && parseFloat(formData.malaysianEntryFee) > 200 ? '#dc3545' : '#dc3545',
+                fontWeight: formData.malaysianEntryFee && parseFloat(formData.malaysianEntryFee) > 200 ? 'bold' : 'normal'
+              }}>
+                {formData.malaysianEntryFee && parseFloat(formData.malaysianEntryFee) > 200
+                  ? '⚠️ Fee exceeds RM 200.00 limit! Please enter a valid amount.'
+                  : 'Note: Not more than RM 200.00'
+                }
+              </small>
             </div>
             
             <div className="form-group">
@@ -1108,18 +1135,28 @@ const TournamentApplication = ({ setCurrentPage }) => {
             
             <div className="form-group">
               <label style={{ visibility: 'hidden' }}>Save</label>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={handleSaveCategory}
+                disabled={isSaveCategoryDisabled()}
                 style={{
                   padding: '10px 20px',
-                  backgroundColor: '#28a745',
+                  backgroundColor: isSaveCategoryDisabled() ? '#6c757d' : '#28a745',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
-                  cursor: 'pointer',
-                  width: 'auto'
+                  cursor: isSaveCategoryDisabled() ? 'not-allowed' : 'pointer',
+                  width: 'auto',
+                  opacity: isSaveCategoryDisabled() ? 0.6 : 1,
+                  transition: 'all 0.2s ease'
                 }}
+                title={
+                  isSaveCategoryDisabled()
+                    ? formData.malaysianEntryFee && parseFloat(formData.malaysianEntryFee) > 200
+                      ? 'Malaysian Entry Fee exceeds RM 200.00 limit'
+                      : 'Please fill in Category and Malaysian Entry Fee (max RM 200.00)'
+                    : 'Save this category'
+                }
               >
                 Save Category
               </button>

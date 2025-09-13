@@ -570,7 +570,7 @@ function App() {
 
   return (
     <div className="App">
-      <Header currentPage={currentPage} setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />
+      {currentPage !== 'login' && <Header currentPage={currentPage} setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
       <main className="App-main">
         {renderPage()}
       </main>
