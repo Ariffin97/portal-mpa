@@ -55,6 +55,8 @@ const Login = ({ setCurrentPage, setIsLoggedIn }) => {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userAuthority', response.user?.authority || 'admin');
         localStorage.setItem('username', formData.username.trim());
+        // Set login timestamp for session management
+        localStorage.setItem('loginTimestamp', Date.now().toString());
         setCurrentPage('admin');
         console.log('Redirecting to admin dashboard');
       } else {

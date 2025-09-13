@@ -15,6 +15,7 @@ import mpaLogo from './assets/images/mpa.png';
 import ref1Image from './assets/images/ref1.png';
 import safeSportCodePDF from './assets/documents/safesportcode.pdf';
 import { useNotices } from './contexts/NoticeContext';
+import apiService from './services/api';
 
 function App() {
   // Use shared notices context
@@ -28,10 +29,43 @@ function App() {
 
   // Check login status on app load
   useEffect(() => {
-    const loginStatus = localStorage.getItem('isLoggedIn');
-    if (loginStatus === 'true') {
-      setIsLoggedIn(true);
-    }
+    const checkAuthStatus = async () => {
+      const loginStatus = localStorage.getItem('isLoggedIn');
+      const username = localStorage.getItem('username');
+      const loginTimestamp = localStorage.getItem('loginTimestamp');
+
+      if (loginStatus === 'true' && username && loginTimestamp) {
+        // Check if session has expired (24 hours = 24 * 60 * 60 * 1000 ms)
+        const sessionDuration = 24 * 60 * 60 * 1000;
+        const currentTime = Date.now();
+        const timeSinceLogin = currentTime - parseInt(loginTimestamp);
+
+        if (timeSinceLogin > sessionDuration) {
+          console.log('Session expired due to time limit, clearing auth');
+          localStorage.removeItem('isLoggedIn');
+          localStorage.removeItem('userAuthority');
+          localStorage.removeItem('username');
+          localStorage.removeItem('loginTimestamp');
+          setIsLoggedIn(false);
+          return;
+        }
+
+        // Verify session is still valid with server
+        try {
+          await apiService.healthCheck();
+          setIsLoggedIn(true);
+        } catch (error) {
+          console.log('Session expired or server unavailable, clearing auth');
+          localStorage.removeItem('isLoggedIn');
+          localStorage.removeItem('userAuthority');
+          localStorage.removeItem('username');
+          localStorage.removeItem('loginTimestamp');
+          setIsLoggedIn(false);
+        }
+      }
+    };
+
+    checkAuthStatus();
   }, []);
 
   // Tournament Guidelines Component

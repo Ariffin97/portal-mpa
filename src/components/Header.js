@@ -5,6 +5,9 @@ const Header = ({ currentPage, setCurrentPage, isLoggedIn, setIsLoggedIn }) => {
   const handleLogout = () => {
     setIsLoggedIn(false);
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userAuthority');
+    localStorage.removeItem('username');
+    localStorage.removeItem('loginTimestamp');
     setCurrentPage('home');
   };
 
