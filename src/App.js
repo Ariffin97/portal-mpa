@@ -11,6 +11,7 @@ import OrganizationPrivacyPolicy from './components/OrganizationPrivacyPolicy';
 import TournamentApplication from './components/TournamentApplication';
 import ApplicationStatus from './components/ApplicationStatus';
 import TermsAndConditions from './components/TermsAndConditions';
+import AssessmentSystem from './components/AssessmentSystem';
 import mpaLogo from './assets/images/mpa.png';
 import ref1Image from './assets/images/ref1.png';
 import safeSportCodePDF from './assets/documents/safesportcode.pdf';
@@ -26,6 +27,58 @@ function App() {
   const [showTournamentGuidelines, setShowTournamentGuidelines] = useState(false);
   const [isNoticePortalExpanded, setIsNoticePortalExpanded] = useState(false);
   const [showImportantNotice, setShowImportantNotice] = useState(false);
+  const [showApplyDropdown, setShowApplyDropdown] = useState(false);
+  const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+
+  // Global assessment submissions state
+  const [globalAssessmentSubmissions, setGlobalAssessmentSubmissions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('assessmentSubmissions');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Error loading assessment submissions:', error);
+      return [];
+    }
+  });
+
+  // Function to save assessment submissions
+  const saveAssessmentSubmission = (submission) => {
+    const newSubmission = {
+      ...submission,
+      id: Date.now() + Math.random(), // Ensure unique ID
+      submittedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString()
+    };
+
+    const updatedSubmissions = [...globalAssessmentSubmissions, newSubmission];
+    setGlobalAssessmentSubmissions(updatedSubmissions);
+
+    // Save to localStorage
+    try {
+      localStorage.setItem('assessmentSubmissions', JSON.stringify(updatedSubmissions));
+    } catch (error) {
+      console.error('Error saving assessment submission:', error);
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showApplyDropdown && !event.target.closest('.apply-dropdown-container')) {
+        setShowApplyDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showApplyDropdown]);
+
+  // Toggle dropdown - always appears at the top
+  const handleDropdownToggle = () => {
+    setShowApplyDropdown(!showApplyDropdown);
+  };
 
   // Check login status on app load
   useEffect(() => {
@@ -374,7 +427,7 @@ function App() {
       case 'login':
         return <Login setCurrentPage={setCurrentPage} setIsLoggedIn={setIsLoggedIn} />;
       case 'admin':
-        return isLoggedIn ? <AdminDashboard setCurrentPage={setCurrentPage} /> : <Login setCurrentPage={setCurrentPage} setIsLoggedIn={setIsLoggedIn} />;
+        return isLoggedIn ? <AdminDashboard setCurrentPage={setCurrentPage} globalAssessmentSubmissions={globalAssessmentSubmissions} /> : <Login setCurrentPage={setCurrentPage} setIsLoggedIn={setIsLoggedIn} />;
       case 'register-organization':
         return <OrganizationRegistration setCurrentPage={setCurrentPage} />;
       case 'organization-terms':
@@ -452,43 +505,93 @@ function App() {
                 <h1 className="hero-title">Malaysia Pickleball Association</h1>
                 <p className="hero-subtitle">Official Tournament Management Portal</p>
                 <p className="hero-description">
-                  Your gateway to competitive pickleball in Malaysia. Apply for tournaments, 
+                  Your gateway to competitive pickleball in Malaysia. Apply for tournaments,
                   track your applications, and join our growing community of players.
                 </p>
+
                 <div className="hero-actions">
-                  <div className="hero-actions-row">
-                    <button 
-                      className="cta-guidelines" 
-                      onClick={() => setShowTournamentGuidelines(true)}
+                  <div className="hero-actions-column">
+                    <button
+                      className="cta-assessment"
+                      onClick={() => setShowAssessmentModal(true)}
                     >
-                      Tournament Guidelines
+                      Assessment
                     </button>
-                    <button 
-                      className="cta-important" 
-                      onClick={() => setShowImportantNotice(true)}
-                    >
-                      Important Notice
-                    </button>
-                    <button 
-                      className="cta-safesport" 
-                      onClick={() => window.open(safeSportCodePDF, '_blank')}
-                    >
-                      Safe Sport Code
-                    </button>
-                  </div>
-                  <div className="hero-actions-row">
-                    <button 
-                      className="cta-primary" 
-                      onClick={() => setShowLoginModal(true)}
-                    >
-                      Apply for Tournament
-                    </button>
-                    <button 
-                      className="cta-secondary" 
-                      onClick={() => setCurrentPage('status')}
-                    >
-                      Check Application Status
-                    </button>
+                    <div className="hero-actions-row">
+                      <div className="apply-dropdown-container">
+                        <button
+                          className="cta-primary dropdown-toggle"
+                          onClick={handleDropdownToggle}
+                        >
+                          Apply for Tournament
+                          <span className={`dropdown-arrow ${showApplyDropdown ? 'open' : ''}`}>▼</span>
+                        </button>
+
+                        {showApplyDropdown && (
+                          <div className="apply-dropdown-menu">
+                            <div className="dropdown-header">
+                              <h4>Quick Resources</h4>
+                              <p>Review these important documents before applying</p>
+                            </div>
+                            <button
+                              className="dropdown-item"
+                              onClick={() => {
+                                setShowTournamentGuidelines(true);
+                                setShowApplyDropdown(false);
+                              }}
+                            >
+                              <div className="dropdown-content">
+                                <strong>Tournament Guidelines</strong>
+                                <small>Complete guide for organizers</small>
+                              </div>
+                            </button>
+                            <button
+                              className="dropdown-item"
+                              onClick={() => {
+                                setShowImportantNotice(true);
+                                setShowApplyDropdown(false);
+                              }}
+                            >
+                              <div className="dropdown-content">
+                                <strong>Important Notice</strong>
+                                <small>Key requirements and regulations</small>
+                              </div>
+                            </button>
+                            <button
+                              className="dropdown-item"
+                              onClick={() => {
+                                window.open(safeSportCodePDF, '_blank');
+                                setShowApplyDropdown(false);
+                              }}
+                            >
+                              <div className="dropdown-content">
+                                <strong>Safe Sport Code</strong>
+                                <small>Safety guidelines and protocols</small>
+                              </div>
+                            </button>
+                            <div className="dropdown-divider"></div>
+                            <button
+                              className="dropdown-item primary-action"
+                              onClick={() => {
+                                setShowLoginModal(true);
+                                setShowApplyDropdown(false);
+                              }}
+                            >
+                              <div className="dropdown-content">
+                                <strong>Start Application</strong>
+                                <small>Begin tournament application process</small>
+                              </div>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        className="cta-secondary"
+                        onClick={() => setCurrentPage('status')}
+                      >
+                        Check Application Status
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -625,6 +728,13 @@ function App() {
 
       {/* Important Notice Modal */}
       {showImportantNotice && renderImportantNotice()}
+
+      {/* Assessment System */}
+      <AssessmentSystem
+        isOpen={showAssessmentModal}
+        onClose={() => setShowAssessmentModal(false)}
+        onSubmissionSave={saveAssessmentSubmission}
+      />
     </div>
   );
 }

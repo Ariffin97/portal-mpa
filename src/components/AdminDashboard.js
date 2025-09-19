@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import apiService from '../services/api';
 import { useNotices } from '../contexts/NoticeContext';
 import mpaLogo from '../assets/images/mpa.png';
+import AdminPanel from './AdminPanel';
 
-const AdminDashboard = ({ setCurrentPage }) => {
+const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) => {
   // Use shared notices context
   const { 
     notices, 
@@ -111,10 +112,216 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
   // Tournament Updates Tracking
   const [tournamentUpdates, setTournamentUpdates] = useState([]);
+
+  // Assessment System States
+  const [assessmentQuestions, setAssessmentQuestions] = useState([]);
+  const [assessmentTimeLimit, setAssessmentTimeLimit] = useState(30);
+  const [assessmentTitle, setAssessmentTitle] = useState('');
+  const [assessmentSubtitle, setAssessmentSubtitle] = useState('');
+  const [includeAnswers, setIncludeAnswers] = useState(true);
+  const [savedAssessmentForms, setSavedAssessmentForms] = useState([]);
+  // Use global assessment submissions instead of local state
+  const assessmentSubmissions = globalAssessmentSubmissions;
+  const [assessmentManagementExpanded, setAssessmentManagementExpanded] = useState(false);
   const [isLoadingUpdates, setIsLoadingUpdates] = useState(false);
+
+  // Database Assessment Results States
+  const [assessmentBatches, setAssessmentBatches] = useState([]);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [dateFilterEnabled, setDateFilterEnabled] = useState(false);
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
+  const [collapsedBatches, setCollapsedBatches] = useState(new Set());
+
+  // Edit Form Popup States
+  const [showEditFormModal, setShowEditFormModal] = useState(false);
+  const [editingForm, setEditingForm] = useState(null);
+  const [editFormTitle, setEditFormTitle] = useState('');
+  const [editFormSubtitle, setEditFormSubtitle] = useState('');
+  const [editFormQuestions, setEditFormQuestions] = useState([]);
+  const [editFormTimeLimit, setEditFormTimeLimit] = useState(30);
 
   // Sidebar Sub-menu state
   const [createTournamentExpanded, setCreateTournamentExpanded] = useState(false);
+
+  // Load saved assessment forms on component mount
+  useEffect(() => {
+    const loadAssessmentForms = async () => {
+      try {
+        const forms = await apiService.getAllAssessmentForms();
+        setSavedAssessmentForms(Array.isArray(forms) ? forms : []);
+      } catch (error) {
+        console.error('Error loading assessment forms:', error);
+        setSavedAssessmentForms([]);
+      }
+    };
+
+    loadAssessmentForms();
+  }, []);
+
+  // Toggle batch folder collapse state
+  const toggleBatchCollapse = (batchId) => {
+    setCollapsedBatches(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(batchId)) {
+        newSet.delete(batchId);
+      } else {
+        newSet.add(batchId);
+      }
+      return newSet;
+    });
+  };
+
+  // Edit Form Popup Functions
+  const openEditFormModal = (form) => {
+    setEditingForm(form);
+    setEditFormTitle(form.title || '');
+    setEditFormSubtitle(form.subtitle || '');
+    setEditFormQuestions([...form.questions]);
+    setEditFormTimeLimit(form.timeLimit || 30);
+    setShowEditFormModal(true);
+  };
+
+  const closeEditFormModal = () => {
+    setShowEditFormModal(false);
+    setEditingForm(null);
+    setEditFormTitle('');
+    setEditFormSubtitle('');
+    setEditFormQuestions([]);
+    setEditFormTimeLimit(30);
+  };
+
+  const saveEditedForm = async () => {
+    try {
+      if (!editFormTitle.trim()) {
+        alert('Please enter an assessment title before saving the form.');
+        return;
+      }
+      if (editFormQuestions.length === 0) {
+        alert('Please add at least one question before saving the form.');
+        return;
+      }
+
+      const formData = {
+        code: editingForm.code,
+        title: editFormTitle.trim(),
+        subtitle: editFormSubtitle.trim(),
+        questions: [...editFormQuestions],
+        timeLimit: editFormTimeLimit
+      };
+
+      console.log('Updating form:', formData);
+      const response = await apiService.saveAssessmentForm(formData);
+      const updatedForm = response.data;
+
+      // Update local state
+      setSavedAssessmentForms(prev =>
+        (Array.isArray(prev) ? prev : []).map(form =>
+          form.code === editingForm.code ? updatedForm : form
+        )
+      );
+
+      alert(`Form updated successfully!\n\nForm Code: ${updatedForm.code}\nTitle: ${updatedForm.title}\nQuestions: ${updatedForm.questions.length}\n\nThe form has been updated with your changes.`);
+      closeEditFormModal();
+    } catch (error) {
+      console.error('Error updating assessment form:', error);
+      alert('Error updating form. Please try again.');
+    }
+  };
+
+  const addEditQuestion = () => {
+    const newQuestion = {
+      id: Date.now(),
+      question: '',
+      section: '',
+      options: ['', '', '', ''],
+      correctAnswer: ''
+    };
+    setEditFormQuestions([...editFormQuestions, newQuestion]);
+  };
+
+  const updateEditQuestion = (index, field, value) => {
+    const updated = [...editFormQuestions];
+    if (field === 'options') {
+      updated[index].options = value;
+    } else {
+      updated[index][field] = value;
+    }
+    setEditFormQuestions(updated);
+  };
+
+  const removeEditQuestion = (index) => {
+    if (window.confirm('Are you sure you want to remove this question?')) {
+      const updated = editFormQuestions.filter((_, i) => i !== index);
+      setEditFormQuestions(updated);
+    }
+  };
+
+  // Load assessment results from database
+  const loadAssessmentResults = async () => {
+    setIsLoadingResults(true);
+    try {
+      const fromDate = dateFilterEnabled && selectedDate ? selectedDate : null;
+
+      const batches = await apiService.getAssessmentBatches(fromDate);
+
+      setAssessmentBatches(Array.isArray(batches) ? batches : []);
+    } catch (error) {
+      console.error('Error loading assessment results:', error);
+      setAssessmentBatches([]);
+    } finally {
+      setIsLoadingResults(false);
+    }
+  };
+
+  // Delete assessment form
+  const deleteAssessmentForm = async (form) => {
+    const confirmMessage = `Are you sure you want to delete the assessment form "${form.title || 'Untitled Assessment'}"?\n\nCode: ${form.code}\nThis action cannot be undone and will permanently remove the form from the database.`;
+
+    if (window.confirm(confirmMessage)) {
+      try {
+        // Delete from database if it has an ID
+        if (form._id || form.id) {
+          await apiService.deleteAssessmentForm(form._id || form.id);
+        }
+
+        // Remove from local state
+        const updatedForms = savedAssessmentForms.filter(f => f.code !== form.code);
+        setSavedAssessmentForms(updatedForms);
+
+        alert(`Assessment form "${form.title || 'Untitled Assessment'}" has been deleted successfully.`);
+      } catch (error) {
+        console.error('Error deleting assessment form:', error);
+        alert('Failed to delete the assessment form. Please try again.');
+      }
+    }
+  };
+
+  // Load assessment results when view changes to assessment management
+  useEffect(() => {
+    if (currentView === 'assessment-statistics') {
+      loadAssessmentResults();
+    }
+  }, [currentView]);
+
+  // Reload data when date filter changes
+  useEffect(() => {
+    if (currentView === 'assessment-statistics') {
+      loadAssessmentResults();
+    }
+  }, [selectedDate, dateFilterEnabled]);
+
+  // Handle date filter toggle
+  const handleDateFilterToggle = () => {
+    setDateFilterEnabled(!dateFilterEnabled);
+    if (dateFilterEnabled) {
+      setSelectedDate('');
+    }
+  };
+
+  // Calculate total batches from selected date
+  const getTotalBatchesFromDate = () => {
+    return assessmentBatches.length;
+  };
 
   // Notice Management States
   const [editingNotice, setEditingNotice] = useState(null);
@@ -130,7 +337,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
   });
 
   // Calendar state
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDateTournaments, setSelectedDateTournaments] = useState([]);
 
@@ -1273,7 +1480,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
   const handleDateClick = (day) => {
     const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    setSelectedDate(clickedDate);
+    setCalendarSelectedDate(clickedDate);
     const tournamentsOnDate = getTournamentsForDate(clickedDate);
     setSelectedDateTournaments(tournamentsOnDate);
   };
@@ -2324,27 +2531,738 @@ const AdminDashboard = ({ setCurrentPage }) => {
     </div>
   );
 
+  const renderAssessmentManagement = () => {
+    const handleSaveForm = async () => {
+      try {
+        console.log('Starting form save process...');
+        console.log('Questions:', assessmentQuestions);
+        console.log('Time limit:', assessmentTimeLimit);
+
+        // Check if we're editing an existing form
+        const isEditing = window.sessionStorage.getItem('isEditingForm') === 'true';
+        const editingFormCode = window.sessionStorage.getItem('editingFormCode');
+
+        if (!assessmentTitle.trim()) {
+          alert('Please enter an assessment title before saving the form.');
+          return null;
+        }
+
+        if (assessmentQuestions.length === 0) {
+          alert('Please add at least one question before saving the form.');
+          return null;
+        }
+
+        const formData = {
+          title: assessmentTitle.trim(),
+          subtitle: assessmentSubtitle.trim(),
+          questions: [...assessmentQuestions],
+          timeLimit: assessmentTimeLimit,
+          includeAnswers: includeAnswers
+        };
+
+        if (isEditing && editingFormCode) {
+          // Update existing form
+          formData.code = editingFormCode;
+          console.log('Updating existing form:', editingFormCode);
+          console.log('Form data to update:', formData);
+        }
+
+        console.log('Form data to send:', formData);
+        console.log('Calling API...');
+        const response = await apiService.saveAssessmentForm(formData);
+        console.log('API response:', response);
+
+        const savedForm = response.data;
+        console.log('Saved form:', savedForm);
+
+        // Update local state
+        if (isEditing && editingFormCode) {
+          // Update existing form in the list
+          setSavedAssessmentForms(prev =>
+            (Array.isArray(prev) ? prev : []).map(form =>
+              form.code === editingFormCode ? savedForm : form
+            )
+          );
+          alert(`Form updated successfully!\n\nForm Code: ${savedForm.code}\nTitle: ${savedForm.title}\nQuestions: ${savedForm.questions.length}\n\nThe existing form has been updated with your changes.`);
+
+          // Clear editing state
+          window.sessionStorage.removeItem('isEditingForm');
+          window.sessionStorage.removeItem('editingFormCode');
+
+          // Clear all form fields for next assessment
+          setAssessmentTitle('');
+          setAssessmentSubtitle('');
+          setAssessmentQuestions([]);
+          setAssessmentTimeLimit(30);
+          setIncludeAnswers(true);
+        } else {
+          // Add new form to the list
+          setSavedAssessmentForms(prev => [...(Array.isArray(prev) ? prev : []), savedForm]);
+          alert(`Form saved successfully! Form Code: ${savedForm.code}\n\nUsers can use this code to access the assessment.`);
+        }
+
+        // Clear all form fields for next assessment
+        setAssessmentTitle('');
+        setAssessmentSubtitle('');
+        setAssessmentQuestions([]);
+        setAssessmentTimeLimit(30);
+        setIncludeAnswers(true);
+
+        return savedForm.code;
+      } catch (error) {
+        console.error('Error saving assessment form:', error);
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+        alert('Error saving form. Please try again.');
+        return null;
+      }
+    };
+
+    return (
+      <div className="assessment-management-view">
+        <div className="dashboard-header">
+          <h2>Assessment Management</h2>
+          <p className="dashboard-subtitle">Manage assessment questions, forms, and submissions</p>
+        </div>
+
+        <div className="assessment-admin-wrapper">
+          <AdminPanel
+            questions={assessmentQuestions}
+            setQuestions={setAssessmentQuestions}
+            timeLimit={assessmentTimeLimit}
+            setTimeLimit={setAssessmentTimeLimit}
+            assessmentTitle={assessmentTitle}
+            setAssessmentTitle={setAssessmentTitle}
+            assessmentSubtitle={assessmentSubtitle}
+            setAssessmentSubtitle={setAssessmentSubtitle}
+            includeAnswers={includeAnswers}
+            setIncludeAnswers={setIncludeAnswers}
+            submissions={assessmentSubmissions}
+            savedForms={savedAssessmentForms}
+            onSaveForm={handleSaveForm}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  const renderAssessmentList = () => {
+    return (
+      <div className="assessment-list-view">
+        <div className="dashboard-header">
+          <h2>Assessment List</h2>
+          <p className="dashboard-subtitle">View and manage all assessment submissions and user performance</p>
+        </div>
+
+        <form className="tournament-form">
+
+          {/* Assessment Submissions List */}
+          <div className="form-section" style={{ padding: '20px' }}>
+            <h3>All Assessment Submissions ({assessmentSubmissions.length})</h3>
+            {assessmentSubmissions.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(0, 0, 0, 0.5)' }}>
+                <p>No assessment submissions yet.</p>
+                <p style={{ fontSize: '14px', marginTop: '10px' }}>Submissions will appear here once users complete assessments.</p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto', marginTop: '20px' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  backgroundColor: 'white',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  borderRadius: '8px',
+                  overflow: 'hidden'
+                }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#f8f9fa' }}>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'left',
+                        fontWeight: '600',
+                        color: '#495057',
+                        borderBottom: '2px solid #dee2e6',
+                        fontSize: '14px'
+                      }}>#</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'left',
+                        fontWeight: '600',
+                        color: '#495057',
+                        borderBottom: '2px solid #dee2e6',
+                        fontSize: '14px'
+                      }}>Name</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'left',
+                        fontWeight: '600',
+                        color: '#495057',
+                        borderBottom: '2px solid #dee2e6',
+                        fontSize: '14px'
+                      }}>IC Number</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'left',
+                        fontWeight: '600',
+                        color: '#495057',
+                        borderBottom: '2px solid #dee2e6',
+                        fontSize: '14px'
+                      }}>Email</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#495057',
+                        borderBottom: '2px solid #dee2e6',
+                        fontSize: '14px'
+                      }}>Score</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#495057',
+                        borderBottom: '2px solid #dee2e6',
+                        fontSize: '14px'
+                      }}>Percentage</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#495057',
+                        borderBottom: '2px solid #dee2e6',
+                        fontSize: '14px'
+                      }}>Date</th>
+                      <th style={{
+                        padding: '12px 16px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        color: '#495057',
+                        borderBottom: '2px solid #dee2e6',
+                        fontSize: '14px'
+                      }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assessmentSubmissions.map((submission, index) => (
+                      <tr key={submission.id} style={{
+                        borderBottom: '1px solid #dee2e6',
+                        '&:hover': { backgroundColor: '#f8f9fa' }
+                      }}>
+                        <td style={{
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          color: '#495057',
+                          fontWeight: '500'
+                        }}>
+                          {index + 1}
+                        </td>
+                        <td style={{
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          color: '#212529',
+                          fontWeight: '500'
+                        }}>
+                          {submission.userInfo?.fullName || 'Unknown User'}
+                        </td>
+                        <td style={{
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          color: '#495057'
+                        }}>
+                          {submission.userInfo?.icNumber || 'N/A'}
+                        </td>
+                        <td style={{
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          color: '#495057',
+                          maxWidth: '200px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {submission.userInfo?.email || 'N/A'}
+                        </td>
+                        <td style={{
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          color: '#495057',
+                          textAlign: 'center',
+                          fontWeight: '500'
+                        }}>
+                          {submission.results?.score || 0}/{submission.results?.totalQuestions || 0}
+                        </td>
+                        <td style={{
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          textAlign: 'center',
+                          fontWeight: '600',
+                          color: submission.results?.percentage >= 70 ? '#28a745' : '#dc3545'
+                        }}>
+                          {submission.results?.percentage || 0}%
+                        </td>
+                        <td style={{
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          color: '#495057',
+                          textAlign: 'center'
+                        }}>
+                          {submission.completedAt ? new Date(submission.completedAt).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td style={{
+                          padding: '12px 16px',
+                          textAlign: 'center'
+                        }}>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '4px 12px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            backgroundColor: (submission.results?.percentage >= 70) ? '#d4edda' : '#f8d7da',
+                            color: (submission.results?.percentage >= 70) ? '#155724' : '#721c24',
+                            border: `1px solid ${(submission.results?.percentage >= 70) ? '#c3e6cb' : '#f5c6cb'}`
+                          }}>
+                            {(submission.results?.percentage >= 70) ? 'PASS' : 'FAIL'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </form>
+      </div>
+    );
+  };
+
+  const renderAssessmentStatistics = () => {
+
+    return (
+      <div className="assessment-statistics-view">
+        <div className="dashboard-header">
+          <h2>Assessment Statistics</h2>
+          <p className="dashboard-subtitle">View detailed statistics and analytics for assessments</p>
+        </div>
+
+        <form className="tournament-form">
+
+
+          {/* Date Filter Section */}
+          <div className="form-section" style={{ padding: '20px', marginBottom: '20px' }}>
+            <h3 style={{ marginBottom: '20px' }}>Batch Filter</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={dateFilterEnabled}
+                  onChange={handleDateFilterToggle}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                  Filter batches from specific date
+                </span>
+              </label>
+
+              {dateFilterEnabled && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: 'bold' }}>From Date:</label>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '2px solid #000',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+              )}
+
+              {dateFilterEnabled && selectedDate && (
+                <div style={{
+                  backgroundColor: '#e8f4f8',
+                  border: '2px solid #007bff',
+                  borderRadius: '8px',
+                  padding: '10px 15px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: '#007bff'
+                }}>
+                  Showing {getTotalBatchesFromDate()} batches from {new Date(selectedDate).toLocaleDateString()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Assessment Results - Organized by Batch */}
+          <div className="form-section" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3>Assessment Results ({assessmentBatches.reduce((acc, batch) => acc + batch.submissionCount, 0)} total submissions)</h3>
+              <button
+                onClick={loadAssessmentResults}
+                className="home-btn"
+                disabled={isLoadingResults}
+                style={{ padding: '8px 16px', fontSize: '14px' }}
+              >
+                {isLoadingResults ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+
+            {isLoadingResults ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(0, 0, 0, 0.5)' }}>
+                <p>Loading assessment results...</p>
+              </div>
+            ) : assessmentBatches.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(0, 0, 0, 0.5)' }}>
+                <p>{dateFilterEnabled && selectedDate ? `No assessment batches found from ${new Date(selectedDate).toLocaleDateString()}` : 'No assessment submissions yet.'}</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '20px' }}>
+                {assessmentBatches.map((batch) => (
+                  <div key={batch._id} style={{
+                    background: '#f8f8f8',
+                    border: '2px solid #000',
+                    borderRadius: '12px',
+                    padding: '20px'
+                  }}>
+                    {/* Batch Header - Folder Style */}
+                    <div
+                      onClick={() => toggleBatchCollapse(batch._id)}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '15px',
+                        paddingBottom: '15px',
+                        borderBottom: '1px solid #000',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        transition: 'background-color 0.2s',
+                        padding: '10px',
+                        borderRadius: '8px',
+                        backgroundColor: collapsedBatches.has(batch._id) ? '#f0f0f0' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = collapsedBatches.has(batch._id) ? '#f0f0f0' : 'transparent'}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          fontSize: '18px',
+                          color: '#f39c12',
+                          transition: 'all 0.2s',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '24px',
+                          height: '24px'
+                        }}>
+                          {collapsedBatches.has(batch._id) ? '📂' : '📁'}
+                        </div>
+                        <div>
+                          <h4 style={{ margin: '0 0 5px 0', color: '#000', fontSize: '18px', fontWeight: 'bold' }}>
+                            {batch._id}
+                          </h4>
+                          <div style={{ color: '#666', fontSize: '14px' }}>
+                            Form: {batch.formCode} • Date: {batch.batchDate} • {batch.submissionCount} participants
+                          </div>
+                          {batch.formTitle && (
+                            <div style={{ color: '#000', fontSize: '13px', fontStyle: 'italic', marginTop: '2px' }}>
+                              "{batch.formTitle}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ color: '#000', fontWeight: 'bold', fontSize: '16px' }}>
+                          Avg: {Math.round(batch.averageScore)}%
+                        </div>
+                        <div style={{ color: '#666', fontSize: '12px' }}>
+                          {batch.submissions.filter(s => s.score >= 70).length} passed / {batch.submissionCount} total
+                        </div>
+                        <div style={{ color: '#999', fontSize: '11px', marginTop: '4px' }}>
+                          {collapsedBatches.has(batch._id) ? 'Click to expand' : 'Click to collapse'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Batch Submissions */}
+                    {!collapsedBatches.has(batch._id) && (
+                    <div style={{ display: 'grid', gap: '10px' }}>
+                      {batch.submissions.map((submission) => (
+                        <div key={submission._id} style={{
+                          background: 'white',
+                          border: '1px solid rgba(0, 0, 0, 0.1)',
+                          borderRadius: '8px',
+                          padding: '15px',
+                          display: 'grid',
+                          gridTemplateColumns: '2fr 1fr 1fr 100px',
+                          gap: '15px',
+                          alignItems: 'center'
+                        }}>
+                          <div>
+                            <div style={{ color: '#333', fontWeight: 'bold', fontSize: '16px', marginBottom: '2px' }}>
+                              {submission.participantName}
+                            </div>
+                            <div style={{ color: '#666', fontSize: '13px' }}>
+                              ID: {submission.submissionId}
+                            </div>
+                            <div style={{ color: '#666', fontSize: '12px' }}>
+                              {new Date(submission.completedAt).toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '14px', color: '#333' }}>
+                              <strong>{submission.correctAnswers}/{submission.totalQuestions}</strong>
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                              Time: {Math.floor(submission.timeSpent / 60)}m {submission.timeSpent % 60}s
+                            </div>
+                          </div>
+                          <div>
+                            <span style={{
+                              background: submission.score >= 70 ? '#000' : '#fff',
+                              color: submission.score >= 70 ? '#fff' : '#000',
+                              border: '1px solid #000',
+                              padding: '4px 8px',
+                              borderRadius: '12px',
+                              fontSize: '12px',
+                              fontWeight: 'bold'
+                            }}>
+                              {submission.score >= 70 ? 'PASSED' : 'FAILED'}
+                            </span>
+                          </div>
+                          <div style={{
+                            background: submission.score >= 70 ? '#000' : '#fff',
+                            color: submission.score >= 70 ? '#fff' : '#000',
+                            border: '2px solid #000',
+                            padding: '10px 12px',
+                            borderRadius: '20px',
+                            fontWeight: 'bold',
+                            fontSize: '14px',
+                            textAlign: 'center'
+                          }}>
+                            {submission.score}%
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </form>
+      </div>
+    );
+  };
+
+  const renderSavedForms = () => {
+
+    return (
+      <div className="saved-forms-view">
+        <div className="dashboard-header">
+          <h2>Saved Assessment Forms</h2>
+          <p className="dashboard-subtitle">Manage and view all saved assessment forms with their codes</p>
+        </div>
+
+        <form className="tournament-form">
+          {/* Saved Forms Section */}
+          <div className="form-section" style={{ padding: '20px' }}>
+            <h3 style={{ marginBottom: '20px' }}>All Saved Forms ({savedAssessmentForms.length})</h3>
+            {savedAssessmentForms.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(0, 0, 0, 0.5)' }}>
+                <p style={{ fontSize: '18px', marginBottom: '8px' }}>No saved forms yet</p>
+                <p style={{ fontSize: '14px' }}>Create and save assessment forms in the "Manage Questions" section</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '15px' }}>
+                {savedAssessmentForms.map((form) => (
+                  <div key={form.code} style={{
+                    background: 'rgba(0, 0, 0, 0.02)',
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                        <div style={{ color: '#333', fontWeight: 'bold', fontSize: '18px' }}>
+                          {form.title || 'Untitled Assessment'}
+                        </div>
+                        <span style={{
+                          backgroundColor: form.active !== false ? '#d4edda' : '#f8d7da',
+                          color: form.active !== false ? '#155724' : '#721c24',
+                          padding: '4px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          textTransform: 'uppercase',
+                          border: `1px solid ${form.active !== false ? '#c3e6cb' : '#f5c6cb'}`
+                        }}>
+                          {form.active !== false ? 'ENABLED' : 'DISABLED'}
+                        </span>
+                      </div>
+                      <div style={{ color: '#28a745', fontWeight: 'bold', fontSize: '16px', marginBottom: '8px' }}>
+                        Code: {form.code}
+                      </div>
+                      <div style={{ color: '#666', fontSize: '14px', marginBottom: '8px' }}>
+                        {form.questions.length} questions • {form.timeLimit} minutes • Created: {new Date(form.createdAt).toLocaleDateString()}
+                      </div>
+                      {form.questions.length > 0 && (
+                        <div style={{ color: '#666', fontSize: '12px' }}>
+                          Sections: {[...new Set(form.questions.map(q => q.section))].join(', ')}
+                        </div>
+                      )}
+                      {form.active === false && (
+                        <div style={{ color: '#dc3545', fontSize: '12px', fontStyle: 'italic', marginTop: '5px' }}>
+                          ⚠️ This form is disabled and cannot be accessed by users
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <div style={{
+                        backgroundColor: '#f8f9fa',
+                        border: '1px solid #dee2e6',
+                        borderRadius: '4px',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        color: '#6c757d'
+                      }}>
+                        Share this code with users to take the assessment
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const action = form.active !== false ? 'disable' : 'enable';
+                          if (window.confirm(`Are you sure you want to ${action} this assessment form?\n\n${action === 'disable' ? 'Users will not be able to access this form when disabled.' : 'Users will be able to access this form when enabled.'}`)) {
+                            const updatedForms = savedAssessmentForms.map(f =>
+                              f.code === form.code ? { ...f, active: form.active === false } : f
+                            );
+                            setSavedAssessmentForms(updatedForms);
+                            alert(`Assessment form "${form.title}" has been ${action}d successfully.`);
+                          }
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '14px',
+                          backgroundColor: form.active !== false ? '#ffc107' : '#28a745',
+                          color: form.active !== false ? '#212529' : 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          marginRight: '10px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {form.active !== false ? 'Disable' : 'Enable'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEditFormModal(form)}
+                        className="edit-btn"
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '14px',
+                          backgroundColor: '#007bff',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          marginRight: '10px'
+                        }}
+                      >
+                        Edit Form
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(form.code);
+                          alert('Assessment code copied to clipboard!');
+                        }}
+                        className="view-btn-table"
+                        style={{ padding: '8px 16px', fontSize: '14px', marginRight: '10px' }}
+                      >
+                        Copy Code
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteAssessmentForm(form)}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '14px',
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontWeight: 'bold'
+                        }}
+                        title="Delete this assessment form permanently"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </form>
+      </div>
+    );
+  };
+
   return (
     <div className="admin-dashboard">
       <div className="dashboard-sidebar">
         <div className="sidebar-nav">
-          <button 
+          <button
             className={`sidebar-nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
             onClick={() => setCurrentView('dashboard')}
+            style={{
+              fontSize: '16px',
+              fontWeight: '500',
+              padding: '12px 20px',
+              color: '#fff',
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              cursor: 'pointer'
+            }}
           >
-Dashboard
+            Dashboard
           </button>
-          
-          <button 
+
+          <button
             className={`sidebar-nav-item ${currentView === 'calendar' ? 'active' : ''}`}
             onClick={() => setCurrentView('calendar')}
+            style={{
+              fontSize: '16px',
+              fontWeight: '500',
+              padding: '12px 20px',
+              color: '#fff',
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              cursor: 'pointer'
+            }}
           >
-Calendar
+            Calendar
           </button>
           
           {/* Create Tournament with Sub-options */}
           <div className="sidebar-nav-group">
-            <button 
+            <button
               className={`sidebar-nav-item ${currentView === 'create-tournament' || currentView === 'edit-tournament' ? 'active' : ''}`}
               onClick={() => {
                 setCreateTournamentExpanded(!createTournamentExpanded);
@@ -2353,39 +3271,62 @@ Calendar
                 }
               }}
               style={{
+                fontSize: '16px',
+                fontWeight: '500',
+                padding: '12px 20px',
+                color: '#fff',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}
             >
               <span>Create Tournament</span>
-              <span style={{ fontSize: '12px', transition: 'transform 0.2s ease', transform: createTournamentExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>
-                ▶
+              <span style={{
+                fontSize: '12px',
+                transition: 'transform 0.2s ease',
+                transform: createTournamentExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+              }}>
+                ▼
               </span>
             </button>
             
             {createTournamentExpanded && (
               <div className="sidebar-sub-menu" style={{ marginLeft: '20px' }}>
-                <button 
+                <button
                   className={`sidebar-nav-item sub-item ${currentView === 'create-tournament' ? 'active' : ''}`}
                   onClick={() => setCurrentView('create-tournament')}
                   style={{
                     fontSize: '14px',
-                    padding: '8px 15px',
-                    color: currentView === 'create-tournament' ? '#007bff' : '#6c757d',
-                    backgroundColor: 'transparent'
+                    fontWeight: '400',
+                    padding: '10px 15px',
+                    color: '#fff',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    width: '100%',
+                    textAlign: 'left',
+                    cursor: 'pointer'
                   }}
                 >
                   New Tournament
                 </button>
-                <button 
+                <button
                   className={`sidebar-nav-item sub-item ${currentView === 'edit-tournament' ? 'active' : ''}`}
                   onClick={() => setCurrentView('edit-tournament')}
                   style={{
                     fontSize: '14px',
-                    padding: '8px 15px',
-                    color: currentView === 'edit-tournament' ? '#007bff' : '#6c757d',
-                    backgroundColor: 'transparent'
+                    fontWeight: '400',
+                    padding: '10px 15px',
+                    color: '#fff',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    width: '100%',
+                    textAlign: 'left',
+                    cursor: 'pointer'
                   }}
                 >
                   Edit Tournament
@@ -2394,33 +3335,223 @@ Calendar
             )}
           </div>
           
-          <button 
+          <button
             className={`sidebar-nav-item ${currentView === 'applications' ? 'active' : ''}`}
             onClick={() => setCurrentView('applications')}
+            style={{
+              fontSize: '16px',
+              fontWeight: '500',
+              padding: '12px 20px',
+              color: '#fff',
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              cursor: 'pointer'
+            }}
           >
-Applications
+            Applications
           </button>
-          <button 
+
+          <button
             className={`sidebar-nav-item ${currentView === 'registered-organizations' ? 'active' : ''}`}
             onClick={() => setCurrentView('registered-organizations')}
+            style={{
+              fontSize: '16px',
+              fontWeight: '500',
+              padding: '12px 20px',
+              color: '#fff',
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              cursor: 'pointer'
+            }}
           >
-Registered Organizations
+            Registered Organizations
           </button>
-          <button 
+
+          <button
             className={`sidebar-nav-item ${currentView === 'analytics' ? 'active' : ''}`}
             onClick={() => setCurrentView('analytics')}
+            style={{
+              fontSize: '16px',
+              fontWeight: '500',
+              padding: '12px 20px',
+              color: '#fff',
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              cursor: 'pointer'
+            }}
           >
-Analytics
+            Analytics
           </button>
-          <button 
+
+          <button
             className={`sidebar-nav-item ${currentView === 'notice-management' ? 'active' : ''}`}
             onClick={() => setCurrentView('notice-management')}
+            style={{
+              fontSize: '16px',
+              fontWeight: '500',
+              padding: '12px 20px',
+              color: '#fff',
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              cursor: 'pointer'
+            }}
           >
-Notice Management
+            Notice Management
           </button>
-          <button 
+          {/* Assessment Management with Sub-options */}
+          <div className="sidebar-nav-group">
+            <button
+              className={`sidebar-nav-item ${currentView === 'assessment-management' || currentView === 'assessment-list' || currentView === 'assessment-statistics' || currentView === 'saved-forms' ? 'active' : ''}`}
+              onClick={() => {
+                setAssessmentManagementExpanded(!assessmentManagementExpanded);
+                if (!assessmentManagementExpanded) {
+                  setCurrentView('assessment-management');
+                }
+              }}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: currentView === 'assessment-management' || currentView === 'assessment-list' || currentView === 'assessment-statistics' || currentView === 'saved-forms' ? '#fff' : '#ccc',
+                cursor: 'pointer',
+                padding: '12px 20px',
+                width: '100%',
+                textAlign: 'left',
+                fontSize: '16px',
+                fontWeight: '500',
+                transition: 'all 0.3s ease',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              <span style={{ flex: 1, minWidth: 0 }}>Assessment Management</span>
+              <span style={{
+                transform: assessmentManagementExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.3s ease',
+                fontSize: '12px',
+                marginLeft: '8px',
+                flexShrink: 0
+              }}>
+                ▼
+              </span>
+            </button>
+
+            {assessmentManagementExpanded && (
+              <div className="sidebar-sub-menu" style={{ marginLeft: '20px' }}>
+                <button
+                  className={`sidebar-nav-item sub-item ${currentView === 'assessment-management' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('assessment-management')}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: currentView === 'assessment-management' ? '#fff' : '#ccc',
+                    cursor: 'pointer',
+                    padding: '10px 20px',
+                    width: '100%',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Manage Questions
+                </button>
+                <button
+                  className={`sidebar-nav-item sub-item ${currentView === 'assessment-list' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('assessment-list')}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: currentView === 'assessment-list' ? '#fff' : '#ccc',
+                    cursor: 'pointer',
+                    padding: '10px 20px',
+                    width: '100%',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Assessment List
+                </button>
+                <button
+                  className={`sidebar-nav-item sub-item ${currentView === 'assessment-statistics' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('assessment-statistics')}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: currentView === 'assessment-statistics' ? '#fff' : '#ccc',
+                    cursor: 'pointer',
+                    padding: '10px 20px',
+                    width: '100%',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Statistics
+                </button>
+                <button
+                  className={`sidebar-nav-item sub-item ${currentView === 'saved-forms' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('saved-forms')}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: currentView === 'saved-forms' ? '#fff' : '#ccc',
+                    cursor: 'pointer',
+                    padding: '10px 20px',
+                    width: '100%',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: '400',
+                    transition: 'all 0.3s ease',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                >
+                  <span>Saved Forms</span>
+                  <span style={{
+                    backgroundColor: '#007bff',
+                    color: '#fff',
+                    borderRadius: '10px',
+                    padding: '2px 6px',
+                    fontSize: '10px',
+                    fontWeight: 'bold'
+                  }}>
+                    {savedAssessmentForms.length}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+          <button
             className={`sidebar-nav-item ${currentView === 'settings' ? 'active' : ''}`}
             onClick={() => setCurrentView('settings')}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: currentView === 'settings' ? '#fff' : '#ccc',
+              cursor: 'pointer',
+              padding: '12px 20px',
+              width: '100%',
+              textAlign: 'left',
+              fontSize: '16px',
+              fontWeight: '500',
+              transition: 'all 0.3s ease'
+            }}
           >
 Settings
           </button>
@@ -2978,7 +4109,7 @@ Settings
                     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
                     const tournaments = getTournamentsForDate(date);
                     const isToday = new Date().toDateString() === date.toDateString();
-                    const isSelected = selectedDate.toDateString() === date.toDateString();
+                    const isSelected = calendarSelectedDate.toDateString() === date.toDateString();
                     
                     return (
                       <div
@@ -3054,7 +4185,7 @@ Settings
               {/* Selected Date Details */}
               <div className="selected-date-details">
                 <h4 style={{ marginTop: 0, color: '#495057' }}>
-                  {selectedDate.toLocaleDateString('default', { 
+                  {calendarSelectedDate.toLocaleDateString('default', { 
                     weekday: 'long', 
                     year: 'numeric', 
                     month: 'long', 
@@ -4401,6 +5532,10 @@ Settings
         {currentView === 'analytics' && renderAnalytics()}
         {currentView === 'registered-organizations' && renderRegisteredOrganizations()}
         {currentView === 'notice-management' && renderNoticeManagement()}
+        {currentView === 'assessment-management' && renderAssessmentManagement()}
+        {currentView === 'assessment-list' && renderAssessmentList()}
+        {currentView === 'assessment-statistics' && renderAssessmentStatistics()}
+        {currentView === 'saved-forms' && renderSavedForms()}
         {currentView === 'settings' && renderSettings()}
       </div>
 
@@ -4780,6 +5915,333 @@ Settings
                   Send Reset Email
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Form Modal */}
+      {showEditFormModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 2000,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '12px',
+            padding: '0',
+            width: '90%',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            border: '2px solid #000',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              backgroundColor: '#000',
+              color: '#fff',
+              padding: '20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexShrink: 0
+            }}>
+              <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>
+                Edit Assessment Form: {editingForm?.code}
+              </h2>
+              <button
+                onClick={closeEditFormModal}
+                style={{
+                  backgroundColor: 'transparent',
+                  color: '#fff',
+                  border: '1px solid #fff',
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  borderRadius: '4px'
+                }}
+              >
+                × Close
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{
+              padding: '20px 30px',
+              flex: 1,
+              overflowY: 'auto',
+              minHeight: 0
+            }}>
+              {/* Form Title */}
+              <div className="form-group" style={{ marginBottom: '25px' }}>
+                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                  Assessment Title *
+                </label>
+                <input
+                  type="text"
+                  value={editFormTitle}
+                  onChange={(e) => setEditFormTitle(e.target.value)}
+                  placeholder="Enter assessment title"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '2px solid #000',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+
+              {/* Sub-Title */}
+              <div className="form-group" style={{ marginBottom: '25px' }}>
+                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                  Sub-Title (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={editFormSubtitle}
+                  onChange={(e) => setEditFormSubtitle(e.target.value)}
+                  placeholder="e.g., Level 1 Certification, Beginner Course"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              {/* Time Limit */}
+              <div className="form-group" style={{ marginBottom: '25px' }}>
+                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                  Time Limit (minutes) *
+                </label>
+                <input
+                  type="number"
+                  value={editFormTimeLimit}
+                  onChange={(e) => setEditFormTimeLimit(parseInt(e.target.value) || 30)}
+                  min="1"
+                  max="180"
+                  style={{
+                    width: '200px',
+                    padding: '12px',
+                    border: '2px solid #000',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+              </div>
+
+              {/* Questions Section */}
+              <div style={{ marginBottom: '25px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>
+                    Questions ({editFormQuestions.length})
+                  </h3>
+                  <button
+                    onClick={addEditQuestion}
+                    style={{
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      padding: '10px 16px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    + Add Question
+                  </button>
+                </div>
+
+                {editFormQuestions.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#666',
+                    border: '2px dashed #ccc',
+                    borderRadius: '8px'
+                  }}>
+                    <p>No questions yet. Click "Add Question" to get started.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '20px' }}>
+                    {editFormQuestions.map((question, index) => (
+                      <div key={question.id || index} style={{
+                        border: '2px solid #000',
+                        borderRadius: '8px',
+                        padding: '20px',
+                        backgroundColor: '#f9f9f9'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                          <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>
+                            Question {index + 1}
+                          </h4>
+                          <button
+                            onClick={() => removeEditQuestion(index)}
+                            style={{
+                              backgroundColor: '#dc3545',
+                              color: 'white',
+                              border: 'none',
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+
+                        {/* Section */}
+                        <div className="form-group" style={{ marginBottom: '15px' }}>
+                          <label style={{ fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Section</label>
+                          <input
+                            type="text"
+                            value={question.section}
+                            onChange={(e) => updateEditQuestion(index, 'section', e.target.value)}
+                            placeholder="e.g., Rules, Equipment, Scoring"
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              border: '1px solid #ccc',
+                              borderRadius: '4px',
+                              fontSize: '14px'
+                            }}
+                          />
+                        </div>
+
+                        {/* Question Text */}
+                        <div className="form-group" style={{ marginBottom: '15px' }}>
+                          <label style={{ fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Question</label>
+                          <textarea
+                            value={question.question}
+                            onChange={(e) => updateEditQuestion(index, 'question', e.target.value)}
+                            placeholder="Enter your question here"
+                            rows="3"
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              border: '1px solid #ccc',
+                              borderRadius: '4px',
+                              fontSize: '14px',
+                              resize: 'vertical'
+                            }}
+                          />
+                        </div>
+
+                        {/* Options */}
+                        <div className="form-group" style={{ marginBottom: '15px' }}>
+                          <label style={{ fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Answer Options</label>
+                          <div style={{ display: 'grid', gap: '8px' }}>
+                            {question.options.map((option, optionIndex) => (
+                              <div key={optionIndex} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span style={{ fontWeight: 'bold', minWidth: '20px' }}>
+                                  {String.fromCharCode(65 + optionIndex)}:
+                                </span>
+                                <input
+                                  type="text"
+                                  value={option}
+                                  onChange={(e) => {
+                                    const newOptions = [...question.options];
+                                    newOptions[optionIndex] = e.target.value;
+                                    updateEditQuestion(index, 'options', newOptions);
+                                  }}
+                                  placeholder={`Option ${String.fromCharCode(65 + optionIndex)}`}
+                                  style={{
+                                    flex: 1,
+                                    padding: '8px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    fontSize: '14px'
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Correct Answer */}
+                        <div className="form-group">
+                          <label style={{ fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Correct Answer</label>
+                          <select
+                            value={question.correctAnswer}
+                            onChange={(e) => updateEditQuestion(index, 'correctAnswer', e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              border: '1px solid #ccc',
+                              borderRadius: '4px',
+                              fontSize: '14px'
+                            }}
+                          >
+                            <option value="">Select correct answer</option>
+                            {question.options.map((option, optionIndex) => (
+                              <option key={optionIndex} value={option}>
+                                {String.fromCharCode(65 + optionIndex)}: {option}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              backgroundColor: '#f8f9fa',
+              padding: '20px',
+              borderTop: '1px solid #dee2e6',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px',
+              flexShrink: 0
+            }}>
+              <button
+                onClick={closeEditFormModal}
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEditedForm}
+                style={{
+                  backgroundColor: '#007bff',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Save Changes
+              </button>
             </div>
           </div>
         </div>

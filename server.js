@@ -1288,6 +1288,131 @@ const newsSchema = new mongoose.Schema({
 
 const News = mongoose.model('News', newsSchema);
 
+// Assessment Form Schema
+const assessmentFormSchema = new mongoose.Schema({
+  code: {
+    type: String,
+    required: true,
+    unique: true,
+    uppercase: true,
+    minlength: 5,
+    maxlength: 5
+  },
+  title: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  questions: [{
+    id: {
+      type: Number,
+      required: true
+    },
+    question: {
+      type: String,
+      required: true
+    },
+    section: {
+      type: String,
+      required: true
+    },
+    options: [{
+      type: String,
+      required: true
+    }],
+    correctAnswer: {
+      type: String,
+      required: false
+    }
+  }],
+  timeLimit: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 180
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true
+});
+
+const AssessmentForm = mongoose.model('AssessmentForm', assessmentFormSchema);
+
+// Assessment Submission Schema
+const assessmentSubmissionSchema = new mongoose.Schema({
+  submissionId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  formCode: {
+    type: String,
+    required: true,
+    ref: 'AssessmentForm'
+  },
+  participantName: {
+    type: String,
+    required: true
+  },
+  participantEmail: {
+    type: String,
+    required: true
+  },
+  answers: [{
+    questionId: {
+      type: Number,
+      required: true
+    },
+    selectedAnswer: {
+      type: String,
+      required: true
+    },
+    isCorrect: {
+      type: Boolean,
+      required: true
+    }
+  }],
+  score: {
+    type: Number,
+    required: true,
+    min: 0,
+    max: 100
+  },
+  correctAnswers: {
+    type: Number,
+    required: true
+  },
+  totalQuestions: {
+    type: Number,
+    required: true
+  },
+  timeSpent: {
+    type: Number,
+    required: true
+  },
+  completedAt: {
+    type: Date,
+    default: Date.now
+  },
+  batchId: {
+    type: String,
+    required: true,
+    index: true
+  },
+  batchDate: {
+    type: String,
+    required: true,
+    index: true
+  }
+}, {
+  timestamps: true
+});
+
+const AssessmentSubmission = mongoose.model('AssessmentSubmission', assessmentSubmissionSchema);
+
 // ID Generation Functions
 const generatePlayerId = async () => {
   let playerId;
@@ -1392,6 +1517,47 @@ const generateOrganizationId = async () => {
   }
   
   return organizationId;
+};
+
+// Generate unique assessment form code
+const generateAssessmentFormCode = async () => {
+  let formCode;
+  let isUnique = false;
+
+  while (!isUnique) {
+    // Generate 5-character random code (letters and numbers)
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    formCode = '';
+    for (let i = 0; i < 5; i++) {
+      formCode += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    // Check if this code already exists
+    const existingForm = await AssessmentForm.findOne({ code: formCode });
+    if (!existingForm) {
+      isUnique = true;
+    }
+  }
+
+  return formCode;
+};
+
+// Generate unique assessment submission ID
+const generateSubmissionId = async () => {
+  let submissionId;
+  let isUnique = false;
+
+  while (!isUnique) {
+    const randomNum = Math.floor(Math.random() * 900000) + 100000;
+    submissionId = `AS${randomNum}`;
+
+    const existingSubmission = await AssessmentSubmission.findOne({ submissionId });
+    if (!existingSubmission) {
+      isUnique = true;
+    }
+  }
+
+  return submissionId;
 };
 
 // Routes
@@ -3066,6 +3232,305 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 });
 
 // ===============================
+// ASSESSMENT FORM MANAGEMENT APIs
+// ===============================
+
+// Save assessment form
+app.post('/api/assessment/forms', async (req, res) => {
+  try {
+    const { questions, timeLimit, title } = req.body;
+
+    // Validation
+    if (!title || !title.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Assessment title is required'
+      });
+    }
+
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Questions are required and must be a non-empty array'
+      });
+    }
+
+    if (!timeLimit || timeLimit < 1 || timeLimit > 180) {
+      return res.status(400).json({
+        success: false,
+        message: 'Time limit must be between 1 and 180 minutes'
+      });
+    }
+
+    // Generate unique form code
+    const formCode = await generateAssessmentFormCode();
+
+    const newForm = new AssessmentForm({
+      code: formCode,
+      title: title.trim(),
+      questions: questions,
+      timeLimit: timeLimit
+    });
+
+    const savedForm = await newForm.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Assessment form saved successfully',
+      data: savedForm
+    });
+  } catch (error) {
+    console.error('Error saving assessment form:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to save assessment form'
+    });
+  }
+});
+
+// Get all assessment forms
+app.get('/api/assessment/forms', async (req, res) => {
+  try {
+    const forms = await AssessmentForm.find().sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: forms
+    });
+  } catch (error) {
+    console.error('Error fetching assessment forms:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to fetch assessment forms'
+    });
+  }
+});
+
+// Get assessment form by code
+app.get('/api/assessment/forms/:code', async (req, res) => {
+  try {
+    const { code } = req.params;
+
+    const form = await AssessmentForm.findOne({ code: code.toUpperCase() });
+
+    if (!form) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assessment form not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: form
+    });
+  } catch (error) {
+    console.error('Error fetching assessment form:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to fetch assessment form'
+    });
+  }
+});
+
+// Delete assessment form
+app.delete('/api/assessment/forms/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedForm = await AssessmentForm.findByIdAndDelete(id);
+
+    if (!deletedForm) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assessment form not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Assessment form deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting assessment form:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to delete assessment form'
+    });
+  }
+});
+
+// ===============================
+// ASSESSMENT SUBMISSION APIs
+// ===============================
+
+// Save assessment submission
+app.post('/api/assessment/submissions', async (req, res) => {
+  try {
+    const { formCode, participantName, participantEmail, answers, score, correctAnswers, totalQuestions, timeSpent, batchId, batchDate } = req.body;
+
+    // Validation
+    if (!formCode || !participantName || !participantEmail || !answers || score === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'All required fields must be provided'
+      });
+    }
+
+    // Verify form exists
+    const form = await AssessmentForm.findOne({ code: formCode.toUpperCase() });
+    if (!form) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assessment form not found'
+      });
+    }
+
+    // Generate unique submission ID
+    const submissionId = await generateSubmissionId();
+
+    // Generate batch information if not provided
+    const submissionDate = new Date();
+    const dateStr = submissionDate.toISOString().split('T')[0];
+    const finalBatchId = batchId || `${formCode.toUpperCase()}-${dateStr}`;
+    const finalBatchDate = batchDate || dateStr;
+
+    const newSubmission = new AssessmentSubmission({
+      submissionId: submissionId,
+      formCode: formCode.toUpperCase(),
+      participantName: participantName,
+      participantEmail: participantEmail,
+      answers: answers,
+      score: score,
+      correctAnswers: correctAnswers,
+      totalQuestions: totalQuestions,
+      timeSpent: timeSpent,
+      batchId: finalBatchId,
+      batchDate: finalBatchDate
+    });
+
+    const savedSubmission = await newSubmission.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Assessment submission saved successfully',
+      data: savedSubmission
+    });
+  } catch (error) {
+    console.error('Error saving assessment submission:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to save assessment submission'
+    });
+  }
+});
+
+// Get all assessment submissions
+app.get('/api/assessment/submissions', async (req, res) => {
+  try {
+    const { batchId, batchDate } = req.query;
+    let query = {};
+
+    // Filter by batch if provided
+    if (batchId) {
+      query.batchId = batchId;
+    }
+    if (batchDate) {
+      query.batchDate = batchDate;
+    }
+
+    const submissions = await AssessmentSubmission.find(query).sort({ completedAt: -1 });
+
+    res.json({
+      success: true,
+      data: submissions
+    });
+  } catch (error) {
+    console.error('Error fetching assessment submissions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to fetch assessment submissions'
+    });
+  }
+});
+
+// Get assessment batches (grouped by batchId)
+app.get('/api/assessment/batches', async (req, res) => {
+  try {
+    const { fromDate } = req.query;
+
+    // Build match stage for date filtering
+    let matchStage = {};
+    if (fromDate) {
+      matchStage.batchDate = { $gte: fromDate };
+    }
+
+    // Build aggregation pipeline
+    const pipeline = [];
+
+    // Add match stage if we have filters
+    if (Object.keys(matchStage).length > 0) {
+      pipeline.push({ $match: matchStage });
+    }
+
+    // Add the rest of the pipeline
+    pipeline.push(
+      {
+        $group: {
+          _id: '$batchId',
+          batchDate: { $first: '$batchDate' },
+          formCode: { $first: '$formCode' },
+          submissionCount: { $sum: 1 },
+          averageScore: { $avg: '$score' },
+          submissions: { $push: '$$ROOT' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'assessmentforms',
+          localField: 'formCode',
+          foreignField: 'code',
+          as: 'formInfo'
+        }
+      },
+      {
+        $addFields: {
+          formTitle: { $arrayElemAt: ['$formInfo.title', 0] }
+        }
+      },
+      {
+        $project: {
+          formInfo: 0
+        }
+      },
+      {
+        $sort: { batchDate: -1 }
+      }
+    );
+
+    const batches = await AssessmentSubmission.aggregate(pipeline);
+
+    res.json({
+      success: true,
+      data: batches
+    });
+  } catch (error) {
+    console.error('Error fetching assessment batches:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to fetch assessment batches'
+    });
+  }
+});
+
+// ===============================
 // FILE UPLOAD APIs
 // ===============================
 
@@ -3434,6 +3899,15 @@ app.get('/api/docs', (req, res) => {
         'GET /api/admin/users - Get all admin users',
         'PATCH /api/admin/users/:id/status - Update admin user status',
         'DELETE /api/admin/users/:id - Delete admin user'
+      ],
+      'Assessment Management': [
+        'POST /api/assessment/forms - Save assessment form',
+        'GET /api/assessment/forms - Get all assessment forms',
+        'GET /api/assessment/forms/:code - Get assessment form by code',
+        'DELETE /api/assessment/forms/:id - Delete assessment form',
+        'POST /api/assessment/submissions - Save assessment submission',
+        'GET /api/assessment/submissions - Get all assessment submissions (supports ?batchId=X&batchDate=Y filters)',
+        'GET /api/assessment/batches - Get assessment batches grouped by batchId (supports ?fromDate=YYYY-MM-DD filter)'
       ]
     }
   };

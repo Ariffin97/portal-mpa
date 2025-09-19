@@ -771,6 +771,51 @@ const TournamentApplication = ({ setCurrentPage }) => {
           </button>
         </div>
 
+        {/* Tournament Guidelines Section */}
+        <div className="sidebar-section guidelines-section">
+          <h3>Tournament Guidelines</h3>
+          <div className="guidelines-list">
+            <div className="guideline-item">
+              <h4>Scoring Format</h4>
+              <ul>
+                <li>Traditional scoring: 11+ pts</li>
+                <li>Rally scoring: 21+ pts (first round-robins only)</li>
+              </ul>
+            </div>
+
+            <div className="guideline-item">
+              <h4>Skill Ratings</h4>
+              <ul>
+                <li><strong>Intermediate:</strong> &lt; 3.5</li>
+                <li><strong>Advanced:</strong> &lt; 4.5</li>
+                <li><strong>Elite:</strong> &gt;= 4.5</li>
+              </ul>
+              <p className="guideline-note">
+                Players with lower ratings can play in higher rated categories,
+                but not vice versa.
+              </p>
+            </div>
+
+            <div className="guideline-item">
+              <h4>Important Notice</h4>
+              <ul>
+                <li>Endorsement logos must be displayed</li>
+                <li>Entry fees capped at RM200 per Malaysian player</li>
+                <li>Venue must be fully covered with valid permits</li>
+              </ul>
+            </div>
+
+            <div className="guideline-item">
+              <h4>Safe Sport Code</h4>
+              <ul>
+                <li>Follow all MPA safety guidelines</li>
+                <li>Report incidents immediately</li>
+                <li>Maintain fair play standards</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         {/* Applied Tournaments Section */}
         <div className="sidebar-section tournaments-section">
           <h3>Applied Tournaments</h3>
@@ -790,9 +835,9 @@ const TournamentApplication = ({ setCurrentPage }) => {
                   </div>
                   <div className="tournament-meta">
                     <span className="tournament-id">ID: {tournament.applicationId}</span>
-                    <span 
+                    <span
                       className="tournament-status"
-                      style={{ 
+                      style={{
                         backgroundColor: getStatusColor(tournament.status),
                         color: 'white',
                         padding: '2px 6px',
@@ -804,13 +849,13 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     </span>
                   </div>
                   <div className="tournament-date">
-                    {tournament.submissionDate ? 
-                      new Date(tournament.submissionDate).toLocaleDateString() : 
+                    {tournament.submissionDate ?
+                      new Date(tournament.submissionDate).toLocaleDateString() :
                       'Date N/A'
                     }
                   </div>
                   <div className="tournament-actions">
-                    <button 
+                    <button
                       className="edit-tournament-btn"
                       onClick={() => startEditTournament(tournament)}
                       style={{
@@ -1299,43 +1344,6 @@ const TournamentApplication = ({ setCurrentPage }) => {
           </div>
         </div>
         
-        <div className="form-section">
-          <h3>NOTE : SCORING</h3>
-          <div className="scoring-reminder">
-            <p><strong>*Scoring Format</strong> to be adopted for each match:</p>
-            <ul className="scoring-list">
-              <li>Traditional scoring up to 11 pts or more;</li>
-              <li>Rally Scoring minimum up to 21 pts is acceptable for the first round-robins and novice only.</li>
-            </ul>
-          </div>
-        </div>
-        
-        <div className="form-section">
-          <h3>Tournament Categories & Skill Ratings</h3>
-          <div className="skill-ratings-info">
-            <h4>Skill Rating Guidelines:</h4>
-            <ul className="skill-ratings">
-              <li><strong>Intermediate:</strong> &lt; 3.5</li>
-              <li><strong>Advanced:</strong> &lt; 4.5</li>
-              <li><strong>Elite:</strong> &gt;= 4.5</li>
-            </ul>
-            <p className="skill-note">
-              <strong>Note:</strong> Players with lower ratings can play in any higher rated categories 
-              but players of higher ratings cannot participate in the lower rated categories.
-            </p>
-          </div>
-        </div>
-        
-        <div className="form-section">
-          <h3>Mandatory Compliance</h3>
-          <div className="remarks-info">
-            <ul className="remarks-list">
-              <li>Endorsement logos (state, national & PJS/KBS) must be displayed on your event banners/at the venue etc.</li>
-              <li>Traditional scoring up to 11 pts or more; Rally Scoring (minimum up to 21 pts) is acceptable for the first round-robins and novice only.</li>
-              <li>The fee for each category is capped at RM200 per Malaysian player and must not be exceeded.</li>
-            </ul>
-          </div>
-        </div>
         
         <div className="form-section">
           <h3>Consent & Agreement</h3>

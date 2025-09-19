@@ -1,7 +1,7 @@
 // Dynamic API URL configuration
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
+const API_BASE_URL = process.env.NODE_ENV === 'production'
   ? '/api'  // In production, use relative path (same domain)
-  : 'http://localhost:5001/api';  // In development, use localhost
+  : 'http://localhost:5002/api';  // In development, use localhost
 
 // Log the API URL for debugging
 console.log('API Base URL:', API_BASE_URL);
@@ -192,6 +192,61 @@ class ApiService {
     return this.makeRequest(`/admin/users/${userId}`, {
       method: 'DELETE',
     });
+  }
+
+  // Assessment Form Management
+  async saveAssessmentForm(formData) {
+    const response = await this.makeRequest('/assessment/forms', {
+      method: 'POST',
+      body: JSON.stringify(formData),
+    });
+    return response;
+  }
+
+  async getAllAssessmentForms() {
+    const response = await this.makeRequest('/assessment/forms');
+    return response.data || [];
+  }
+
+  async getAssessmentFormByCode(code) {
+    const response = await this.makeRequest(`/assessment/forms/${code}`);
+    return response.data || null;
+  }
+
+  async deleteAssessmentForm(formId) {
+    return this.makeRequest(`/assessment/forms/${formId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async saveAssessmentSubmission(submissionData) {
+    return this.makeRequest('/assessment/submissions', {
+      method: 'POST',
+      body: JSON.stringify(submissionData),
+    });
+  }
+
+  async getAllAssessmentSubmissions() {
+    const response = await this.makeRequest('/assessment/submissions');
+    return response.data || [];
+  }
+
+  async getAssessmentSubmissionsByBatch(batchId, batchDate) {
+    const params = new URLSearchParams();
+    if (batchId) params.append('batchId', batchId);
+    if (batchDate) params.append('batchDate', batchDate);
+
+    const response = await this.makeRequest(`/assessment/submissions?${params.toString()}`);
+    return response.data || [];
+  }
+
+  async getAssessmentBatches(fromDate = null) {
+    const params = new URLSearchParams();
+    if (fromDate) params.append('fromDate', fromDate);
+
+    const endpoint = `/assessment/batches${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await this.makeRequest(endpoint);
+    return response.data || [];
   }
 }
 
