@@ -333,90 +333,130 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
     try {
       const doc = new jsPDF();
 
-      // Title
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Assessment Results Report', 20, 25);
+      // Convert logo to base64 and add to PDF
+      const addLogoToPDF = () => {
+        // Create a canvas to convert the image to base64
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
 
-      // Date generated
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, 35);
+        img.onload = function() {
+          canvas.width = this.width;
+          canvas.height = this.height;
+          ctx.drawImage(this, 0, 0);
+          const dataURL = canvas.toDataURL('image/png');
 
-      let yPosition = 50;
+          // Add logo to PDF (top right corner)
+          const imgWidth = 25;
+          const imgHeight = (this.height / this.width) * imgWidth;
+          doc.addImage(dataURL, 'PNG', 170, 10, imgWidth, imgHeight);
 
-      // Check if there are results to display
-      if (assessmentBatches.length === 0) {
+          // Continue with rest of PDF generation
+          generatePDFContent();
+        };
+
+        img.onerror = function() {
+          // If logo fails to load, continue without it
+          generatePDFContent();
+        };
+
+        img.src = mpaLogo;
+      };
+
+      const generatePDFContent = () => {
+        // Title
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Assessment Results Report', 20, 25);
+
+        // Subtitle
         doc.setFontSize(12);
-        doc.text('No assessment results available.', 20, yPosition);
-      } else {
-        // Process each batch
-        assessmentBatches.forEach((batch, batchIndex) => {
-          // Batch header
-          doc.setFontSize(14);
-          doc.setFont('helvetica', 'bold');
-          doc.text(`Batch: ${batch._id}`, 20, yPosition);
-          yPosition += 10;
+        doc.setFont('helvetica', 'normal');
+        doc.text('Malaysia Pickleball Association', 20, 35);
 
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'normal');
-          doc.text(`Form Code: ${batch.formCode} | Date: ${batch.batchDate} | Average Score: ${Math.round(batch.averageScore)}%`, 20, yPosition);
-          yPosition += 15;
+        // Date generated
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, 45);
 
-          // Table headers
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'bold');
-          doc.text('No.', 20, yPosition);
-          doc.text('Name', 35, yPosition);
-          doc.text('IC Number', 100, yPosition);
-          doc.text('Score', 140, yPosition);
-          doc.text('Percentage', 160, yPosition);
-          doc.text('Status', 185, yPosition);
-          yPosition += 5;
+        let yPosition = 60;
 
-          // Draw line under headers
-          doc.line(20, yPosition, 200, yPosition);
-          yPosition += 8;
+        // Check if there are results to display
+        if (assessmentBatches.length === 0) {
+          doc.setFontSize(12);
+          doc.text('No assessment results available.', 20, yPosition);
+        } else {
+          // Process each batch
+          assessmentBatches.forEach((batch, batchIndex) => {
+            // Batch header
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Batch: ${batch._id}`, 20, yPosition);
+            yPosition += 10;
 
-          // Process submissions in this batch
-          batch.submissions.forEach((submission, index) => {
-            // Check if we need a new page
-            if (yPosition > 270) {
-              doc.addPage();
-              yPosition = 20;
-            }
-
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'normal');
-            doc.text((index + 1).toString(), 20, yPosition);
-            doc.text(submission.participantName || 'Unknown', 35, yPosition);
-            doc.text('N/A', 100, yPosition); // IC Number not available in current data structure
-            doc.text(`${submission.correctAnswers || 0}/${submission.totalQuestions || 0}`, 140, yPosition);
-            doc.text(`${submission.score || 0}%`, 160, yPosition);
+            doc.text(`Form Code: ${batch.formCode} | Date: ${batch.batchDate} | Average Score: ${Math.round(batch.averageScore)}%`, 20, yPosition);
+            yPosition += 15;
 
-            // Status with color
-            const passed = (submission.score || 0) >= 70;
-            doc.setTextColor(passed ? 0 : 255, passed ? 128 : 0, 0);
-            doc.text(passed ? 'PASS' : 'FAIL', 185, yPosition);
-            doc.setTextColor(0, 0, 0); // Reset to black
+            // Table headers
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('No.', 20, yPosition);
+            doc.text('Name', 35, yPosition);
+            doc.text('IC Number', 100, yPosition);
+            doc.text('Score', 140, yPosition);
+            doc.text('Percentage', 160, yPosition);
+            doc.text('Status', 185, yPosition);
+            yPosition += 5;
 
+            // Draw line under headers
+            doc.line(20, yPosition, 200, yPosition);
             yPosition += 8;
+
+            // Process submissions in this batch
+            batch.submissions.forEach((submission, index) => {
+              // Check if we need a new page
+              if (yPosition > 270) {
+                doc.addPage();
+                yPosition = 20;
+              }
+
+              doc.setFont('helvetica', 'normal');
+              doc.text((index + 1).toString(), 20, yPosition);
+              doc.text(submission.participantName || 'Unknown', 35, yPosition);
+              doc.text('N/A', 100, yPosition); // IC Number not available in current data structure
+              doc.text(`${submission.correctAnswers || 0}/${submission.totalQuestions || 0}`, 140, yPosition);
+              doc.text(`${submission.score || 0}%`, 160, yPosition);
+
+              // Status with color
+              const passed = (submission.score || 0) >= 70;
+              doc.setTextColor(passed ? 0 : 255, passed ? 128 : 0, 0);
+              doc.text(passed ? 'PASS' : 'FAIL', 185, yPosition);
+              doc.setTextColor(0, 0, 0); // Reset to black
+
+              yPosition += 8;
+            });
+
+            yPosition += 10; // Space between batches
           });
+        }
 
-          yPosition += 10; // Space between batches
-        });
-      }
+        // Footer
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.text('Malaysia Pickleball Association - Assessment Results Report', 20, 290);
 
-      // Footer
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'italic');
-      doc.text('Malaysia Pickleball Association - Assessment Results Report', 20, 290);
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const filename = `Assessment_Results_${timestamp}.pdf`;
 
-      // Generate filename with timestamp
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-      const filename = `Assessment_Results_${timestamp}.pdf`;
+        // Save the PDF
+        doc.save(filename);
+      };
 
-      // Save the PDF
-      doc.save(filename);
+      // Start the PDF generation with logo
+      addLogoToPDF();
 
     } catch (error) {
       console.error('Error generating PDF:', error);
