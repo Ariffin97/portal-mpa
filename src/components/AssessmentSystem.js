@@ -211,8 +211,9 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
         padding: '40px',
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#fff'
+        alignItems: currentView === 'results' ? 'flex-start' : 'center',
+        backgroundColor: '#fff',
+        overflow: 'auto'
       }}>
         {currentView === 'registration' && (
           <UserRegistration
@@ -786,7 +787,9 @@ const Results = ({ results, userInfo, questions, onBackToHome }) => {
       maxWidth: showReview ? '800px' : '500px',
       margin: '0 auto',
       backgroundColor: '#fff',
-      textAlign: 'center'
+      textAlign: 'center',
+      minHeight: 'auto',
+      padding: '20px 0'
     }}>
       <h3 style={{
         fontSize: '28px',
@@ -903,7 +906,9 @@ const Results = ({ results, userInfo, questions, onBackToHome }) => {
           padding: '20px',
           marginBottom: '30px',
           backgroundColor: '#fff',
-          textAlign: 'left'
+          textAlign: 'left',
+          maxHeight: '70vh',
+          overflow: 'auto'
         }}>
           <h4 style={{
             fontSize: '20px',
@@ -925,7 +930,9 @@ const Results = ({ results, userInfo, questions, onBackToHome }) => {
                 borderRadius: '8px',
                 padding: '20px',
                 marginBottom: '16px',
-                backgroundColor: isCorrect ? '#f0f8f0' : '#fff8f0'
+                backgroundColor: isCorrect ? '#f0f8f0' : '#fff8f0',
+                wordWrap: 'break-word',
+                overflow: 'visible'
               }}>
                 <div style={{
                   display: 'flex',
