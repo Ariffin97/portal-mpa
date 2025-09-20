@@ -6398,7 +6398,7 @@ Settings
                     <strong>Name:</strong> {selectedSubmission.userInfo?.fullName || selectedSubmission.participantName || 'Unknown'}
                   </div>
                   <div>
-                    <strong>IC Number:</strong> {selectedSubmission.userInfo?.icNumber || 'N/A'}
+                    <strong>IC Number:</strong> {selectedSubmission.userInfo?.icNumber || selectedSubmission.participantEmail?.split('@')[0] || 'N/A'}
                   </div>
                   <div>
                     <strong>Form Code:</strong> {selectedSubmission.userInfo?.formCode || selectedSubmission.formCode || 'N/A'}
@@ -6448,7 +6448,7 @@ Settings
               </div>
 
               {/* Enhanced Answers Details with Questions */}
-              {(selectedSubmission.results?.answers || selectedSubmission.answers) && (
+              {(selectedSubmission.results?.answers || selectedSubmission.answers) && (Array.isArray(selectedSubmission.answers) ? selectedSubmission.answers.length > 0 : Object.keys(selectedSubmission.results?.answers || selectedSubmission.answers || {}).length > 0) && (
                 <div style={{
                   backgroundColor: '#fff',
                   padding: '20px',
@@ -6461,30 +6461,40 @@ Settings
                     Question Review & Answers
                   </h4>
                   <div style={{ display: 'grid', gap: '20px' }}>
-                    {Object.entries(selectedSubmission.results?.answers || selectedSubmission.answers || {}).map(([questionId, answer], index) => {
-                      let answerData = answer;
-                      let isCorrect = false;
-                      let userAnswer = '';
-                      let correctAnswer = '';
+                    {(() => {
+                      // Handle both array and object formats for answers
+                      let answersToDisplay = [];
 
                       if (Array.isArray(selectedSubmission.answers)) {
-                        answerData = selectedSubmission.answers.find(a => a.questionId == questionId);
-                        isCorrect = answerData?.isCorrect || false;
-                        userAnswer = answerData?.selectedAnswer || 'No answer';
-                      } else {
-                        userAnswer = typeof answer === 'string' ? answer : 'No answer';
-                        isCorrect = answerData?.isCorrect !== undefined ? answerData.isCorrect : false;
+                        // Database format: answers is an array
+                        answersToDisplay = selectedSubmission.answers.map((answerObj, index) => ({
+                          questionId: answerObj.questionId,
+                          userAnswer: answerObj.selectedAnswer || 'No answer',
+                          isCorrect: answerObj.isCorrect || false,
+                          correctAnswer: answerObj.correctAnswer || '',
+                          index: index
+                        }));
+                      } else if (selectedSubmission.results?.answers || selectedSubmission.answers) {
+                        // Local format: answers is an object
+                        const answersObj = selectedSubmission.results?.answers || selectedSubmission.answers || {};
+                        answersToDisplay = Object.entries(answersObj).map(([questionId, answer], index) => ({
+                          questionId: questionId,
+                          userAnswer: typeof answer === 'string' ? answer : (answer?.selectedAnswer || 'No answer'),
+                          isCorrect: answer?.isCorrect !== undefined ? answer.isCorrect : false,
+                          correctAnswer: answer?.correctAnswer || '',
+                          index: index
+                        }));
                       }
 
-                      // Try to get question text and correct answer from the form
-                      const questionText = `Question ${index + 1}`;
+                      return answersToDisplay.map((answerData) => {
+                        const questionText = `Question ${answerData.index + 1}`;
 
-                      return (
-                        <div key={questionId} style={{
+                        return (
+                        <div key={answerData.questionId} style={{
                           border: '1px solid #ddd',
                           borderRadius: '8px',
                           padding: '20px',
-                          backgroundColor: isCorrect ? '#f0f8f0' : '#fff8f0'
+                          backgroundColor: answerData.isCorrect ? '#f0f8f0' : '#fff8f0'
                         }}>
                           <div style={{
                             display: 'flex',
@@ -6503,7 +6513,7 @@ Settings
                               </div>
                             </div>
                             <div style={{
-                              backgroundColor: isCorrect ? '#28a745' : '#dc3545',
+                              backgroundColor: answerData.isCorrect ? '#28a745' : '#dc3545',
                               color: 'white',
                               padding: '6px 12px',
                               borderRadius: '4px',
@@ -6512,7 +6522,7 @@ Settings
                               flexShrink: 0,
                               marginLeft: '16px'
                             }}>
-                              {isCorrect ? 'CORRECT' : 'INCORRECT'}
+                              {answerData.isCorrect ? 'CORRECT' : 'INCORRECT'}
                             </div>
                           </div>
 
@@ -6527,17 +6537,17 @@ Settings
                             </div>
                             <div style={{
                               padding: '10px 15px',
-                              backgroundColor: isCorrect ? '#e8f5e8' : '#ffe8e8',
-                              border: `1px solid ${isCorrect ? '#4caf50' : '#f44336'}`,
+                              backgroundColor: answerData.isCorrect ? '#e8f5e8' : '#ffe8e8',
+                              border: `1px solid ${answerData.isCorrect ? '#4caf50' : '#f44336'}`,
                               borderRadius: '6px',
                               fontSize: '14px',
                               fontWeight: '500'
                             }}>
-                              {userAnswer}
+                              {answerData.userAnswer}
                             </div>
                           </div>
 
-                          {answerData?.correctAnswer && (
+                          {answerData.correctAnswer && (
                             <div>
                               <div style={{
                                 fontSize: '14px',
@@ -6566,11 +6576,11 @@ Settings
                             color: '#666',
                             fontStyle: 'italic'
                           }}>
-                            Question ID: {questionId}
+                            Question ID: {answerData.questionId}
                           </div>
                         </div>
                       );
-                    })}
+                    })})()}
                   </div>
                 </div>
               )}
