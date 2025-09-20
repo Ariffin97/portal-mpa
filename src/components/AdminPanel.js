@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessmentTitle, setAssessmentTitle, assessmentSubtitle, setAssessmentSubtitle, submissions = [], savedForms = [], onSaveForm }) => {
+const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessmentTitle, setAssessmentTitle, assessmentSubtitle, setAssessmentSubtitle, passingScore, setPassingScore, submissions = [], savedForms = [], onSaveForm }) => {
   const [newQuestion, setNewQuestion] = useState({
     question: '',
     section: '',
@@ -229,6 +229,31 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
                 }}
                 required
               />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '0' }}>
+              <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
+                Passing Score (%) *
+              </label>
+              <input
+                type="number"
+                id="passingScore"
+                value={passingScore}
+                onChange={(e) => setPassingScore(parseInt(e.target.value) || 70)}
+                min="1"
+                max="100"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #000',
+                  borderRadius: '4px',
+                  fontSize: '16px'
+                }}
+                required
+              />
+              <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                Minimum percentage score required to pass the assessment
+              </small>
             </div>
           </div>
 

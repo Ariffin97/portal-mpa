@@ -118,6 +118,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [assessmentTimeLimit, setAssessmentTimeLimit] = useState(30);
   const [assessmentTitle, setAssessmentTitle] = useState('');
   const [assessmentSubtitle, setAssessmentSubtitle] = useState('');
+  const [passingScore, setPassingScore] = useState(70); // Percentage required to pass
   const [savedAssessmentForms, setSavedAssessmentForms] = useState([]);
   // Use global assessment submissions instead of local state
   const assessmentSubmissions = globalAssessmentSubmissions;
@@ -139,6 +140,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [editFormSubtitle, setEditFormSubtitle] = useState('');
   const [editFormQuestions, setEditFormQuestions] = useState([]);
   const [editFormTimeLimit, setEditFormTimeLimit] = useState(30);
+  const [editFormPassingScore, setEditFormPassingScore] = useState(70);
 
   // Submission Details Modal States
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
@@ -182,6 +184,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
     setEditFormSubtitle(form.subtitle || '');
     setEditFormQuestions([...form.questions]);
     setEditFormTimeLimit(form.timeLimit || 30);
+    setEditFormPassingScore(form.passingScore || 70);
     setShowEditFormModal(true);
   };
 
@@ -192,6 +195,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
     setEditFormSubtitle('');
     setEditFormQuestions([]);
     setEditFormTimeLimit(30);
+    setEditFormPassingScore(70);
   };
 
   const saveEditedForm = async () => {
@@ -210,7 +214,8 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
         title: editFormTitle.trim(),
         subtitle: editFormSubtitle.trim(),
         questions: [...editFormQuestions],
-        timeLimit: editFormTimeLimit
+        timeLimit: editFormTimeLimit,
+        passingScore: editFormPassingScore
       };
 
       console.log('Updating form:', formData);
@@ -2566,7 +2571,8 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
           title: assessmentTitle.trim(),
           subtitle: assessmentSubtitle.trim(),
           questions: [...assessmentQuestions],
-          timeLimit: assessmentTimeLimit
+          timeLimit: assessmentTimeLimit,
+          passingScore: passingScore
         };
 
         if (isEditing && editingFormCode) {
@@ -2603,6 +2609,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
           setAssessmentSubtitle('');
           setAssessmentQuestions([]);
           setAssessmentTimeLimit(30);
+          setPassingScore(70);
         } else {
           // Add new form to the list
           setSavedAssessmentForms(prev => [...(Array.isArray(prev) ? prev : []), savedForm]);
@@ -2614,6 +2621,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
         setAssessmentSubtitle('');
         setAssessmentQuestions([]);
         setAssessmentTimeLimit(30);
+        setPassingScore(70);
 
         return savedForm.code;
       } catch (error) {
@@ -2642,6 +2650,8 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
             setAssessmentTitle={setAssessmentTitle}
             assessmentSubtitle={assessmentSubtitle}
             setAssessmentSubtitle={setAssessmentSubtitle}
+            passingScore={passingScore}
+            setPassingScore={setPassingScore}
             submissions={assessmentSubmissions}
             savedForms={savedAssessmentForms}
             onSaveForm={handleSaveForm}
@@ -6130,6 +6140,30 @@ Settings
                     fontSize: '16px'
                   }}
                 />
+              </div>
+
+              {/* Passing Score */}
+              <div className="form-group" style={{ marginBottom: '25px' }}>
+                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                  Passing Score (%) *
+                </label>
+                <input
+                  type="number"
+                  value={editFormPassingScore}
+                  onChange={(e) => setEditFormPassingScore(parseInt(e.target.value) || 70)}
+                  min="1"
+                  max="100"
+                  style={{
+                    width: '200px',
+                    padding: '12px',
+                    border: '2px solid #000',
+                    borderRadius: '4px',
+                    fontSize: '16px'
+                  }}
+                />
+                <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  Minimum percentage score required to pass the assessment
+                </small>
               </div>
 
               {/* Questions Section */}
