@@ -3,6 +3,7 @@ import apiService from '../services/api';
 import { useNotices } from '../contexts/NoticeContext';
 import mpaLogo from '../assets/images/mpa.png';
 import AdminPanel from './AdminPanel';
+import jsPDF from 'jspdf';
 
 const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) => {
   // Use shared notices context
@@ -324,6 +325,102 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
     setDateFilterEnabled(!dateFilterEnabled);
     if (dateFilterEnabled) {
       setSelectedDate('');
+    }
+  };
+
+  // Generate PDF report of all assessment results
+  const downloadAssessmentResultsPDF = () => {
+    try {
+      const doc = new jsPDF();
+
+      // Title
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Assessment Results Report', 20, 25);
+
+      // Date generated
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, 35);
+
+      let yPosition = 50;
+
+      // Check if there are results to display
+      if (assessmentBatches.length === 0) {
+        doc.setFontSize(12);
+        doc.text('No assessment results available.', 20, yPosition);
+      } else {
+        // Process each batch
+        assessmentBatches.forEach((batch, batchIndex) => {
+          // Batch header
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`Batch: ${batch._id}`, 20, yPosition);
+          yPosition += 10;
+
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          doc.text(`Form Code: ${batch.formCode} | Date: ${batch.batchDate} | Average Score: ${Math.round(batch.averageScore)}%`, 20, yPosition);
+          yPosition += 15;
+
+          // Table headers
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.text('No.', 20, yPosition);
+          doc.text('Name', 35, yPosition);
+          doc.text('IC Number', 100, yPosition);
+          doc.text('Score', 140, yPosition);
+          doc.text('Percentage', 160, yPosition);
+          doc.text('Status', 185, yPosition);
+          yPosition += 5;
+
+          // Draw line under headers
+          doc.line(20, yPosition, 200, yPosition);
+          yPosition += 8;
+
+          // Process submissions in this batch
+          batch.submissions.forEach((submission, index) => {
+            // Check if we need a new page
+            if (yPosition > 270) {
+              doc.addPage();
+              yPosition = 20;
+            }
+
+            doc.setFont('helvetica', 'normal');
+            doc.text((index + 1).toString(), 20, yPosition);
+            doc.text(submission.participantName || 'Unknown', 35, yPosition);
+            doc.text('N/A', 100, yPosition); // IC Number not available in current data structure
+            doc.text(`${submission.correctAnswers || 0}/${submission.totalQuestions || 0}`, 140, yPosition);
+            doc.text(`${submission.score || 0}%`, 160, yPosition);
+
+            // Status with color
+            const passed = (submission.score || 0) >= 70;
+            doc.setTextColor(passed ? 0 : 255, passed ? 128 : 0, 0);
+            doc.text(passed ? 'PASS' : 'FAIL', 185, yPosition);
+            doc.setTextColor(0, 0, 0); // Reset to black
+
+            yPosition += 8;
+          });
+
+          yPosition += 10; // Space between batches
+        });
+      }
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.text('Malaysia Pickleball Association - Assessment Results Report', 20, 290);
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      const filename = `Assessment_Results_${timestamp}.pdf`;
+
+      // Save the PDF
+      doc.save(filename);
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF report. Please try again.');
     }
   };
 
@@ -2976,9 +3073,24 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                   onClick={loadAssessmentResults}
                   className="home-btn"
                   disabled={isLoadingResults}
-                  style={{ padding: '8px 16px', fontSize: '14px' }}
+                  style={{ padding: '8px 16px', fontSize: '14px', marginRight: '10px' }}
                 >
                   {isLoadingResults ? 'Loading...' : 'Refresh'}
+                </button>
+                <button
+                  type="button"
+                  onClick={downloadAssessmentResultsPDF}
+                  className="home-btn"
+                  disabled={isLoadingResults || assessmentBatches.length === 0}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    backgroundColor: '#28a745',
+                    borderColor: '#28a745'
+                  }}
+                  title="Download all assessment results as PDF"
+                >
+                  📄 Download PDF
                 </button>
               </div>
             </div>
