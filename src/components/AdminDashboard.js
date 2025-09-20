@@ -2750,14 +2750,6 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                       }}>IC Number</th>
                       <th style={{
                         padding: '12px 16px',
-                        textAlign: 'left',
-                        fontWeight: '600',
-                        color: '#495057',
-                        borderBottom: '2px solid #dee2e6',
-                        fontSize: '14px'
-                      }}>Email</th>
-                      <th style={{
-                        padding: '12px 16px',
                         textAlign: 'center',
                         fontWeight: '600',
                         color: '#495057',
@@ -2824,17 +2816,6 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                           color: '#495057'
                         }}>
                           {submission.userInfo?.icNumber || 'N/A'}
-                        </td>
-                        <td style={{
-                          padding: '12px 16px',
-                          fontSize: '14px',
-                          color: '#495057',
-                          maxWidth: '200px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {submission.userInfo?.email || 'N/A'}
                         </td>
                         <td style={{
                           padding: '12px 16px',
@@ -6432,7 +6413,7 @@ Settings
                     <strong>Name:</strong> {selectedSubmission.userInfo?.fullName || selectedSubmission.participantName || 'Unknown'}
                   </div>
                   <div>
-                    <strong>IC Number:</strong> {selectedSubmission.userInfo?.icNumber || selectedSubmission.participantEmail?.split('@')[0] || 'N/A'}
+                    <strong>IC Number:</strong> {selectedSubmission.userInfo?.icNumber || 'N/A'}
                   </div>
                   <div>
                     <strong>Form Code:</strong> {selectedSubmission.userInfo?.formCode || selectedSubmission.formCode || 'N/A'}

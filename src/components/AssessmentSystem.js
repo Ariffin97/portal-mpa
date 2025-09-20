@@ -135,7 +135,6 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
       const submissionData = {
         formCode: userInfo.formCode,
         participantName: userInfo.fullName,
-        participantEmail: userInfo.icNumber + '@assessment.local', // Using IC as email placeholder
         answers: assessmentResults.answers ? Object.entries(assessmentResults.answers).map(([questionId, selectedAnswer]) => ({
           questionId: parseInt(questionId),
           selectedAnswer: selectedAnswer,
