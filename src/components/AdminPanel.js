@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessmentTitle, setAssessmentTitle, assessmentSubtitle, setAssessmentSubtitle, includeAnswers, setIncludeAnswers, submissions = [], savedForms = [], onSaveForm }) => {
+const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessmentTitle, setAssessmentTitle, assessmentSubtitle, setAssessmentSubtitle, submissions = [], savedForms = [], onSaveForm }) => {
   const [newQuestion, setNewQuestion] = useState({
     question: '',
     section: '',
@@ -80,8 +80,8 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
       return false;
     }
 
-    // Only validate correct answer if automatic scoring is enabled
-    if (includeAnswers && (!newQuestion.correctAnswer || typeof newQuestion.correctAnswer !== 'string' || !newQuestion.correctAnswer.trim())) {
+    // Validate correct answer is required
+    if (!newQuestion.correctAnswer || typeof newQuestion.correctAnswer !== 'string' || !newQuestion.correctAnswer.trim()) {
       alert('Please select the correct answer');
       return false;
     }
@@ -106,8 +106,8 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
       question: newQuestion.question.trim(),
       section: newQuestion.section.trim(),
       options: newQuestion.options.map(opt => opt.trim()),
-      correctAnswer: includeAnswers ? newQuestion.correctAnswer.trim() : '',
-      hasCorrectAnswer: includeAnswers
+      correctAnswer: newQuestion.correctAnswer.trim(),
+      hasCorrectAnswer: true
     };
 
     // Add section to sections list if it's new
@@ -256,59 +256,6 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
             </small>
           </div>
 
-          {/* Include Answers Toggle */}
-          <div className="form-group">
-            <label style={{ fontWeight: 'bold', marginBottom: '12px', display: 'block', fontSize: '14px' }}>
-              Answer Checking Mode
-            </label>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '16px',
-              border: '2px solid #000',
-              borderRadius: '8px',
-              backgroundColor: includeAnswers ? '#e8f4f8' : '#fff3cd'
-            }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                margin: 0
-              }}>
-                <input
-                  type="checkbox"
-                  checked={includeAnswers}
-                  onChange={(e) => setIncludeAnswers(e.target.checked)}
-                  style={{
-                    width: '18px',
-                    height: '18px',
-                    cursor: 'pointer'
-                  }}
-                />
-                <span style={{ color: includeAnswers ? '#007bff' : '#856404' }}>
-                  {includeAnswers ? 'Automatic Scoring' : 'Manual Checking'}
-                </span>
-              </label>
-              <div style={{
-                fontSize: '13px',
-                color: '#666',
-                fontStyle: 'italic',
-                flex: 1
-              }}>
-                {includeAnswers
-                  ? 'Participants will see their results immediately after completing the assessment'
-                  : 'Results will be announced by the trainer after manual checking'
-                }
-              </div>
-            </div>
-            <small style={{ color: '#666', fontSize: '12px', marginTop: '8px', display: 'block' }}>
-              When automatic scoring is disabled, participants won't need to set correct answers, and results will be manually reviewed
-            </small>
-          </div>
         </div>
 
         {/* Add/Edit Question Section */}
@@ -513,58 +460,33 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
             )}
           </div>
 
-          {/* Correct Answer - Only show if automatic scoring is enabled */}
-          {includeAnswers && (
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
-                Correct Answer *
-              </label>
-              <select
-                id="correctAnswer"
-                value={newQuestion.correctAnswer}
-                onChange={(e) => setNewQuestion(prev => ({ ...prev, correctAnswer: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-                required={includeAnswers}
-              >
-                <option value="">Select correct answer</option>
-                {newQuestion.options.map((option, index) => (
-                  option.trim() && (
-                    <option key={index} value={option}>{String.fromCharCode(65 + index)}: {option}</option>
-                  )
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Correct Answer */}
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
+              Correct Answer *
+            </label>
+            <select
+              id="correctAnswer"
+              value={newQuestion.correctAnswer}
+              onChange={(e) => setNewQuestion(prev => ({ ...prev, correctAnswer: e.target.value }))}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                fontSize: '14px'
+              }}
+              required
+            >
+              <option value="">Select correct answer</option>
+              {newQuestion.options.map((option, index) => (
+                option.trim() && (
+                  <option key={index} value={option}>{String.fromCharCode(65 + index)}: {option}</option>
+                )
+              ))}
+            </select>
+          </div>
 
-          {/* Manual Checking Message - Only show if automatic scoring is disabled */}
-          {!includeAnswers && (
-            <div style={{
-              padding: '16px',
-              backgroundColor: '#fff3cd',
-              border: '2px solid #856404',
-              borderRadius: '8px',
-              marginBottom: '20px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <strong style={{ color: '#856404', fontSize: '14px' }}>Manual Checking Mode</strong>
-              </div>
-              <p style={{
-                margin: 0,
-                fontSize: '13px',
-                color: '#856404',
-                lineHeight: '1.4'
-              }}>
-                Since automatic scoring is disabled, you don't need to set correct answers.
-                Assessment results will be manually reviewed and announced by the trainer.
-              </p>
-            </div>
-          )}
 
           {/* Action Buttons */}
           <div style={{

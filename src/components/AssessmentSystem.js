@@ -9,7 +9,6 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
   const [results, setResults] = useState(null);
   const [allSubmissions, setAllSubmissions] = useState([]);
   const [savedForms, setSavedForms] = useState([]);
-  const [includeAnswers, setIncludeAnswers] = useState(true);
 
   // Sample questions for demo
   const sampleQuestions = [
@@ -94,7 +93,6 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
       if (localForm) {
         setQuestions(localForm.questions);
         setTimeLimit(localForm.timeLimit);
-        setIncludeAnswers(localForm.includeAnswers === true); // Use exact value from saved form
         return true;
       }
 
@@ -105,7 +103,6 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
         console.log('Form includeAnswers value:', form.includeAnswers);
         setQuestions(form.questions);
         setTimeLimit(form.timeLimit);
-        setIncludeAnswers(form.includeAnswers === true); // Use exact value from saved form
         return true;
       }
 
@@ -121,18 +118,8 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
     const dateStr = submissionDate.toISOString().split('T')[0]; // YYYY-MM-DD format
     const batchId = `${userInfo.formCode}-${dateStr}`; // e.g., "YA374-2025-09-19"
 
-    // For manual checking, create modified results without scoring
+    // Use assessment results as-is (automatic scoring only)
     let finalResults = assessmentResults;
-    if (!includeAnswers) {
-      finalResults = {
-        ...assessmentResults,
-        score: 0, // No score for manual checking
-        percentage: 0, // No percentage for manual checking
-        answers: assessmentResults.answers, // Keep answers for trainer review
-        totalQuestions: assessmentResults.totalQuestions,
-        timeSpent: assessmentResults.timeSpent || 0
-      };
-    }
 
     const submission = {
       id: Date.now(),
@@ -152,10 +139,10 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
         answers: assessmentResults.answers ? Object.entries(assessmentResults.answers).map(([questionId, selectedAnswer]) => ({
           questionId: parseInt(questionId),
           selectedAnswer: selectedAnswer,
-          isCorrect: includeAnswers ? questions.find(q => q.id == questionId)?.correctAnswer === selectedAnswer : null // Only check if automatic scoring
+          isCorrect: questions.find(q => q.id == questionId)?.correctAnswer === selectedAnswer
         })) : [],
-        score: includeAnswers ? assessmentResults.percentage : 0, // 0 for manual checking
-        correctAnswers: includeAnswers ? assessmentResults.score : 0, // 0 for manual checking
+        score: assessmentResults.percentage,
+        correctAnswers: assessmentResults.score,
         totalQuestions: assessmentResults.totalQuestions,
         timeSpent: assessmentResults.timeSpent || 0,
         batchId: batchId,
@@ -255,7 +242,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
           <Results
             results={results}
             userInfo={userInfo}
-            includeAnswers={includeAnswers}
+            questions={questions}
             onBackToHome={() => {
               setCurrentView('registration');
               setUserInfo(null);
@@ -780,17 +767,23 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegist
 
 
 // Results Component
-const Results = ({ results, userInfo, includeAnswers, onBackToHome }) => {
+const Results = ({ results, userInfo, questions, onBackToHome }) => {
+  const [showReview, setShowReview] = useState(false);
+
   const getScoreClass = (percentage) => {
     if (percentage >= 80) return 'score-excellent';
     if (percentage >= 60) return 'score-good';
     return 'score-needs-improvement';
   };
 
+  const getAnswerStatus = (question, userAnswer) => {
+    return userAnswer === question.correctAnswer;
+  };
+
   return (
     <div style={{
       width: '100%',
-      maxWidth: '500px',
+      maxWidth: showReview ? '800px' : '500px',
       margin: '0 auto',
       backgroundColor: '#fff',
       textAlign: 'center'
@@ -811,122 +804,55 @@ const Results = ({ results, userInfo, includeAnswers, onBackToHome }) => {
         marginBottom: '30px',
         backgroundColor: '#fff'
       }}>
-        {includeAnswers ? (
-          // Automatic scoring - show results
-          <>
-            <div style={{
-              width: '150px',
-              height: '150px',
-              borderRadius: '50%',
+        <div style={{
+          width: '150px',
+          height: '150px',
+          borderRadius: '50%',
+          backgroundColor: results.percentage >= 70 ? '#000' : '#fff',
+          color: results.percentage >= 70 ? '#fff' : '#000',
+          border: '4px solid #000',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '32px',
+          fontWeight: 'bold',
+          margin: '0 auto 30px auto'
+        }}>
+          {results.percentage}%
+        </div>
+
+        <div style={{ textAlign: 'left', fontSize: '16px', lineHeight: '1.6' }}>
+          <div style={{ marginBottom: '12px' }}>
+            <strong>Name:</strong> {userInfo.fullName}
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <strong>IC Number:</strong> {userInfo.icNumber}
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <strong>Score:</strong> {results.score} / {results.totalQuestions}
+          </div>
+          <div style={{ marginBottom: '12px' }}>
+            <strong>Percentage:</strong> {results.percentage}%
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <strong>Status:</strong>
+            <span style={{
               backgroundColor: results.percentage >= 70 ? '#000' : '#fff',
               color: results.percentage >= 70 ? '#fff' : '#000',
-              border: '4px solid #000',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '32px',
+              border: '2px solid #000',
+              padding: '6px 12px',
+              borderRadius: '4px',
               fontWeight: 'bold',
-              margin: '0 auto 30px auto'
+              fontSize: '14px'
             }}>
-              {results.percentage}%
-            </div>
-
-            <div style={{ textAlign: 'left', fontSize: '16px', lineHeight: '1.6' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>Name:</strong> {userInfo.fullName}
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>IC Number:</strong> {userInfo.icNumber}
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>Score:</strong> {results.score} / {results.totalQuestions}
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>Percentage:</strong> {results.percentage}%
-              </div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <strong>Status:</strong>
-                <span style={{
-                  backgroundColor: results.percentage >= 70 ? '#000' : '#fff',
-                  color: results.percentage >= 70 ? '#fff' : '#000',
-                  border: '2px solid #000',
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  fontWeight: 'bold',
-                  fontSize: '14px'
-                }}>
-                  {results.percentage >= 70 ? 'PASSED' : 'FAILED'}
-                </span>
-              </div>
-            </div>
-          </>
-        ) : (
-          // Manual checking - show submission confirmation
-          <>
-            <div style={{
-              width: '150px',
-              height: '150px',
-              borderRadius: '50%',
-              backgroundColor: '#fff3cd',
-              color: '#856404',
-              border: '4px solid #856404',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '48px',
-              margin: '0 auto 30px auto'
-            }}>
-              📋
-            </div>
-
-            <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-              <h4 style={{ color: '#856404', fontSize: '20px', margin: '0 0 15px 0' }}>
-                Assessment Submitted Successfully!
-              </h4>
-              <p style={{ color: '#856404', fontSize: '16px', margin: 0, lineHeight: '1.5' }}>
-                Your assessment has been submitted for manual review.
-                Results will be announced by the trainer after checking.
-              </p>
-            </div>
-
-            <div style={{ textAlign: 'left', fontSize: '16px', lineHeight: '1.6' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>Name:</strong> {userInfo.fullName}
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>IC Number:</strong> {userInfo.icNumber}
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>Questions Completed:</strong> {results.totalQuestions}
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <strong>Submission Time:</strong> {new Date().toLocaleString()}
-              </div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}>
-                <strong>Status:</strong>
-                <span style={{
-                  backgroundColor: '#fff3cd',
-                  color: '#856404',
-                  border: '2px solid #856404',
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  fontWeight: 'bold',
-                  fontSize: '14px'
-                }}>
-                  UNDER REVIEW
-                </span>
-              </div>
-            </div>
-          </>
-        )}
+              {results.percentage >= 70 ? 'PASSED' : 'FAILED'}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div style={{
@@ -948,6 +874,143 @@ const Results = ({ results, userInfo, includeAnswers, onBackToHome }) => {
           </p>
         )}
       </div>
+
+      {/* Review Section Toggle */}
+      <div style={{ marginBottom: '30px' }}>
+        <button
+          onClick={() => setShowReview(!showReview)}
+          style={{
+            backgroundColor: '#fff',
+            color: '#000',
+            border: '2px solid #000',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            fontSize: '16px',
+            marginBottom: '20px'
+          }}
+        >
+          {showReview ? 'Hide Review' : 'Review Questions & Answers'}
+        </button>
+      </div>
+
+      {/* Questions Review Section */}
+      {showReview && (
+        <div style={{
+          border: '2px solid #000',
+          borderRadius: '8px',
+          padding: '20px',
+          marginBottom: '30px',
+          backgroundColor: '#fff',
+          textAlign: 'left'
+        }}>
+          <h4 style={{
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: '#000',
+            margin: '0 0 20px 0',
+            textAlign: 'center'
+          }}>
+            Question Review
+          </h4>
+
+          {questions.map((question, index) => {
+            const userAnswer = results.answers[question.id];
+            const isCorrect = getAnswerStatus(question, userAnswer);
+
+            return (
+              <div key={question.id} style={{
+                border: '1px solid #ddd',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '16px',
+                backgroundColor: isCorrect ? '#f0f8f0' : '#fff8f0'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  marginBottom: '12px'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      marginBottom: '4px'
+                    }}>
+                      Question {index + 1}
+                      {question.section && ` • ${question.section}`}
+                    </div>
+                    <h5 style={{
+                      fontSize: '16px',
+                      fontWeight: 'bold',
+                      color: '#000',
+                      margin: '0 0 12px 0',
+                      lineHeight: '1.4'
+                    }}>
+                      {question.question}
+                    </h5>
+                  </div>
+                  <div style={{
+                    backgroundColor: isCorrect ? '#000' : '#fff',
+                    color: isCorrect ? '#fff' : '#000',
+                    border: '2px solid #000',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    flexShrink: 0,
+                    marginLeft: '16px'
+                  }}>
+                    {isCorrect ? 'CORRECT' : 'INCORRECT'}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: '#000',
+                    marginBottom: '8px'
+                  }}>
+                    Your Answer:
+                  </div>
+                  <div style={{
+                    padding: '8px 12px',
+                    backgroundColor: isCorrect ? '#e8f5e8' : '#ffe8e8',
+                    border: `1px solid ${isCorrect ? '#4caf50' : '#f44336'}`,
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}>
+                    {userAnswer || 'No answer selected'}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: '#000',
+                    marginBottom: '8px'
+                  }}>
+                    Correct Answer:
+                  </div>
+                  <div style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#e8f5e8',
+                    border: '1px solid #4caf50',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}>
+                    {question.correctAnswer}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <button
         onClick={onBackToHome}

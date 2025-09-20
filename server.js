@@ -1303,6 +1303,12 @@ const assessmentFormSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  subtitle: {
+    type: String,
+    required: false,
+    trim: true,
+    default: ''
+  },
   questions: [{
     id: {
       type: Number,
@@ -1322,7 +1328,7 @@ const assessmentFormSchema = new mongoose.Schema({
     }],
     correctAnswer: {
       type: String,
-      required: false
+      required: true
     }
   }],
   timeLimit: {
@@ -3238,7 +3244,7 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 // Save assessment form
 app.post('/api/assessment/forms', async (req, res) => {
   try {
-    const { questions, timeLimit, title } = req.body;
+    const { questions, timeLimit, title, subtitle } = req.body;
 
     // Validation
     if (!title || !title.trim()) {
@@ -3268,8 +3274,9 @@ app.post('/api/assessment/forms', async (req, res) => {
     const newForm = new AssessmentForm({
       code: formCode,
       title: title.trim(),
+      subtitle: subtitle ? subtitle.trim() : '',
       questions: questions,
-      timeLimit: timeLimit
+      timeLimit: timeLimit,
     });
 
     const savedForm = await newForm.save();
@@ -3371,27 +3378,38 @@ app.delete('/api/assessment/forms/:id', async (req, res) => {
 // Save assessment submission
 app.post('/api/assessment/submissions', async (req, res) => {
   try {
+    console.log('=== Assessment Submission Request ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+
     const { formCode, participantName, participantEmail, answers, score, correctAnswers, totalQuestions, timeSpent, batchId, batchDate } = req.body;
 
     // Validation
+    console.log('Validating fields...');
     if (!formCode || !participantName || !participantEmail || !answers || score === undefined) {
+      console.log('Validation failed:', { formCode, participantName, participantEmail, answers: !!answers, score });
       return res.status(400).json({
         success: false,
         message: 'All required fields must be provided'
       });
     }
+    console.log('Validation passed');
 
     // Verify form exists
+    console.log('Checking if form exists:', formCode.toUpperCase());
     const form = await AssessmentForm.findOne({ code: formCode.toUpperCase() });
     if (!form) {
+      console.log('Form not found:', formCode.toUpperCase());
       return res.status(404).json({
         success: false,
         message: 'Assessment form not found'
       });
     }
+    console.log('Form found:', form.code);
 
     // Generate unique submission ID
+    console.log('Generating submission ID...');
     const submissionId = await generateSubmissionId();
+    console.log('Generated submission ID:', submissionId);
 
     // Generate batch information if not provided
     const submissionDate = new Date();
@@ -3399,6 +3417,7 @@ app.post('/api/assessment/submissions', async (req, res) => {
     const finalBatchId = batchId || `${formCode.toUpperCase()}-${dateStr}`;
     const finalBatchDate = batchDate || dateStr;
 
+    console.log('Creating submission object...');
     const newSubmission = new AssessmentSubmission({
       submissionId: submissionId,
       formCode: formCode.toUpperCase(),
@@ -3413,7 +3432,9 @@ app.post('/api/assessment/submissions', async (req, res) => {
       batchDate: finalBatchDate
     });
 
+    console.log('Saving submission to database...');
     const savedSubmission = await newSubmission.save();
+    console.log('Submission saved successfully:', savedSubmission.submissionId);
 
     res.status(201).json({
       success: true,
@@ -3456,6 +3477,30 @@ app.get('/api/assessment/submissions', async (req, res) => {
       success: false,
       error: 'Internal server error',
       message: 'Failed to fetch assessment submissions'
+    });
+  }
+});
+
+// Clear all assessment submissions
+app.delete('/api/assessment/submissions/clear', async (req, res) => {
+  try {
+    console.log('=== Clear All Assessment Submissions Request ===');
+
+    const result = await AssessmentSubmission.deleteMany({});
+
+    console.log(`Successfully cleared ${result.deletedCount} assessment submissions`);
+
+    res.json({
+      success: true,
+      message: `Successfully cleared ${result.deletedCount} assessment submissions`,
+      deletedCount: result.deletedCount
+    });
+  } catch (error) {
+    console.error('Error clearing assessment submissions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to clear assessment submissions'
     });
   }
 });
@@ -3529,6 +3574,7 @@ app.get('/api/assessment/batches', async (req, res) => {
     });
   }
 });
+
 
 // ===============================
 // FILE UPLOAD APIs

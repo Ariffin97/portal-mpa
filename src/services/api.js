@@ -1,7 +1,7 @@
 // Dynamic API URL configuration
 const API_BASE_URL = process.env.NODE_ENV === 'production'
   ? '/api'  // In production, use relative path (same domain)
-  : 'http://localhost:5002/api';  // In development, use localhost
+  : 'http://localhost:5001/api';  // In development, use localhost
 
 // Log the API URL for debugging
 console.log('API Base URL:', API_BASE_URL);
@@ -247,6 +247,12 @@ class ApiService {
     const endpoint = `/assessment/batches${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await this.makeRequest(endpoint);
     return response.data || [];
+  }
+
+  async clearAllAssessmentSubmissions() {
+    return this.makeRequest('/assessment/submissions/clear', {
+      method: 'DELETE',
+    });
   }
 }
 

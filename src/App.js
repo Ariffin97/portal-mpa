@@ -61,6 +61,24 @@ function App() {
     }
   };
 
+  // Function to clear all assessment submissions
+  const clearAllAssessmentSubmissions = () => {
+    setGlobalAssessmentSubmissions([]);
+    try {
+      localStorage.removeItem('assessmentSubmissions');
+    } catch (error) {
+      console.error('Error clearing assessment submissions:', error);
+    }
+  };
+
+  // Make clear function available globally
+  useEffect(() => {
+    window.clearAllAssessmentSubmissions = clearAllAssessmentSubmissions;
+    return () => {
+      delete window.clearAllAssessmentSubmissions;
+    };
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {

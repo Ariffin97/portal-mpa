@@ -118,7 +118,6 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [assessmentTimeLimit, setAssessmentTimeLimit] = useState(30);
   const [assessmentTitle, setAssessmentTitle] = useState('');
   const [assessmentSubtitle, setAssessmentSubtitle] = useState('');
-  const [includeAnswers, setIncludeAnswers] = useState(true);
   const [savedAssessmentForms, setSavedAssessmentForms] = useState([]);
   // Use global assessment submissions instead of local state
   const assessmentSubmissions = globalAssessmentSubmissions;
@@ -132,6 +131,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [collapsedBatches, setCollapsedBatches] = useState(new Set());
 
+
   // Edit Form Popup States
   const [showEditFormModal, setShowEditFormModal] = useState(false);
   const [editingForm, setEditingForm] = useState(null);
@@ -139,6 +139,10 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [editFormSubtitle, setEditFormSubtitle] = useState('');
   const [editFormQuestions, setEditFormQuestions] = useState([]);
   const [editFormTimeLimit, setEditFormTimeLimit] = useState(30);
+
+  // Submission Details Modal States
+  const [showSubmissionModal, setShowSubmissionModal] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   // Sidebar Sub-menu state
   const [createTournamentExpanded, setCreateTournamentExpanded] = useState(false);
@@ -321,6 +325,12 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   // Calculate total batches from selected date
   const getTotalBatchesFromDate = () => {
     return assessmentBatches.length;
+  };
+
+  // Function to open submission details modal
+  const openSubmissionDetails = (submission) => {
+    setSelectedSubmission(submission);
+    setShowSubmissionModal(true);
   };
 
   // Notice Management States
@@ -2556,8 +2566,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
           title: assessmentTitle.trim(),
           subtitle: assessmentSubtitle.trim(),
           questions: [...assessmentQuestions],
-          timeLimit: assessmentTimeLimit,
-          includeAnswers: includeAnswers
+          timeLimit: assessmentTimeLimit
         };
 
         if (isEditing && editingFormCode) {
@@ -2594,7 +2603,6 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
           setAssessmentSubtitle('');
           setAssessmentQuestions([]);
           setAssessmentTimeLimit(30);
-          setIncludeAnswers(true);
         } else {
           // Add new form to the list
           setSavedAssessmentForms(prev => [...(Array.isArray(prev) ? prev : []), savedForm]);
@@ -2606,7 +2614,6 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
         setAssessmentSubtitle('');
         setAssessmentQuestions([]);
         setAssessmentTimeLimit(30);
-        setIncludeAnswers(true);
 
         return savedForm.code;
       } catch (error) {
@@ -2635,8 +2642,6 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
             setAssessmentTitle={setAssessmentTitle}
             assessmentSubtitle={assessmentSubtitle}
             setAssessmentSubtitle={setAssessmentSubtitle}
-            includeAnswers={includeAnswers}
-            setIncludeAnswers={setIncludeAnswers}
             submissions={assessmentSubmissions}
             savedForms={savedAssessmentForms}
             onSaveForm={handleSaveForm}
@@ -2658,7 +2663,40 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
 
           {/* Assessment Submissions List */}
           <div className="form-section" style={{ padding: '20px' }}>
-            <h3>All Assessment Submissions ({assessmentSubmissions.length})</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3>All Assessment Submissions ({assessmentSubmissions.length})</h3>
+              {assessmentSubmissions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (window.confirm('Are you sure you want to clear all assessment submissions? This action cannot be undone.')) {
+                      // Clear from global state via the parent component
+                      if (window.clearAllAssessmentSubmissions) {
+                        window.clearAllAssessmentSubmissions();
+                        alert('All assessment submissions have been cleared.');
+                      } else {
+                        // Fallback: clear from localStorage directly
+                        localStorage.removeItem('assessmentSubmissions');
+                        alert('All assessment submissions have been cleared. Please refresh the page to see changes.');
+                      }
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Clear All Submissions
+                </button>
+              )}
+            </div>
             {assessmentSubmissions.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(0, 0, 0, 0.5)' }}>
                 <p>No assessment submissions yet.</p>
@@ -2744,10 +2782,16 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                   </thead>
                   <tbody>
                     {assessmentSubmissions.map((submission, index) => (
-                      <tr key={submission.id} style={{
-                        borderBottom: '1px solid #dee2e6',
-                        '&:hover': { backgroundColor: '#f8f9fa' }
-                      }}>
+                      <tr
+                        key={submission.id}
+                        onClick={() => openSubmissionDetails(submission)}
+                        style={{
+                          borderBottom: '1px solid #dee2e6',
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: '#f8f9fa' }
+                        }}
+                        title="Click to view submission details"
+                      >
                         <td style={{
                           padding: '12px 16px',
                           fontSize: '14px',
@@ -2903,14 +2947,49 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
           <div className="form-section" style={{ padding: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3>Assessment Results ({assessmentBatches.reduce((acc, batch) => acc + batch.submissionCount, 0)} total submissions)</h3>
-              <button
-                onClick={loadAssessmentResults}
-                className="home-btn"
-                disabled={isLoadingResults}
-                style={{ padding: '8px 16px', fontSize: '14px' }}
-              >
-                {isLoadingResults ? 'Loading...' : 'Refresh'}
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {assessmentBatches.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      if (window.confirm('Are you sure you want to clear all assessment submissions from the database? This action cannot be undone.')) {
+                        try {
+                          const response = await apiService.clearAllAssessmentSubmissions();
+                          console.log('Clear submissions response:', response);
+                          setAssessmentBatches([]);
+                          alert(`Successfully cleared ${response.deletedCount || 0} assessment submissions from the database.`);
+                        } catch (error) {
+                          console.error('Error clearing submissions:', error);
+                          const errorMessage = error.message || 'Unknown error occurred';
+                          alert(`Error clearing submissions: ${errorMessage}. Please check the console for more details and try again.`);
+                        }
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#dc3545',
+                      color: 'white',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Clear All Submissions
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={loadAssessmentResults}
+                  className="home-btn"
+                  disabled={isLoadingResults}
+                  style={{ padding: '8px 16px', fontSize: '14px' }}
+                >
+                  {isLoadingResults ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
             </div>
 
             {isLoadingResults ? (
@@ -2994,16 +3073,23 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                     {!collapsedBatches.has(batch._id) && (
                     <div style={{ display: 'grid', gap: '10px' }}>
                       {batch.submissions.map((submission) => (
-                        <div key={submission._id} style={{
-                          background: 'white',
-                          border: '1px solid rgba(0, 0, 0, 0.1)',
-                          borderRadius: '8px',
-                          padding: '15px',
-                          display: 'grid',
-                          gridTemplateColumns: '2fr 1fr 1fr 100px',
-                          gap: '15px',
-                          alignItems: 'center'
-                        }}>
+                        <div
+                          key={submission._id}
+                          onClick={() => openSubmissionDetails(submission)}
+                          style={{
+                            background: 'white',
+                            border: '1px solid rgba(0, 0, 0, 0.1)',
+                            borderRadius: '8px',
+                            padding: '15px',
+                            display: 'grid',
+                            gridTemplateColumns: '2fr 1fr 1fr 100px 120px',
+                            gap: '15px',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          title="Click to view submission details"
+                        >
                           <div>
                             <div style={{ color: '#333', fontWeight: 'bold', fontSize: '16px', marginBottom: '2px' }}>
                               {submission.participantName}
@@ -3046,7 +3132,10 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                             fontSize: '14px',
                             textAlign: 'center'
                           }}>
-                            {submission.score}%
+                            {`${submission.score}%`}
+                          </div>
+                          <div>
+                            {/* No manual review needed - all scoring is automatic */}
                           </div>
                         </div>
                       ))}
@@ -6246,6 +6335,201 @@ Settings
           </div>
         </div>
       )}
+
+      {/* Submission Details Modal */}
+      {showSubmissionModal && selectedSubmission && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }} onClick={() => setShowSubmissionModal(false)}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '0',
+            maxWidth: '800px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            flexDirection: 'column'
+          }} onClick={(e) => e.stopPropagation()}>
+
+            {/* Modal Header */}
+            <div style={{
+              padding: '20px 24px',
+              borderBottom: '1px solid #dee2e6',
+              backgroundColor: '#f8f9fa'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold', color: '#212529' }}>
+                Assessment Submission Details
+              </h3>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{
+              padding: '24px',
+              overflow: 'auto',
+              flex: 1
+            }}>
+
+              {/* User Information */}
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                padding: '20px',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                border: '1px solid #dee2e6'
+              }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold', color: '#495057' }}>
+                  Participant Information
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <strong>Name:</strong> {selectedSubmission.userInfo?.fullName || selectedSubmission.participantName || 'Unknown'}
+                  </div>
+                  <div>
+                    <strong>IC Number:</strong> {selectedSubmission.userInfo?.icNumber || 'N/A'}
+                  </div>
+                  <div>
+                    <strong>Form Code:</strong> {selectedSubmission.userInfo?.formCode || selectedSubmission.formCode || 'N/A'}
+                  </div>
+                  <div>
+                    <strong>Submission Date:</strong> {new Date(selectedSubmission.submittedAt || selectedSubmission.completedAt).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Score Information */}
+              <div style={{
+                backgroundColor: '#fff',
+                padding: '20px',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                border: '1px solid #dee2e6'
+              }}>
+                <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold', color: '#495057' }}>
+                  Assessment Results
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <strong>Score:</strong> {selectedSubmission.results?.score || selectedSubmission.correctAnswers || 0} / {selectedSubmission.results?.totalQuestions || selectedSubmission.totalQuestions || 0}
+                  </div>
+                  <div>
+                    <strong>Percentage:</strong> {selectedSubmission.results?.percentage || selectedSubmission.score || 0}%
+                  </div>
+                  <div>
+                    <strong>Status:</strong>
+                    <span style={{
+                      marginLeft: '8px',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      backgroundColor: (selectedSubmission.results?.percentage || selectedSubmission.score || 0) >= 70 ? '#28a745' : '#dc3545',
+                      color: 'white'
+                    }}>
+                      {(selectedSubmission.results?.percentage || selectedSubmission.score || 0) >= 70 ? 'PASSED' : 'FAILED'}
+                    </span>
+                  </div>
+                  <div>
+                    <strong>Time Spent:</strong> {Math.floor((selectedSubmission.results?.timeSpent || selectedSubmission.timeSpent || 0) / 60)}m {(selectedSubmission.results?.timeSpent || selectedSubmission.timeSpent || 0) % 60}s
+                  </div>
+                </div>
+              </div>
+
+              {/* Answers Details */}
+              {(selectedSubmission.results?.answers || selectedSubmission.answers) && (
+                <div style={{
+                  backgroundColor: '#fff',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  border: '1px solid #dee2e6'
+                }}>
+                  <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold', color: '#495057' }}>
+                    Detailed Answers
+                  </h4>
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    {Object.entries(selectedSubmission.results?.answers || selectedSubmission.answers || {}).map(([questionId, answer], index) => {
+                      let answerData = answer;
+                      if (Array.isArray(selectedSubmission.answers)) {
+                        answerData = selectedSubmission.answers.find(a => a.questionId == questionId);
+                      }
+
+                      return (
+                        <div key={questionId} style={{
+                          padding: '16px',
+                          backgroundColor: '#f8f9fa',
+                          borderRadius: '6px',
+                          border: '1px solid #dee2e6'
+                        }}>
+                          <div style={{ marginBottom: '8px' }}>
+                            <strong>Question {index + 1}:</strong>
+                          </div>
+                          <div style={{ marginBottom: '8px' }}>
+                            <strong>Answer:</strong> {typeof answer === 'string' ? answer : (answerData?.selectedAnswer || 'No answer')}
+                          </div>
+                          {answerData?.isCorrect !== undefined && (
+                            <div>
+                              <strong>Result:</strong>
+                              <span style={{
+                                marginLeft: '8px',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                backgroundColor: answerData.isCorrect ? '#28a745' : '#dc3545',
+                                color: 'white'
+                              }}>
+                                {answerData.isCorrect ? 'Correct' : 'Incorrect'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #dee2e6',
+              backgroundColor: '#f8f9fa',
+              display: 'flex',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setShowSubmissionModal(false)}
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
     </div>
   );
