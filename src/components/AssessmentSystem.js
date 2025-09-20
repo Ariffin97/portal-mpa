@@ -513,6 +513,13 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegist
       ...prev,
       [questionId]: answer
     }));
+
+    // Auto-advance to next question after a short delay
+    setTimeout(() => {
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(prev => prev + 1);
+      }
+    }, 500); // 500ms delay for better UX
   };
 
   // Check if all questions are answered
