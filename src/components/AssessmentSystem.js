@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import apiService from '../services/api';
+import mpaLogo from '../assets/images/mpa.png';
 
 const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
   const [currentView, setCurrentView] = useState('registration'); // registration, assessment, results
@@ -329,6 +330,17 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [] }) => {
       maxWidth: '400px',
       textAlign: 'center'
     }}>
+      <div style={{ marginBottom: '24px' }}>
+        <img
+          src={mpaLogo}
+          alt="MPA Logo"
+          style={{
+            height: '120px',
+            width: 'auto',
+            objectFit: 'contain'
+          }}
+        />
+      </div>
       <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: 'bold', color: '#000' }}>
         Assessment Registration
       </h3>
