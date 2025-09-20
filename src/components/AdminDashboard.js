@@ -6447,53 +6447,127 @@ Settings
                 </div>
               </div>
 
-              {/* Answers Details */}
+              {/* Enhanced Answers Details with Questions */}
               {(selectedSubmission.results?.answers || selectedSubmission.answers) && (
                 <div style={{
                   backgroundColor: '#fff',
                   padding: '20px',
                   borderRadius: '8px',
-                  border: '1px solid #dee2e6'
+                  border: '1px solid #dee2e6',
+                  maxHeight: '60vh',
+                  overflow: 'auto'
                 }}>
-                  <h4 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 'bold', color: '#495057' }}>
-                    Detailed Answers
+                  <h4 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 'bold', color: '#495057' }}>
+                    Question Review & Answers
                   </h4>
-                  <div style={{ display: 'grid', gap: '16px' }}>
+                  <div style={{ display: 'grid', gap: '20px' }}>
                     {Object.entries(selectedSubmission.results?.answers || selectedSubmission.answers || {}).map(([questionId, answer], index) => {
                       let answerData = answer;
+                      let isCorrect = false;
+                      let userAnswer = '';
+                      let correctAnswer = '';
+
                       if (Array.isArray(selectedSubmission.answers)) {
                         answerData = selectedSubmission.answers.find(a => a.questionId == questionId);
+                        isCorrect = answerData?.isCorrect || false;
+                        userAnswer = answerData?.selectedAnswer || 'No answer';
+                      } else {
+                        userAnswer = typeof answer === 'string' ? answer : 'No answer';
+                        isCorrect = answerData?.isCorrect !== undefined ? answerData.isCorrect : false;
                       }
+
+                      // Try to get question text and correct answer from the form
+                      const questionText = `Question ${index + 1}`;
 
                       return (
                         <div key={questionId} style={{
-                          padding: '16px',
-                          backgroundColor: '#f8f9fa',
-                          borderRadius: '6px',
-                          border: '1px solid #dee2e6'
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          padding: '20px',
+                          backgroundColor: isCorrect ? '#f0f8f0' : '#fff8f0'
                         }}>
-                          <div style={{ marginBottom: '8px' }}>
-                            <strong>Question {index + 1}:</strong>
-                          </div>
-                          <div style={{ marginBottom: '8px' }}>
-                            <strong>Answer:</strong> {typeof answer === 'string' ? answer : (answerData?.selectedAnswer || 'No answer')}
-                          </div>
-                          {answerData?.isCorrect !== undefined && (
-                            <div>
-                              <strong>Result:</strong>
-                              <span style={{
-                                marginLeft: '8px',
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                backgroundColor: answerData.isCorrect ? '#28a745' : '#dc3545',
-                                color: 'white'
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'space-between',
+                            marginBottom: '15px'
+                          }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{
+                                fontSize: '14px',
+                                color: '#666',
+                                marginBottom: '8px',
+                                fontWeight: 'bold'
                               }}>
-                                {answerData.isCorrect ? 'Correct' : 'Incorrect'}
-                              </span>
+                                {questionText}
+                              </div>
+                            </div>
+                            <div style={{
+                              backgroundColor: isCorrect ? '#28a745' : '#dc3545',
+                              color: 'white',
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              flexShrink: 0,
+                              marginLeft: '16px'
+                            }}>
+                              {isCorrect ? 'CORRECT' : 'INCORRECT'}
+                            </div>
+                          </div>
+
+                          <div style={{ marginBottom: '15px' }}>
+                            <div style={{
+                              fontSize: '14px',
+                              fontWeight: 'bold',
+                              color: '#000',
+                              marginBottom: '8px'
+                            }}>
+                              User's Answer:
+                            </div>
+                            <div style={{
+                              padding: '10px 15px',
+                              backgroundColor: isCorrect ? '#e8f5e8' : '#ffe8e8',
+                              border: `1px solid ${isCorrect ? '#4caf50' : '#f44336'}`,
+                              borderRadius: '6px',
+                              fontSize: '14px',
+                              fontWeight: '500'
+                            }}>
+                              {userAnswer}
+                            </div>
+                          </div>
+
+                          {answerData?.correctAnswer && (
+                            <div>
+                              <div style={{
+                                fontSize: '14px',
+                                fontWeight: 'bold',
+                                color: '#000',
+                                marginBottom: '8px'
+                              }}>
+                                Correct Answer:
+                              </div>
+                              <div style={{
+                                padding: '10px 15px',
+                                backgroundColor: '#e8f5e8',
+                                border: '1px solid #4caf50',
+                                borderRadius: '6px',
+                                fontSize: '14px',
+                                fontWeight: '500'
+                              }}>
+                                {answerData.correctAnswer}
+                              </div>
                             </div>
                           )}
+
+                          <div style={{
+                            marginTop: '12px',
+                            fontSize: '12px',
+                            color: '#666',
+                            fontStyle: 'italic'
+                          }}>
+                            Question ID: {questionId}
+                          </div>
                         </div>
                       );
                     })}
