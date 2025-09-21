@@ -530,6 +530,16 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
     loadTournamentUpdates();
   }, []);
 
+  // Role-based access control - redirect assessment_admin to assessments view
+  useEffect(() => {
+    if (currentUserAuthority === 'assessment_admin') {
+      const allowedViews = ['assessment-management', 'assessment-list', 'assessment-statistics', 'saved-forms'];
+      if (!allowedViews.includes(currentView)) {
+        setCurrentView('assessment-statistics');
+      }
+    }
+  }, [currentUserAuthority, currentView]);
+
   // Notice Management Functions
   const handleCreateNotice = () => {
     setNoticeFormData({
@@ -1061,10 +1071,28 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
         return 'Super Admin';
       case 'admin':
         return 'Admin';
+      case 'assessment_admin':
+        return 'Assessment Admin';
       default:
         return level;
     }
   };
+
+  // Check if current user has access to specific sections
+  const hasAccessTo = (section) => {
+    switch (currentUserAuthority) {
+      case 'super_admin':
+        return true; // Super admin has access to everything
+      case 'admin':
+        return section !== 'admin_management'; // Admin has access except admin management
+      case 'assessment_admin':
+        // Assessment admin only has access to assessment-related features
+        return ['assessments', 'assessment-management', 'assessment-list', 'assessment-statistics', 'saved-forms'].includes(section);
+      default:
+        return false;
+    }
+  };
+
 
   // Create Account Functions
   const handleCreateAccount = async () => {
@@ -2469,10 +2497,12 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                 <option value="">Select Authority Level</option>
                 <option value="super_admin">Super Admin</option>
                 <option value="admin">Admin</option>
+                <option value="assessment_admin">Assessment Admin</option>
               </select>
               <small className="authority-info">
                 • <strong>Super Admin:</strong> Full access to all features and settings<br/>
-                • <strong>Admin:</strong> Standard admin access with limited system settings
+                • <strong>Admin:</strong> Standard admin access with limited system settings<br/>
+                • <strong>Assessment Admin:</strong> Access to assessment management only
               </small>
             </div>
             <div className="setting-item">
@@ -3456,44 +3486,49 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
     <div className="admin-dashboard">
       <div className="dashboard-sidebar">
         <div className="sidebar-nav">
-          <button
-            className={`sidebar-nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setCurrentView('dashboard')}
-            style={{
-              fontSize: '16px',
-              fontWeight: '500',
-              padding: '12px 20px',
-              color: '#fff',
-              backgroundColor: 'transparent',
-              border: 'none',
-              width: '100%',
-              textAlign: 'left',
-              cursor: 'pointer'
-            }}
-          >
-            Dashboard
-          </button>
+          {hasAccessTo('dashboard') && (
+            <button
+              className={`sidebar-nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setCurrentView('dashboard')}
+              style={{
+                fontSize: '16px',
+                fontWeight: '500',
+                padding: '12px 20px',
+                color: '#fff',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer'
+              }}
+            >
+              Dashboard
+            </button>
+          )}
 
-          <button
-            className={`sidebar-nav-item ${currentView === 'calendar' ? 'active' : ''}`}
-            onClick={() => setCurrentView('calendar')}
-            style={{
-              fontSize: '16px',
-              fontWeight: '500',
-              padding: '12px 20px',
-              color: '#fff',
-              backgroundColor: 'transparent',
-              border: 'none',
-              width: '100%',
-              textAlign: 'left',
-              cursor: 'pointer'
-            }}
-          >
-            Calendar
-          </button>
+          {hasAccessTo('calendar') && (
+            <button
+              className={`sidebar-nav-item ${currentView === 'calendar' ? 'active' : ''}`}
+              onClick={() => setCurrentView('calendar')}
+              style={{
+                fontSize: '16px',
+                fontWeight: '500',
+                padding: '12px 20px',
+                color: '#fff',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer'
+              }}
+            >
+              Calendar
+            </button>
+          )}
           
           {/* Create Tournament with Sub-options */}
-          <div className="sidebar-nav-group">
+          {hasAccessTo('tournaments') && (
+            <div className="sidebar-nav-group">
             <button
               className={`sidebar-nav-item ${currentView === 'create-tournament' || currentView === 'edit-tournament' ? 'active' : ''}`}
               onClick={() => {
@@ -3566,80 +3601,90 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
               </div>
             )}
           </div>
+          )}
           
-          <button
-            className={`sidebar-nav-item ${currentView === 'applications' ? 'active' : ''}`}
-            onClick={() => setCurrentView('applications')}
-            style={{
-              fontSize: '16px',
-              fontWeight: '500',
-              padding: '12px 20px',
-              color: '#fff',
-              backgroundColor: 'transparent',
-              border: 'none',
-              width: '100%',
-              textAlign: 'left',
-              cursor: 'pointer'
-            }}
-          >
-            Applications
-          </button>
+          {hasAccessTo('applications') && (
+            <button
+              className={`sidebar-nav-item ${currentView === 'applications' ? 'active' : ''}`}
+              onClick={() => setCurrentView('applications')}
+              style={{
+                fontSize: '16px',
+                fontWeight: '500',
+                padding: '12px 20px',
+                color: '#fff',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer'
+              }}
+            >
+              Applications
+            </button>
+          )}
 
-          <button
-            className={`sidebar-nav-item ${currentView === 'registered-organizations' ? 'active' : ''}`}
-            onClick={() => setCurrentView('registered-organizations')}
-            style={{
-              fontSize: '16px',
-              fontWeight: '500',
-              padding: '12px 20px',
-              color: '#fff',
-              backgroundColor: 'transparent',
-              border: 'none',
-              width: '100%',
-              textAlign: 'left',
-              cursor: 'pointer'
-            }}
-          >
-            Registered Organizations
-          </button>
+          {hasAccessTo('organizations') && (
+            <button
+              className={`sidebar-nav-item ${currentView === 'registered-organizations' ? 'active' : ''}`}
+              onClick={() => setCurrentView('registered-organizations')}
+              style={{
+                fontSize: '16px',
+                fontWeight: '500',
+                padding: '12px 20px',
+                color: '#fff',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer'
+              }}
+            >
+              Registered Organizations
+            </button>
+          )}
 
-          <button
-            className={`sidebar-nav-item ${currentView === 'analytics' ? 'active' : ''}`}
-            onClick={() => setCurrentView('analytics')}
-            style={{
-              fontSize: '16px',
-              fontWeight: '500',
-              padding: '12px 20px',
-              color: '#fff',
-              backgroundColor: 'transparent',
-              border: 'none',
-              width: '100%',
-              textAlign: 'left',
-              cursor: 'pointer'
-            }}
-          >
-            Analytics
-          </button>
+          {hasAccessTo('analytics') && (
+            <button
+              className={`sidebar-nav-item ${currentView === 'analytics' ? 'active' : ''}`}
+              onClick={() => setCurrentView('analytics')}
+              style={{
+                fontSize: '16px',
+                fontWeight: '500',
+                padding: '12px 20px',
+                color: '#fff',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer'
+              }}
+            >
+              Analytics
+            </button>
+          )}
 
-          <button
-            className={`sidebar-nav-item ${currentView === 'notice-management' ? 'active' : ''}`}
-            onClick={() => setCurrentView('notice-management')}
-            style={{
-              fontSize: '16px',
-              fontWeight: '500',
-              padding: '12px 20px',
-              color: '#fff',
-              backgroundColor: 'transparent',
-              border: 'none',
-              width: '100%',
-              textAlign: 'left',
-              cursor: 'pointer'
-            }}
-          >
-            Notice Management
-          </button>
+          {hasAccessTo('notices') && (
+            <button
+              className={`sidebar-nav-item ${currentView === 'notice-management' ? 'active' : ''}`}
+              onClick={() => setCurrentView('notice-management')}
+              style={{
+                fontSize: '16px',
+                fontWeight: '500',
+                padding: '12px 20px',
+                color: '#fff',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer'
+              }}
+            >
+              Notice Management
+            </button>
+          )}
           {/* Assessment Management with Sub-options */}
-          <div className="sidebar-nav-group">
+          {hasAccessTo('assessments') && (
+            <div className="sidebar-nav-group">
             <button
               className={`sidebar-nav-item ${currentView === 'assessment-management' || currentView === 'assessment-list' || currentView === 'assessment-statistics' || currentView === 'saved-forms' ? 'active' : ''}`}
               onClick={() => {
@@ -3769,9 +3814,11 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
               </div>
             )}
           </div>
-          <button
-            className={`sidebar-nav-item ${currentView === 'settings' ? 'active' : ''}`}
-            onClick={() => setCurrentView('settings')}
+          )}
+          {hasAccessTo('settings') && (
+            <button
+              className={`sidebar-nav-item ${currentView === 'settings' ? 'active' : ''}`}
+              onClick={() => setCurrentView('settings')}
             style={{
               backgroundColor: 'transparent',
               border: 'none',
@@ -3787,6 +3834,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
           >
 Settings
           </button>
+          )}
         </div>
       </div>
 
@@ -6071,6 +6119,7 @@ Settings
                     >
                       <option value="admin">Admin</option>
                       <option value="super_admin">Super Admin</option>
+                      <option value="assessment_admin">Assessment Admin</option>
                     </select>
                   </div>
                 </div>

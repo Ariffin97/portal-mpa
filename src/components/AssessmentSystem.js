@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import apiService from '../services/api';
 import mpaLogo from '../assets/images/mpa.png';
+import jsPDF from 'jspdf';
 
 const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
   const [currentView, setCurrentView] = useState('registration'); // registration, assessment, results
@@ -10,6 +11,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
   const [results, setResults] = useState(null);
   const [allSubmissions, setAllSubmissions] = useState([]);
   const [savedForms, setSavedForms] = useState([]);
+  const [assessmentFormData, setAssessmentFormData] = useState(null);
 
   // Sample questions for demo
   const sampleQuestions = [
@@ -104,6 +106,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
         console.log('Form includeAnswers value:', form.includeAnswers);
         setQuestions(form.questions);
         setTimeLimit(form.timeLimit);
+        setAssessmentFormData(form);
         return true;
       }
 
@@ -244,6 +247,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
             results={results}
             userInfo={userInfo}
             questions={questions}
+            assessmentFormData={assessmentFormData}
             onBackToHome={() => {
               setCurrentView('registration');
               setUserInfo(null);
@@ -786,8 +790,117 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegist
 
 
 // Results Component
-const Results = ({ results, userInfo, questions, onBackToHome }) => {
+const Results = ({ results, userInfo, questions, assessmentFormData, onBackToHome }) => {
   const [showReview, setShowReview] = useState(false);
+
+  const downloadResultPDF = () => {
+    try {
+      const doc = new jsPDF();
+
+      // Add logo to PDF
+      const addLogoToPDF = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+
+        img.onload = function() {
+          canvas.width = this.width;
+          canvas.height = this.height;
+          ctx.drawImage(this, 0, 0);
+          const dataURL = canvas.toDataURL('image/png');
+
+          // Add logo to PDF (top right corner)
+          const imgWidth = 25;
+          const imgHeight = (this.height / this.width) * imgWidth;
+          doc.addImage(dataURL, 'PNG', 170, 10, imgWidth, imgHeight);
+
+          generatePDFContent();
+        };
+
+        img.onerror = function() {
+          generatePDFContent();
+        };
+
+        img.src = mpaLogo;
+      };
+
+      const generatePDFContent = () => {
+        // Title
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Assessment Result Report', 20, 25);
+
+        // Subtitle
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Malaysia Pickleball Association', 20, 35);
+
+        let yPosition = 60;
+
+        // Participant Information
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Participant Information:', 20, yPosition);
+        yPosition += 15;
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Full Name: ${userInfo.fullName}`, 25, yPosition);
+        yPosition += 10;
+        doc.text(`Identity Card Number: ${userInfo.icNumber}`, 25, yPosition);
+        yPosition += 10;
+        doc.text(`Assessment Code: ${userInfo.formCode}`, 25, yPosition);
+        yPosition += 20;
+
+        // Assessment Information
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Assessment Information:', 20, yPosition);
+        yPosition += 15;
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Title: ${assessmentFormData?.title || 'Assessment'}`, 25, yPosition);
+        yPosition += 10;
+        if (assessmentFormData?.subtitle) {
+          doc.text(`Sub-title: ${assessmentFormData.subtitle}`, 25, yPosition);
+          yPosition += 10;
+        }
+        yPosition += 10;
+
+        // Results Summary
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Results Summary:', 20, yPosition);
+        yPosition += 15;
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Total Questions: ${results.totalQuestions}`, 25, yPosition);
+        yPosition += 10;
+        doc.text(`Correct Answers: ${results.score}`, 25, yPosition);
+        yPosition += 10;
+        doc.text(`Wrong Answers: ${results.totalQuestions - results.score}`, 25, yPosition);
+        yPosition += 10;
+        doc.text(`Percentage Score: ${results.percentage}%`, 25, yPosition);
+        yPosition += 20;
+
+        // Date and time
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, yPosition);
+
+        // Save the PDF
+        doc.save(`Assessment_Result_${userInfo.fullName.replace(/\s+/g, '_')}_${userInfo.formCode}.pdf`);
+      };
+
+      addLogoToPDF();
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
+  };
 
   const getScoreClass = (percentage) => {
     if (percentage >= 80) return 'score-excellent';
@@ -862,15 +975,15 @@ const Results = ({ results, userInfo, questions, onBackToHome }) => {
           }}>
             <strong>Status:</strong>
             <span style={{
-              backgroundColor: results.percentage >= 70 ? '#000' : '#fff',
-              color: results.percentage >= 70 ? '#fff' : '#000',
+              backgroundColor: '#000',
+              color: '#fff',
               border: '2px solid #000',
               padding: '6px 12px',
               borderRadius: '4px',
               fontWeight: 'bold',
               fontSize: '14px'
             }}>
-              {results.percentage >= 70 ? 'PASSED' : 'FAILED'}
+              COMPLETED
             </span>
           </div>
         </div>
@@ -885,19 +998,13 @@ const Results = ({ results, userInfo, questions, onBackToHome }) => {
         fontSize: '16px',
         lineHeight: '1.5'
       }}>
-        {results.percentage >= 70 ? (
-          <p style={{ margin: 0, color: '#000' }}>
-            <strong>Congratulations!</strong> You have successfully passed the assessment.
-          </p>
-        ) : (
-          <p style={{ margin: 0, color: '#000' }}>
-            Please review the material and try again to improve your score.
-          </p>
-        )}
+        <p style={{ margin: 0, color: '#000' }}>
+          <strong>Assessment completed successfully.</strong> Thank you for your participation.
+        </p>
       </div>
 
       {/* Review Section Toggle */}
-      <div style={{ marginBottom: '30px' }}>
+      <div style={{ marginBottom: '15px' }}>
         <button
           onClick={() => setShowReview(!showReview)}
           style={{
@@ -908,8 +1015,7 @@ const Results = ({ results, userInfo, questions, onBackToHome }) => {
             borderRadius: '8px',
             fontWeight: 'bold',
             cursor: 'pointer',
-            fontSize: '16px',
-            marginBottom: '20px'
+            fontSize: '16px'
           }}
         >
           {showReview ? 'Hide Review' : 'Review Questions & Answers'}
@@ -1037,21 +1143,48 @@ const Results = ({ results, userInfo, questions, onBackToHome }) => {
         </div>
       )}
 
-      <button
-        onClick={onBackToHome}
-        style={{
-          backgroundColor: '#000',
-          color: '#fff',
-          border: '2px solid #000',
-          padding: '16px 32px',
-          borderRadius: '8px',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          fontSize: '16px'
-        }}
-      >
-        Back to Home
-      </button>
+      <div style={{
+        textAlign: 'center',
+        marginBottom: '15px',
+        fontSize: '14px',
+        color: '#d32f2f',
+        fontStyle: 'italic'
+      }}>
+        Please download the PDF report for reference.
+      </div>
+
+      <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
+        <button
+          onClick={downloadResultPDF}
+          style={{
+            backgroundColor: '#fff',
+            color: '#000',
+            border: '2px solid #000',
+            padding: '16px 32px',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            fontSize: '16px'
+          }}
+        >
+          Download PDF
+        </button>
+        <button
+          onClick={onBackToHome}
+          style={{
+            backgroundColor: '#000',
+            color: '#fff',
+            border: '2px solid #000',
+            padding: '16px 32px',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            fontSize: '16px'
+          }}
+        >
+          Back to Home
+        </button>
+      </div>
     </div>
   );
 };

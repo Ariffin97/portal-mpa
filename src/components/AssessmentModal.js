@@ -272,7 +272,7 @@ const AssessmentModal = ({ isOpen, onClose }) => {
                   <p><strong>Name:</strong> {userInfo.fullName}</p>
                   <p><strong>IC Number:</strong> {userInfo.icNumber}</p>
                   <p><strong>Score:</strong> {userInfo.score}/{userInfo.totalQuestions} ({userInfo.percentage}%)</p>
-                  <p><strong>Status:</strong> {userInfo.percentage >= 70 ? 'PASSED' : 'FAILED'}</p>
+                  <p><strong>Status:</strong> COMPLETED</p>
                 </div>
 
                 <div className="recommendations">

@@ -1019,7 +1019,10 @@ const adminUserSchema = new mongoose.Schema({
   },
   authorityLevel: {
     type: String,
-    enum: ['super_admin', 'admin'],
+    enum: {
+      values: ['super_admin', 'admin', 'assessment_admin'],
+      message: 'Authority level must be one of: super_admin, admin, assessment_admin'
+    },
     default: 'admin'
   },
   status: {
@@ -3102,6 +3105,15 @@ app.post('/api/admin/users', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Username and password are required'
+      });
+    }
+
+    // Validate authority level
+    const validAuthorityLevels = ['super_admin', 'admin', 'assessment_admin'];
+    if (authorityLevel && !validAuthorityLevels.includes(authorityLevel)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid authority level. Must be one of: ${validAuthorityLevels.join(', ')}`
       });
     }
 

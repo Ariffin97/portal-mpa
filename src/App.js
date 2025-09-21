@@ -524,7 +524,7 @@ function App() {
                 <p className="hero-subtitle">Official Tournament Management Portal</p>
                 <p className="hero-description">
                   Your gateway to competitive pickleball in Malaysia. Apply for tournaments,
-                  track your applications, and join our growing community of players.
+                  take assessments to test your knowledge, track your applications, and join our growing community of players.
                 </p>
 
                 <div className="hero-actions">
