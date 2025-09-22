@@ -1306,7 +1306,19 @@ const assessmentFormSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  titleMalay: {
+    type: String,
+    required: false,
+    trim: true,
+    default: ''
+  },
   subtitle: {
+    type: String,
+    required: false,
+    trim: true,
+    default: ''
+  },
+  subtitleMalay: {
     type: String,
     required: false,
     trim: true,
@@ -1321,13 +1333,25 @@ const assessmentFormSchema = new mongoose.Schema({
       type: String,
       required: true
     },
+    questionMalay: {
+      type: String,
+      required: false,
+      default: ''
+    },
     section: {
       type: String,
       required: true
     },
     options: [{
-      type: String,
-      required: true
+      text: {
+        type: String,
+        required: true
+      },
+      malay: {
+        type: String,
+        required: false,
+        default: ''
+      }
     }],
     correctAnswer: {
       type: String,

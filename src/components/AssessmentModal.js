@@ -221,19 +221,49 @@ const AssessmentModal = ({ isOpen, onClose }) => {
               </div>
 
               <div className="question-container">
-                <h3>{questions[currentQuestion].question}</h3>
+                <h3>
+                  {questions[currentQuestion].question}
+                  {questions[currentQuestion].questionMalay && (
+                    <div style={{
+                      fontStyle: 'italic',
+                      fontSize: '16px',
+                      fontWeight: 'normal',
+                      color: '#666',
+                      marginTop: '8px'
+                    }}>
+                      {questions[currentQuestion].questionMalay}
+                    </div>
+                  )}
+                </h3>
                 <div className="options">
-                  {questions[currentQuestion].options.map((option, index) => (
-                    <label key={index} className="option">
-                      <input
-                        type="radio"
-                        name={`question-${currentQuestion}`}
-                        checked={answers[currentQuestion] === index}
-                        onChange={() => handleAnswer(index)}
-                      />
-                      <span>{option}</span>
-                    </label>
-                  ))}
+                  {questions[currentQuestion].options.map((option, index) => {
+                    const optionText = typeof option === 'string' ? option : option.text;
+                    const optionMalay = typeof option === 'object' ? option.malay : null;
+
+                    return (
+                      <label key={index} className="option">
+                        <input
+                          type="radio"
+                          name={`question-${currentQuestion}`}
+                          checked={answers[currentQuestion] === index}
+                          onChange={() => handleAnswer(index)}
+                        />
+                        <span>
+                          {optionText}
+                          {optionMalay && (
+                            <div style={{
+                              fontStyle: 'italic',
+                              fontSize: '14px',
+                              color: '#666',
+                              marginTop: '4px'
+                            }}>
+                              {optionMalay}
+                            </div>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 

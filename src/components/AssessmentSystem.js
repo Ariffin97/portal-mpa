@@ -18,39 +18,109 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
     {
       id: 1,
       question: "What is the standard size of a pickleball court?",
+      questionMalay: "Apakah saiz standard sebuah gelanggang pickleball?",
       section: "Court Specifications",
-      options: ["20' x 44'", "20' x 40'", "24' x 44'", "20' x 48'"],
+      options: [
+        { text: "20' x 44'", malay: "20' x 44'" },
+        { text: "20' x 40'", malay: "20' x 40'" },
+        { text: "24' x 44'", malay: "24' x 44'" },
+        { text: "20' x 48'", malay: "20' x 48'" }
+      ],
       correctAnswer: "20' x 44'"
     },
     {
       id: 2,
       question: "What is the height of the net at the center?",
+      questionMalay: "Apakah ketinggian net di bahagian tengah?",
       section: "Equipment",
-      options: ["34 inches", "36 inches", "32 inches", "38 inches"],
+      options: [
+        { text: "34 inches", malay: "34 inci" },
+        { text: "36 inches", malay: "36 inci" },
+        { text: "32 inches", malay: "32 inci" },
+        { text: "38 inches", malay: "38 inci" }
+      ],
       correctAnswer: "34 inches"
     },
     {
       id: 3,
       question: "What is the non-volley zone also called?",
+      questionMalay: "Apakah nama lain untuk non-volley zone?",
       section: "Rules",
-      options: ["The service area", "The kitchen", "The baseline", "The sideline"],
+      options: [
+        { text: "The service area", malay: "Kawasan servis" },
+        { text: "The kitchen", malay: "Dapur" },
+        { text: "The baseline", malay: "Garisan asas" },
+        { text: "The sideline", malay: "Garisan sisi" }
+      ],
       correctAnswer: "The kitchen"
     },
     {
       id: 4,
       question: "How many points do you need to win a game?",
+      questionMalay: "Berapa mata diperlukan untuk memenangi satu permainan?",
       section: "Scoring",
-      options: ["11 points with a 2-point lead", "15 points", "21 points", "First to 11"],
+      options: [
+        { text: "11 points with a 2-point lead", malay: "11 mata dengan pendahuluan 2 mata" },
+        { text: "15 points", malay: "15 mata" },
+        { text: "21 points", malay: "21 mata" },
+        { text: "First to 11", malay: "Pertama sampai 11" }
+      ],
       correctAnswer: "11 points with a 2-point lead"
     },
     {
       id: 5,
       question: "In doubles, who serves first at the start of the game?",
+      questionMalay: "Dalam permainan beregu, siapa yang melakukan servis pertama pada permulaan permainan?",
       section: "Serving",
-      options: ["Left side player", "Right side player", "Either player", "Team captain"],
+      options: [
+        { text: "Left side player", malay: "Pemain sebelah kiri" },
+        { text: "Right side player", malay: "Pemain sebelah kanan" },
+        { text: "Either player", malay: "Mana-mana pemain" },
+        { text: "Team captain", malay: "Kapten pasukan" }
+      ],
       correctAnswer: "Right side player"
     }
   ];
+
+  // Function to enhance questions with Malay translations
+  const enhanceQuestionsWithMalay = (questions) => {
+    return questions.map(question => {
+      // If question already has Malay translation, keep it
+      if (question.questionMalay && Array.isArray(question.options) &&
+          typeof question.options[0] === 'object') {
+        return question;
+      }
+
+      // Find matching sample question for translation
+      const sampleMatch = sampleQuestions.find(sample =>
+        sample.question === question.question ||
+        sample.id === question.id
+      );
+
+      if (sampleMatch) {
+        return {
+          ...question,
+          questionMalay: sampleMatch.questionMalay,
+          options: question.options.map((option, index) => {
+            if (typeof option === 'string') {
+              const sampleOption = sampleMatch.options[index];
+              return sampleOption && typeof sampleOption === 'object' ?
+                { text: sampleOption.text, malay: sampleOption.malay || '' } : { text: option, malay: option };
+            }
+            return typeof option === 'object' ? { text: option.text, malay: option.malay || '' } : option;
+          })
+        };
+      }
+
+      // If no match found, convert string options to object format without Malay
+      return {
+        ...question,
+        options: question.options.map(option =>
+          typeof option === 'string' ? { text: option, malay: option } : { text: option.text, malay: option.malay || '' }
+        )
+      };
+    });
+  };
 
   useEffect(() => {
     if (questions.length === 0) {
@@ -94,7 +164,8 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
       // First check local savedForms
       const localForm = savedForms.find(f => f.code === code.toUpperCase());
       if (localForm) {
-        setQuestions(localForm.questions);
+        const enhancedQuestions = enhanceQuestionsWithMalay(localForm.questions);
+        setQuestions(enhancedQuestions);
         setTimeLimit(localForm.timeLimit);
         return true;
       }
@@ -104,7 +175,8 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
       if (form) {
         console.log('Loaded form from API:', form);
         console.log('Form includeAnswers value:', form.includeAnswers);
-        setQuestions(form.questions);
+        const enhancedQuestions = enhanceQuestionsWithMalay(form.questions);
+        setQuestions(enhancedQuestions);
         setTimeLimit(form.timeLimit);
         setAssessmentFormData(form);
         return true;
@@ -172,7 +244,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
   if (!isOpen) return null;
 
   return (
-    <div style={{
+    <div className="assessment-system-modal" style={{
       position: 'fixed',
       top: 0,
       left: 0,
@@ -183,7 +255,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <div style={{
+      <div className="assessment-system-header" style={{
         backgroundColor: '#000',
         color: '#fff',
         padding: '16px 24px',
@@ -194,6 +266,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
       }}>
         <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Assessment</h2>
         <button
+          className="assessment-close-btn"
           onClick={onClose}
           style={{
             backgroundColor: 'transparent',
@@ -209,7 +282,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
         </button>
       </div>
 
-      <div style={{
+      <div className="assessment-system-content" style={{
         flex: 1,
         padding: '40px',
         display: 'flex',
@@ -325,7 +398,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [] }) => {
   };
 
   return (
-    <div style={{
+    <div className="assessment-registration-container" style={{
       backgroundColor: '#fff',
       border: '2px solid #000',
       borderRadius: '8px',
@@ -645,59 +718,86 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegist
             lineHeight: '1.4'
           }}>
             {currentQ.question}
+            {currentQ.questionMalay && (
+              <div style={{
+                fontStyle: 'italic',
+                fontWeight: 'normal',
+                fontSize: '16px',
+                color: '#666',
+                marginTop: '8px'
+              }}>
+                {currentQ.questionMalay}
+              </div>
+            )}
           </h3>
         </div>
 
         <div style={{ marginBottom: '30px' }}>
-          {currentQ.options.map((option, index) => (
-            <label key={index} style={{
-              display: 'block',
-              marginBottom: '12px',
-              cursor: 'pointer'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '16px',
-                border: answers[currentQ.id] === option ? '2px solid #000' : '1px solid #ccc',
-                borderRadius: '8px',
-                backgroundColor: answers[currentQ.id] === option ? '#f0f0f0' : '#fff',
-                transition: 'all 0.2s ease'
+          {currentQ.options.map((option, index) => {
+            const optionText = typeof option === 'string' ? option : option.text;
+            const optionMalay = typeof option === 'object' ? option.malay : null;
+
+
+            return (
+              <label key={index} style={{
+                display: 'block',
+                marginBottom: '12px',
+                cursor: 'pointer'
               }}>
-                <input
-                  type="radio"
-                  name={`question-${currentQ.id}`}
-                  value={option}
-                  checked={answers[currentQ.id] === option}
-                  onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
-                  style={{ display: 'none' }}
-                />
                 <div style={{
-                  backgroundColor: '#000',
-                  color: '#fff',
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  marginRight: '16px',
-                  flexShrink: 0
+                  padding: '16px',
+                  border: answers[currentQ.id] === optionText ? '2px solid #000' : '1px solid #ccc',
+                  borderRadius: '8px',
+                  backgroundColor: answers[currentQ.id] === optionText ? '#f0f0f0' : '#fff',
+                  transition: 'all 0.2s ease'
                 }}>
-                  {String.fromCharCode(65 + index)}
+                  <input
+                    type="radio"
+                    name={`question-${currentQ.id}`}
+                    value={optionText}
+                    checked={answers[currentQ.id] === optionText}
+                    onChange={(e) => handleAnswerChange(currentQ.id, e.target.value)}
+                    style={{ display: 'none' }}
+                  />
+                  <div style={{
+                    backgroundColor: '#000',
+                    color: '#fff',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    marginRight: '16px',
+                    flexShrink: 0
+                  }}>
+                    {String.fromCharCode(65 + index)}
+                  </div>
+                  <div style={{
+                    color: '#000',
+                    fontSize: '16px',
+                    lineHeight: '1.4'
+                  }}>
+                    <div>{optionText}</div>
+                    {optionMalay && (
+                      <div style={{
+                        fontStyle: 'italic',
+                        fontSize: '14px',
+                        color: '#666',
+                        marginTop: '4px'
+                      }}>
+                        {optionMalay}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <span style={{
-                  color: '#000',
-                  fontSize: '16px',
-                  lineHeight: '1.4'
-                }}>
-                  {option}
-                </span>
-              </div>
-            </label>
-          ))}
+              </label>
+            );
+          })}
         </div>
       </div>
 
@@ -1048,6 +1148,18 @@ const Results = ({ results, userInfo, questions, assessmentFormData, onBackToHom
             const userAnswer = results.answers[question.id];
             const isCorrect = getAnswerStatus(question, userAnswer);
 
+            // Helper function to get Malay translation for an answer
+            const getMalayTranslation = (answerText) => {
+              if (!answerText) return null;
+              const option = question.options.find(opt =>
+                (typeof opt === 'string' ? opt : opt.text) === answerText
+              );
+              return option && typeof option === 'object' ? option.malay : null;
+            };
+
+            const userAnswerMalay = getMalayTranslation(userAnswer);
+            const correctAnswerMalay = getMalayTranslation(question.correctAnswer);
+
             return (
               <div key={question.id} style={{
                 border: '1px solid #ddd',
@@ -1081,6 +1193,17 @@ const Results = ({ results, userInfo, questions, assessmentFormData, onBackToHom
                       lineHeight: '1.4'
                     }}>
                       {question.question}
+                      {question.questionMalay && (
+                        <div style={{
+                          fontStyle: 'italic',
+                          fontWeight: 'normal',
+                          fontSize: '13px',
+                          color: '#666',
+                          marginTop: '6px'
+                        }}>
+                          {question.questionMalay}
+                        </div>
+                      )}
                     </h5>
                   </div>
                   <div style={{
@@ -1114,7 +1237,17 @@ const Results = ({ results, userInfo, questions, assessmentFormData, onBackToHom
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}>
-                    {userAnswer || 'No answer selected'}
+                    <div>{userAnswer || 'No answer selected'}</div>
+                    {userAnswerMalay && (
+                      <div style={{
+                        fontStyle: 'italic',
+                        fontSize: '12px',
+                        color: '#666',
+                        marginTop: '4px'
+                      }}>
+                        {userAnswerMalay}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1134,7 +1267,17 @@ const Results = ({ results, userInfo, questions, assessmentFormData, onBackToHom
                     borderRadius: '4px',
                     fontSize: '14px'
                   }}>
-                    {question.correctAnswer}
+                    <div>{question.correctAnswer}</div>
+                    {correctAnswerMalay && (
+                      <div style={{
+                        fontStyle: 'italic',
+                        fontSize: '12px',
+                        color: '#666',
+                        marginTop: '4px'
+                      }}>
+                        {correctAnswerMalay}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

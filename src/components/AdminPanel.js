@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 
-const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessmentTitle, setAssessmentTitle, assessmentSubtitle, setAssessmentSubtitle, passingScore, setPassingScore, submissions = [], savedForms = [], onSaveForm }) => {
+const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessmentTitle, setAssessmentTitle, assessmentTitleMalay, setAssessmentTitleMalay, assessmentSubtitle, setAssessmentSubtitle, assessmentSubtitleMalay, setAssessmentSubtitleMalay, passingScore, setPassingScore, submissions = [], savedForms = [], onSaveForm }) => {
   const [newQuestion, setNewQuestion] = useState({
     question: '',
+    questionMalay: '',
     section: '',
     options: [],
     correctAnswer: ''
@@ -22,25 +23,49 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
   const addOption = () => {
     setNewQuestion(prev => ({
       ...prev,
-      options: [...prev.options, '']
+      options: [...prev.options, { text: '', malay: '' }]
     }));
   };
 
   // Remove option from current question
   const removeOption = (indexToRemove) => {
-    setNewQuestion(prev => ({
-      ...prev,
-      options: prev.options.filter((_, index) => index !== indexToRemove),
-      // Reset correct answer if it was the removed option
-      correctAnswer: prev.correctAnswer === prev.options[indexToRemove] ? '' : prev.correctAnswer
-    }));
+    setNewQuestion(prev => {
+      const removedOption = prev.options[indexToRemove];
+      const removedOptionText = typeof removedOption === 'string' ? removedOption : removedOption.text;
+      return {
+        ...prev,
+        options: prev.options.filter((_, index) => index !== indexToRemove),
+        // Reset correct answer if it was the removed option
+        correctAnswer: prev.correctAnswer === removedOptionText ? '' : prev.correctAnswer
+      };
+    });
   };
 
-  // Update specific option
+  // Update specific option (English text)
   const updateOption = (index, value) => {
     setNewQuestion(prev => {
       const newOptions = [...prev.options];
-      newOptions[index] = value;
+      if (typeof newOptions[index] === 'string') {
+        newOptions[index] = { text: value, malay: '' };
+      } else {
+        newOptions[index] = { ...newOptions[index], text: value };
+      }
+      return {
+        ...prev,
+        options: newOptions
+      };
+    });
+  };
+
+  // Update specific option (Malay text)
+  const updateOptionMalay = (index, value) => {
+    setNewQuestion(prev => {
+      const newOptions = [...prev.options];
+      if (typeof newOptions[index] === 'string') {
+        newOptions[index] = { text: newOptions[index], malay: value };
+      } else {
+        newOptions[index] = { ...newOptions[index], malay: value };
+      }
       return {
         ...prev,
         options: newOptions
@@ -75,7 +100,12 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
       return false;
     }
 
-    if (newQuestion.options.some(option => !option || typeof option !== 'string' || !option.trim())) {
+    if (newQuestion.options.some(option => {
+      if (typeof option === 'string') {
+        return !option || !option.trim();
+      }
+      return !option || !option.text || !option.text.trim();
+    })) {
       alert('Please fill in all options');
       return false;
     }
@@ -104,8 +134,14 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
     const question = {
       id: editingId || Date.now(),
       question: newQuestion.question.trim(),
+      questionMalay: newQuestion.questionMalay?.trim() || '',
       section: newQuestion.section.trim(),
-      options: newQuestion.options.map(opt => opt.trim()),
+      options: newQuestion.options.map(opt => {
+        if (typeof opt === 'string') {
+          return { text: opt.trim(), malay: '' };
+        }
+        return { text: opt.text?.trim() || '', malay: opt.malay?.trim() || '' };
+      }),
       correctAnswer: newQuestion.correctAnswer.trim(),
       hasCorrectAnswer: true
     };
@@ -125,6 +161,7 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
     // Keep the current section for user convenience, but reset other fields
     setNewQuestion({
       question: '',
+      questionMalay: '',
       section: newQuestion.section, // Maintain the current section
       options: [],
       correctAnswer: ''
@@ -134,6 +171,7 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
   const handleEdit = (question) => {
     setNewQuestion({
       question: question.question,
+      questionMalay: question.questionMalay || '',
       section: question.section || '',
       options: [...question.options],
       correctAnswer: question.correctAnswer
@@ -150,6 +188,7 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
   const handleCancel = () => {
     setNewQuestion({
       question: '',
+      questionMalay: '',
       section: '',
       options: [],
       correctAnswer: ''
@@ -187,7 +226,7 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '20px' }}>
             <div className="form-group" style={{ marginBottom: '0' }}>
               <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
-                Assessment Title *
+                Assessment Title (English) *
               </label>
               <input
                 type="text"
@@ -233,10 +272,35 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
 
           </div>
 
+          {/* Assessment Title (Malay) */}
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
+              Assessment Title (Bahasa Melayu)
+            </label>
+            <input
+              type="text"
+              id="assessmentTitleMalay"
+              placeholder="Contoh: Peraturan Asas Pickleball, Pensijilan Penganjur Kejohanan"
+              value={assessmentTitleMalay || ''}
+              onChange={(e) => setAssessmentTitleMalay(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                fontSize: '16px',
+                fontStyle: 'italic'
+              }}
+            />
+            <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block', fontStyle: 'italic' }}>
+              Optional Malay translation that will be displayed in italic below the English title
+            </small>
+          </div>
+
           {/* Sub-Title Field */}
           <div className="form-group">
             <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
-              Sub-Title (Optional)
+              Sub-Title (English)
             </label>
             <input
               type="text"
@@ -254,6 +318,31 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
             />
             <small style={{ color: '#666', fontSize: '12px', marginTop: '8px', display: 'block' }}>
               Optional subtitle to provide additional context or level information
+            </small>
+          </div>
+
+          {/* Sub-Title (Malay) Field */}
+          <div className="form-group">
+            <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
+              Sub-Title (Bahasa Melayu)
+            </label>
+            <input
+              type="text"
+              id="assessmentSubtitleMalay"
+              placeholder="Contoh: Pensijilan Tahap 1, Kursus Pemula"
+              value={assessmentSubtitleMalay || ''}
+              onChange={(e) => setAssessmentSubtitleMalay(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontStyle: 'italic'
+              }}
+            />
+            <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block', fontStyle: 'italic' }}>
+              Optional Malay translation that will be displayed in italic below the English subtitle
             </small>
           </div>
 
@@ -391,7 +480,7 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
           {/* Question Text */}
           <div className="form-group" style={{ marginBottom: '20px' }}>
             <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
-              Question *
+              Question (English) *
             </label>
             <textarea
               id="questionText"
@@ -409,6 +498,32 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
               }}
               required
             />
+          </div>
+
+          {/* Question Text (Malay) */}
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
+              Question (Bahasa Melayu)
+            </label>
+            <textarea
+              id="questionTextMalay"
+              placeholder="Masukkan soalan dalam Bahasa Melayu di sini"
+              value={newQuestion.questionMalay}
+              onChange={(e) => setNewQuestion(prev => ({ ...prev, questionMalay: e.target.value }))}
+              rows="3"
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontStyle: 'italic',
+                resize: 'vertical'
+              }}
+            />
+            <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block', fontStyle: 'italic' }}>
+              Optional Malay translation that will be displayed in italic below the English question
+            </small>
           </div>
 
           {/* Answer Options */}
@@ -446,43 +561,84 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
                 <p>No options yet. Click "Add Option" to get started.</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: '10px' }}>
-                {newQuestion.options.map((option, index) => (
-                  <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontWeight: 'bold', minWidth: '20px', fontSize: '14px' }}>
-                      {String.fromCharCode(65 + index)}:
-                    </span>
-                    <input
-                      type="text"
-                      placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                      value={option}
-                      onChange={(e) => updateOption(index, e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: '10px',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px',
-                        fontSize: '14px'
-                      }}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeOption(index)}
-                      style={{
-                        backgroundColor: '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 12px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '12px'
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
+              <div style={{ display: 'grid', gap: '20px' }}>
+                {newQuestion.options.map((option, index) => {
+                  const optionText = typeof option === 'string' ? option : option.text || '';
+                  const optionMalay = typeof option === 'object' ? option.malay || '' : '';
+
+                  return (
+                    <div key={index} style={{
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      padding: '15px',
+                      backgroundColor: '#f8f9fa'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                        <span style={{ fontWeight: 'bold', minWidth: '30px', fontSize: '16px', color: '#007bff' }}>
+                          {String.fromCharCode(65 + index)}:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeOption(index)}
+                          style={{
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            padding: '6px 10px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            marginLeft: 'auto'
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      {/* English Option */}
+                      <div style={{ marginBottom: '10px' }}>
+                        <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '4px' }}>
+                          English *
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={`Option ${String.fromCharCode(65 + index)} in English`}
+                          value={optionText}
+                          onChange={(e) => updateOption(index, e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #ccc',
+                            borderRadius: '4px',
+                            fontSize: '14px'
+                          }}
+                          required
+                        />
+                      </div>
+
+                      {/* Malay Option */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '4px', fontStyle: 'italic' }}>
+                          Bahasa Melayu
+                        </label>
+                        <input
+                          type="text"
+                          placeholder={`Pilihan ${String.fromCharCode(65 + index)} dalam Bahasa Melayu`}
+                          value={optionMalay}
+                          onChange={(e) => updateOptionMalay(index, e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #ccc',
+                            borderRadius: '4px',
+                            fontSize: '14px',
+                            fontStyle: 'italic'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -506,11 +662,16 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
               required
             >
               <option value="">Select correct answer</option>
-              {newQuestion.options.map((option, index) => (
-                option.trim() && (
-                  <option key={index} value={option}>{String.fromCharCode(65 + index)}: {option}</option>
-                )
-              ))}
+              {newQuestion.options.map((option, index) => {
+                const optionText = typeof option === 'string' ? option : option.text || '';
+                const optionMalay = typeof option === 'object' ? option.malay || '' : '';
+                return optionText.trim() && (
+                  <option key={index} value={optionText}>
+                    {String.fromCharCode(65 + index)}: {optionText}
+                    {optionMalay && ` (${optionMalay})`}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -580,17 +741,47 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                         <div style={{ flex: 1 }}>
-                          <h4 style={{ color: '#000', margin: '0 0 8px 0', fontSize: '16px' }}>Q{index + 1}: {question.question}</h4>
-                          <div style={{ display: 'grid', gap: '3px' }}>
-                            {question.options.map((option, optIndex) => (
-                              <div key={optIndex} style={{
-                                color: option === question.correctAnswer ? '#28a745' : '#000',
-                                fontWeight: option === question.correctAnswer ? 'bold' : 'normal',
-                                fontSize: '14px'
+                          <h4 style={{ color: '#000', margin: '0 0 8px 0', fontSize: '16px' }}>
+                            Q{index + 1}: {question.question}
+                            {question.questionMalay && (
+                              <div style={{
+                                fontStyle: 'italic',
+                                fontWeight: 'normal',
+                                fontSize: '14px',
+                                color: '#666',
+                                marginTop: '4px'
                               }}>
-                                {option === question.correctAnswer && '✓ '}{option}
+                                {question.questionMalay}
                               </div>
-                            ))}
+                            )}
+                          </h4>
+                          <div style={{ display: 'grid', gap: '3px' }}>
+                            {question.options.map((option, optIndex) => {
+                              const optionText = typeof option === 'string' ? option : option.text;
+                              const optionMalay = typeof option === 'object' ? option.malay : null;
+                              const isCorrect = optionText === question.correctAnswer;
+
+                              return (
+                                <div key={optIndex} style={{
+                                  color: isCorrect ? '#28a745' : '#000',
+                                  fontWeight: isCorrect ? 'bold' : 'normal',
+                                  fontSize: '14px'
+                                }}>
+                                  {isCorrect && '✓ '}{optionText}
+                                  {optionMalay && (
+                                    <div style={{
+                                      fontStyle: 'italic',
+                                      fontSize: '12px',
+                                      color: '#666',
+                                      marginTop: '2px',
+                                      marginLeft: isCorrect ? '16px' : '0px'
+                                    }}>
+                                      {optionMalay}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -637,16 +828,44 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
                               <div style={{ flex: 1 }}>
                                 <h5 style={{ color: '#000', margin: '0 0 10px 0' }}>
                                   Q{questions.indexOf(question) + 1}: {question.question}
+                                  {question.questionMalay && (
+                                    <div style={{
+                                      fontStyle: 'italic',
+                                      fontWeight: 'normal',
+                                      fontSize: '13px',
+                                      color: '#666',
+                                      marginTop: '4px'
+                                    }}>
+                                      {question.questionMalay}
+                                    </div>
+                                  )}
                                 </h5>
                                 <div style={{ display: 'grid', gap: '5px' }}>
-                                  {question.options.map((option, optIndex) => (
-                                    <div key={optIndex} style={{
-                                      color: option === question.correctAnswer ? '#28a745' : '#000',
-                                      fontWeight: option === question.correctAnswer ? 'bold' : 'normal'
-                                    }}>
-                                      {option === question.correctAnswer && '✓ '}{option}
-                                    </div>
-                                  ))}
+                                  {question.options.map((option, optIndex) => {
+                                    const optionText = typeof option === 'string' ? option : option.text;
+                                    const optionMalay = typeof option === 'object' ? option.malay : null;
+                                    const isCorrect = optionText === question.correctAnswer;
+
+                                    return (
+                                      <div key={optIndex} style={{
+                                        color: isCorrect ? '#28a745' : '#000',
+                                        fontWeight: isCorrect ? 'bold' : 'normal'
+                                      }}>
+                                        {isCorrect && '✓ '}{optionText}
+                                        {optionMalay && (
+                                          <div style={{
+                                            fontStyle: 'italic',
+                                            fontSize: '12px',
+                                            color: '#666',
+                                            marginTop: '2px',
+                                            marginLeft: isCorrect ? '16px' : '0px'
+                                          }}>
+                                            {optionMalay}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
                               <div style={{ display: 'flex', gap: '10px' }}>

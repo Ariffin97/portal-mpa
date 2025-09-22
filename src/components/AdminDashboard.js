@@ -118,7 +118,9 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [assessmentQuestions, setAssessmentQuestions] = useState([]);
   const [assessmentTimeLimit, setAssessmentTimeLimit] = useState(30);
   const [assessmentTitle, setAssessmentTitle] = useState('');
+  const [assessmentTitleMalay, setAssessmentTitleMalay] = useState('');
   const [assessmentSubtitle, setAssessmentSubtitle] = useState('');
+  const [assessmentSubtitleMalay, setAssessmentSubtitleMalay] = useState('');
   const [passingScore, setPassingScore] = useState(70); // Percentage required to pass
   const [savedAssessmentForms, setSavedAssessmentForms] = useState([]);
   // Use global assessment submissions instead of local state
@@ -138,7 +140,9 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [showEditFormModal, setShowEditFormModal] = useState(false);
   const [editingForm, setEditingForm] = useState(null);
   const [editFormTitle, setEditFormTitle] = useState('');
+  const [editFormTitleMalay, setEditFormTitleMalay] = useState('');
   const [editFormSubtitle, setEditFormSubtitle] = useState('');
+  const [editFormSubtitleMalay, setEditFormSubtitleMalay] = useState('');
   const [editFormQuestions, setEditFormQuestions] = useState([]);
   const [editFormTimeLimit, setEditFormTimeLimit] = useState(30);
   const [editFormPassingScore, setEditFormPassingScore] = useState(70);
@@ -182,7 +186,9 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const openEditFormModal = (form) => {
     setEditingForm(form);
     setEditFormTitle(form.title || '');
+    setEditFormTitleMalay(form.titleMalay || '');
     setEditFormSubtitle(form.subtitle || '');
+    setEditFormSubtitleMalay(form.subtitleMalay || '');
     setEditFormQuestions([...form.questions]);
     setEditFormTimeLimit(form.timeLimit || 30);
     setEditFormPassingScore(form.passingScore || 70);
@@ -193,7 +199,9 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
     setShowEditFormModal(false);
     setEditingForm(null);
     setEditFormTitle('');
+    setEditFormTitleMalay('');
     setEditFormSubtitle('');
+    setEditFormSubtitleMalay('');
     setEditFormQuestions([]);
     setEditFormTimeLimit(30);
     setEditFormPassingScore(70);
@@ -213,7 +221,9 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
       const formData = {
         code: editingForm.code,
         title: editFormTitle.trim(),
+        titleMalay: editFormTitleMalay.trim(),
         subtitle: editFormSubtitle.trim(),
+        subtitleMalay: editFormSubtitleMalay.trim(),
         questions: [...editFormQuestions],
         timeLimit: editFormTimeLimit,
         passingScore: editFormPassingScore
@@ -243,7 +253,12 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
       id: Date.now(),
       question: '',
       section: '',
-      options: ['', '', '', ''],
+      options: [
+        { text: '', malay: '' },
+        { text: '', malay: '' },
+        { text: '', malay: '' },
+        { text: '', malay: '' }
+      ],
       correctAnswer: ''
     };
     setEditFormQuestions([...editFormQuestions, newQuestion]);
@@ -2736,7 +2751,9 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
 
         const formData = {
           title: assessmentTitle.trim(),
+          titleMalay: assessmentTitleMalay.trim(),
           subtitle: assessmentSubtitle.trim(),
+          subtitleMalay: assessmentSubtitleMalay.trim(),
           questions: [...assessmentQuestions],
           timeLimit: assessmentTimeLimit,
           passingScore: passingScore
@@ -2815,8 +2832,12 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
             setTimeLimit={setAssessmentTimeLimit}
             assessmentTitle={assessmentTitle}
             setAssessmentTitle={setAssessmentTitle}
+            assessmentTitleMalay={assessmentTitleMalay}
+            setAssessmentTitleMalay={setAssessmentTitleMalay}
             assessmentSubtitle={assessmentSubtitle}
             setAssessmentSubtitle={setAssessmentSubtitle}
+            assessmentSubtitleMalay={assessmentSubtitleMalay}
+            setAssessmentSubtitleMalay={setAssessmentSubtitleMalay}
             passingScore={passingScore}
             setPassingScore={setPassingScore}
             submissions={assessmentSubmissions}
@@ -6283,6 +6304,27 @@ Settings
                 />
               </div>
 
+              {/* Assessment Title (Malay) */}
+              <div className="form-group" style={{ marginBottom: '25px' }}>
+                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontStyle: 'italic' }}>
+                  Assessment Title (Bahasa Melayu)
+                </label>
+                <input
+                  type="text"
+                  value={editFormTitleMalay}
+                  onChange={(e) => setEditFormTitleMalay(e.target.value)}
+                  placeholder="Masukkan tajuk penilaian dalam Bahasa Melayu"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    fontStyle: 'italic'
+                  }}
+                />
+              </div>
+
               {/* Sub-Title */}
               <div className="form-group" style={{ marginBottom: '25px' }}>
                 <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
@@ -6299,6 +6341,27 @@ Settings
                     border: '1px solid #ccc',
                     borderRadius: '4px',
                     fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              {/* Sub-Title (Malay) */}
+              <div className="form-group" style={{ marginBottom: '25px' }}>
+                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontStyle: 'italic' }}>
+                  Sub-Title (Bahasa Melayu)
+                </label>
+                <input
+                  type="text"
+                  value={editFormSubtitleMalay}
+                  onChange={(e) => setEditFormSubtitleMalay(e.target.value)}
+                  placeholder="Cth: Pensijilan Tahap 1, Kursus Pemula"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #ccc',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    fontStyle: 'italic'
                   }}
                 />
               </div>
@@ -6447,32 +6510,94 @@ Settings
                           />
                         </div>
 
+                        {/* Question Text (Malay) */}
+                        <div className="form-group" style={{ marginBottom: '15px' }}>
+                          <label style={{ fontWeight: 'bold', marginBottom: '5px', display: 'block', fontStyle: 'italic' }}>Question (Bahasa Melayu)</label>
+                          <textarea
+                            value={question.questionMalay || ''}
+                            onChange={(e) => updateEditQuestion(index, 'questionMalay', e.target.value)}
+                            placeholder="Masukkan soalan dalam Bahasa Melayu di sini"
+                            rows="3"
+                            style={{
+                              width: '100%',
+                              padding: '10px',
+                              border: '1px solid #ccc',
+                              borderRadius: '4px',
+                              fontSize: '14px',
+                              fontStyle: 'italic',
+                              resize: 'vertical'
+                            }}
+                          />
+                        </div>
+
                         {/* Options */}
                         <div className="form-group" style={{ marginBottom: '15px' }}>
                           <label style={{ fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Answer Options</label>
                           <div style={{ display: 'grid', gap: '8px' }}>
                             {question.options.map((option, optionIndex) => (
-                              <div key={optionIndex} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <span style={{ fontWeight: 'bold', minWidth: '20px' }}>
-                                  {String.fromCharCode(65 + optionIndex)}:
-                                </span>
-                                <input
-                                  type="text"
-                                  value={option}
-                                  onChange={(e) => {
-                                    const newOptions = [...question.options];
-                                    newOptions[optionIndex] = e.target.value;
-                                    updateEditQuestion(index, 'options', newOptions);
-                                  }}
-                                  placeholder={`Option ${String.fromCharCode(65 + optionIndex)}`}
-                                  style={{
-                                    flex: 1,
-                                    padding: '8px',
-                                    border: '1px solid #ccc',
-                                    borderRadius: '4px',
-                                    fontSize: '14px'
-                                  }}
-                                />
+                              <div key={optionIndex} style={{ border: '1px solid #e0e0e0', borderRadius: '8px', padding: '15px', marginBottom: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+                                  <span style={{ fontWeight: 'bold', minWidth: '30px', fontSize: '16px' }}>
+                                    {String.fromCharCode(65 + optionIndex)}:
+                                  </span>
+                                </div>
+
+                                {/* English Option */}
+                                <div style={{ marginBottom: '10px' }}>
+                                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '4px' }}>
+                                    English *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={typeof option === 'string' ? option : option.text}
+                                    onChange={(e) => {
+                                      const newOptions = [...question.options];
+                                      if (typeof newOptions[optionIndex] === 'string') {
+                                        newOptions[optionIndex] = { text: e.target.value, malay: '' };
+                                      } else {
+                                        newOptions[optionIndex] = { ...newOptions[optionIndex], text: e.target.value };
+                                      }
+                                      updateEditQuestion(index, 'options', newOptions);
+                                    }}
+                                    placeholder={`Option ${String.fromCharCode(65 + optionIndex)} in English`}
+                                    style={{
+                                      width: '100%',
+                                      padding: '8px',
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px',
+                                      fontSize: '14px'
+                                    }}
+                                  />
+                                </div>
+
+                                {/* Malay Option */}
+                                <div>
+                                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '4px', fontStyle: 'italic' }}>
+                                    Bahasa Melayu
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={typeof option === 'object' ? (option.malay || '') : ''}
+                                    onChange={(e) => {
+                                      const newOptions = [...question.options];
+                                      if (typeof newOptions[optionIndex] === 'string') {
+                                        newOptions[optionIndex] = { text: newOptions[optionIndex], malay: e.target.value };
+                                      } else {
+                                        newOptions[optionIndex] = { ...newOptions[optionIndex], malay: e.target.value };
+                                      }
+                                      updateEditQuestion(index, 'options', newOptions);
+                                    }}
+                                    placeholder={`Pilihan ${String.fromCharCode(65 + optionIndex)} dalam Bahasa Melayu`}
+                                    style={{
+                                      width: '100%',
+                                      padding: '8px',
+                                      border: '1px solid #ccc',
+                                      borderRadius: '4px',
+                                      fontSize: '14px',
+                                      fontStyle: 'italic'
+                                    }}
+                                  />
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -6494,8 +6619,8 @@ Settings
                           >
                             <option value="">Select correct answer</option>
                             {question.options.map((option, optionIndex) => (
-                              <option key={optionIndex} value={option}>
-                                {String.fromCharCode(65 + optionIndex)}: {option}
+                              <option key={optionIndex} value={typeof option === 'string' ? option : option.text}>
+                                {String.fromCharCode(65 + optionIndex)}: {typeof option === 'string' ? option : option.text}
                               </option>
                             ))}
                           </select>

@@ -543,37 +543,25 @@ button.utility-link {
 }
 
 .assessment-system-modal {
-  background: linear-gradient(135deg, rgba(10, 14, 39, 0.98) 0%, rgba(26, 31, 58, 0.98) 100%);
-  border: 1px solid rgba(0, 255, 127, 0.4);
-  border-radius: 12px;
-  width: 95vw;
-  height: 90vh;
-  max-width: 1400px;
-  position: relative;
-  box-shadow:
-    0 0 30px rgba(0, 255, 127, 0.3),
-    0 0 60px rgba(0, 255, 255, 0.1);
-  display: flex;
-  flex-direction: column;
+  background: #fff !important;
+  border: none !important;
+  border-radius: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  z-index: 9999 !important;
 }
 
 .assessment-system-modal::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 255, 127, 0.03) 2px,
-      rgba(0, 255, 127, 0.03) 4px
-    );
-  border-radius: 12px;
-  pointer-events: none;
+  display: none !important;
 }
 
 .assessment-system-header {
@@ -616,9 +604,38 @@ button.utility-link {
 }
 
 .assessment-system-content {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
+  flex: 1 !important;
+  position: relative !important;
+  overflow: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Desktop Registration Container Styles */
+.assessment-registration-container {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 40px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background-color: #fff !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  min-height: 100vh !important;
+}
+
+/* Desktop Registration Form Content */
+.assessment-registration-container form {
+  width: 100% !important;
+  max-width: 400px !important;
+  margin: 0 auto !important;
 }
 
 /* Registration Step */
@@ -7498,3 +7515,300 @@ button.utility-link {
 }
 
 /* Assessment management now uses standard admin dashboard form styling */
+
+/* ===== ASSESSMENT SYSTEM MOBILE RESPONSIVENESS ===== */
+
+/* Mobile styles for assessment system */
+@media (max-width: 768px) {
+  /* Assessment Modal Mobile Fixes */
+  .assessment-system-modal {
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 9999 !important;
+  }
+
+  /* Assessment Header Mobile */
+  .assessment-system-header {
+    padding: 12px 15px !important;
+    flex-wrap: wrap;
+  }
+
+  .assessment-system-header h2 {
+    font-size: 18px !important;
+    margin: 0 !important;
+  }
+
+  /* Assessment Content Area Mobile */
+  .assessment-system-content {
+    padding: 0 !important;
+    width: 100vw !important;
+    height: calc(100vh - 60px) !important;
+    overflow-y: auto !important;
+    margin: 0 !important;
+    justify-content: stretch !important;
+    align-items: stretch !important;
+  }
+
+  /* Special handling for registration content on mobile */
+  .assessment-system-content:has(.assessment-registration-container) {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    z-index: 10001 !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  /* Hide header when registration is active on mobile */
+  .assessment-system-modal:has(.assessment-registration-container) .assessment-system-header {
+    display: none !important;
+  }
+
+  /* Registration Form Mobile Styles */
+  .assessment-registration-container {
+    padding: 20px !important;
+    max-width: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    overflow-y: auto !important;
+    background-color: #fff !important;
+    min-height: 100vh !important;
+  }
+  /* Registration Form Content Mobile */
+  .assessment-registration-container form {
+    width: 100% !important;
+    max-width: 400px !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+    text-align: left !important;
+  }
+
+  .assessment-form-group {
+    margin-bottom: 20px !important;
+  }
+
+  .assessment-form-group label {
+    font-size: 14px !important;
+    margin-bottom: 8px !important;
+    display: block !important;
+  }
+
+  .assessment-form-group input,
+  .assessment-form-group select {
+    width: 100% !important;
+    padding: 12px 16px !important;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Submit Button Mobile */
+  .assessment-submit-btn {
+    width: 100% !important;
+    padding: 14px 20px !important;
+    font-size: 16px !important;
+    margin-top: 20px !important;
+  }
+
+  /* Question Container Mobile */
+  .question-container {
+    padding: 15px !important;
+    height: 100% !important;
+    width: 100% !important;
+    min-height: calc(100vh - 120px) !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .question-container h3 {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+    margin-bottom: 20px !important;
+    word-wrap: break-word !important;
+  }
+
+  /* Question Header Mobile */
+  .question-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .progress {
+    align-self: flex-end !important;
+    font-size: 14px !important;
+  }
+
+  /* Options Mobile Styling */
+  .options {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .option {
+    padding: 16px !important;
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    word-wrap: break-word !important;
+    min-height: 50px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  /* Navigation Buttons Mobile */
+  .assessment-nav-buttons,
+  .navigation-buttons {
+    padding: 15px !important;
+    gap: 12px !important;
+    flex-direction: column !important;
+  }
+
+  .assessment-btn-nav {
+    width: 100% !important;
+    padding: 14px 20px !important;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+    min-height: 50px !important;
+  }
+
+  /* Results Mobile Styling */
+  .assessment-results-container {
+    padding: 15px !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .results-summary {
+    margin-bottom: 20px !important;
+  }
+
+  .score-display {
+    font-size: 18px !important;
+    text-align: center !important;
+    margin-bottom: 20px !important;
+  }
+
+  /* Review Section Mobile */
+  .review-section {
+    margin-top: 20px !important;
+  }
+
+  .review-question {
+    margin-bottom: 20px !important;
+    padding: 15px !important;
+    border-radius: 8px !important;
+  }
+
+  .review-question h4 {
+    font-size: 15px !important;
+    margin-bottom: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+  .review-options {
+    gap: 8px !important;
+  }
+
+  .review-option {
+    padding: 10px !important;
+    font-size: 14px !important;
+    border-radius: 6px !important;
+  }
+
+  /* Close Button Mobile */
+  .assessment-close-btn {
+    padding: 8px 12px !important;
+    font-size: 18px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra Small Screens */
+  .assessment-system-header {
+    padding: 10px 12px !important;
+  }
+
+  .assessment-system-header h2 {
+    font-size: 16px !important;
+  }
+
+  .question-container {
+    padding: 12px !important;
+  }
+
+  .question-container h3 {
+    font-size: 15px !important;
+    margin-bottom: 15px !important;
+  }
+
+  .option {
+    padding: 14px !important;
+    font-size: 14px !important;
+    min-height: 45px !important;
+  }
+
+  .assessment-btn-nav {
+    padding: 12px 16px !important;
+    font-size: 15px !important;
+    min-height: 45px !important;
+  }
+
+  .assessment-form-group input,
+  .assessment-form-group select {
+    padding: 10px 14px !important;
+    font-size: 15px !important;
+  }
+
+  .assessment-registration-container {
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Very Small Screens */
+  .assessment-system-header h2 {
+    font-size: 15px !important;
+  }
+
+  .question-container h3 {
+    font-size: 14px !important;
+  }
+
+  .option {
+    padding: 12px !important;
+    font-size: 13px !important;
+  }
+
+  .assessment-btn-nav {
+    font-size: 14px !important;
+  }
+}
