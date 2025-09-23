@@ -213,8 +213,26 @@ class ApiService {
     return response.data || null;
   }
 
+  async generateTemporaryAssessmentCode(formId) {
+    const response = await this.makeRequest(`/assessment/forms/${formId}/generate-temp-code`, {
+      method: 'POST',
+    });
+    return response.data || null;
+  }
+
+  async getTemporaryCodes() {
+    const response = await this.makeRequest('/assessment/temporary-codes');
+    return response.data || [];
+  }
+
   async deleteAssessmentForm(formId) {
     return this.makeRequest(`/assessment/forms/${formId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async deleteTemporaryCode(tempCodeId) {
+    return this.makeRequest(`/assessment/forms/${tempCodeId}`, {
       method: 'DELETE',
     });
   }

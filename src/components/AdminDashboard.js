@@ -147,6 +147,19 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [editFormTimeLimit, setEditFormTimeLimit] = useState(30);
   const [editFormPassingScore, setEditFormPassingScore] = useState(70);
 
+  // Temporary Code Modal States
+  const [showTempCodeModal, setShowTempCodeModal] = useState(false);
+  const [tempCodeData, setTempCodeData] = useState(null);
+
+  // Security Notice Modal States
+  const [showSecurityNoticeModal, setShowSecurityNoticeModal] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState(null);
+
+  // Temporary Codes Management States
+  const [showTempCodesListModal, setShowTempCodesListModal] = useState(false);
+  const [temporaryCodesList, setTemporaryCodesList] = useState([]);
+  const [isLoadingTempCodes, setIsLoadingTempCodes] = useState(false);
+
   // Submission Details Modal States
   const [showSubmissionModal, setShowSubmissionModal] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -240,7 +253,16 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
         )
       );
 
-      alert(`Form updated successfully!\n\nForm Code: ${updatedForm.code}\nTitle: ${updatedForm.title}\nQuestions: ${updatedForm.questions.length}\n\nThe form has been updated with your changes.`);
+      // Show security notice popup for edited form
+      const securityNotice = `✅ FORM UPDATED SUCCESSFULLY!\n\n` +
+        `Form Code: ${updatedForm.code}\n` +
+        `Title: ${updatedForm.title}\n` +
+        `Questions: ${updatedForm.questions.length}\n\n` +
+        `🔒 IMPORTANT SECURITY GUIDELINES:\n\n` +
+        `1) Do not share the original assessment or assessment code with participants.\n\n` +
+        `2) Click the "Generate Temporary Code" button to obtain a code that starts with "T." This code will expire after 24 hours to ensure the system maintains the highest level of data integrity.\n\n` +
+        `The form has been updated with your changes.`;
+      alert(securityNotice);
       closeEditFormModal();
     } catch (error) {
       console.error('Error updating assessment form:', error);
@@ -295,6 +317,209 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
       setAssessmentBatches([]);
     } finally {
       setIsLoadingResults(false);
+    }
+  };
+
+  // Generate temporary assessment code
+  const generateTempCode = async (form) => {
+    if (!form._id && !form.id) {
+      alert('Cannot generate temporary code: Form ID not found. Please save the form first.');
+      return;
+    }
+
+    try {
+      const result = await apiService.generateTemporaryAssessmentCode(form._id || form.id);
+
+      if (result && result.tempCode) {
+        const expiryDate = new Date(result.expiresAt);
+        setTempCodeData({
+          ...result,
+          expiryDate: expiryDate,
+          parentForm: form
+        });
+        setShowTempCodeModal(true);
+      } else {
+        alert('Failed to generate temporary code. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error generating temporary code:', error);
+      alert('Failed to generate temporary code: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  // Copy temporary code to clipboard
+  const copyTempCodeToClipboard = () => {
+    if (tempCodeData && tempCodeData.tempCode) {
+      navigator.clipboard.writeText(tempCodeData.tempCode);
+      alert('Temporary code copied to clipboard!');
+    }
+  };
+
+  // Close temporary code modal
+  const closeTempCodeModal = () => {
+    setShowTempCodeModal(false);
+    setTempCodeData(null);
+  };
+
+  // Open temporary codes list modal
+  const openTempCodesListModal = async () => {
+    setIsLoadingTempCodes(true);
+    setShowTempCodesListModal(true);
+    try {
+      const codes = await apiService.getTemporaryCodes();
+      setTemporaryCodesList(codes);
+    } catch (error) {
+      console.error('Error loading temporary codes:', error);
+      alert('Failed to load temporary codes: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsLoadingTempCodes(false);
+    }
+  };
+
+  // Close temporary codes list modal
+  const closeTempCodesListModal = () => {
+    setShowTempCodesListModal(false);
+    setTemporaryCodesList([]);
+  };
+
+  // Copy temporary code from list
+  const copyTempCodeFromList = (code) => {
+    navigator.clipboard.writeText(code);
+    alert('Temporary code copied to clipboard!');
+  };
+
+  // Delete temporary code
+  const deleteTempCode = async (tempCodeId, tempCode) => {
+    const confirmMessage = `Are you sure you want to delete the temporary code "${tempCode}"?\n\nThis action cannot be undone.`;
+
+    if (window.confirm(confirmMessage)) {
+      try {
+        await apiService.deleteTemporaryCode(tempCodeId);
+        // Remove from local state
+        setTemporaryCodesList(prevCodes => prevCodes.filter(code => code._id !== tempCodeId));
+        alert('Temporary code deleted successfully!');
+      } catch (error) {
+        console.error('Error deleting temporary code:', error);
+        alert('Failed to delete temporary code: ' + (error.message || 'Unknown error'));
+      }
+    }
+  };
+
+  // Close security notice modal
+  const handleCloseSecurityModal = () => {
+    setShowSecurityNoticeModal(false);
+  };
+
+  // Actually save the form after user confirms security notice
+  const handleConfirmSave = async () => {
+    try {
+      console.log('Starting form save process...');
+      console.log('Questions:', assessmentQuestions);
+      console.log('Time limit:', assessmentTimeLimit);
+
+      // Validation
+      if (!assessmentTitle.trim()) {
+        alert('Please provide an assessment title.');
+        return;
+      }
+
+      if (assessmentQuestions.length === 0) {
+        alert('Please add at least one question to the assessment.');
+        return;
+      }
+
+      // Check if all questions have the required fields
+      const invalidQuestions = assessmentQuestions.filter(q =>
+        !q.question.trim() || !q.section.trim() || q.options.length === 0 || !q.options.some(opt => opt.isCorrect)
+      );
+
+      if (invalidQuestions.length > 0) {
+        alert('Please ensure all questions have a question text, section, at least one option, and one correct answer.');
+        return;
+      }
+
+      console.log('Validation passed');
+
+      // Get editing state
+      const isEditing = window.sessionStorage.getItem('isEditingForm') === 'true';
+      const editingFormCode = window.sessionStorage.getItem('editingFormCode');
+
+      console.log('Is editing:', isEditing);
+      console.log('Editing form code:', editingFormCode);
+
+      // Prepare form data
+      const formData = {
+        title: assessmentTitle.trim(),
+        titleMalay: assessmentTitleMalay.trim(),
+        subtitle: assessmentSubtitle.trim(),
+        subtitleMalay: assessmentSubtitleMalay.trim(),
+        questions: assessmentQuestions.map(q => ({
+          ...q,
+          question: q.question.trim(),
+          section: q.section.trim()
+        })),
+        timeLimit: assessmentTimeLimit,
+        passingScore: passingScore
+      };
+
+      if (isEditing && editingFormCode) {
+        // Update existing form
+        formData.code = editingFormCode;
+        console.log('Updating existing form:', editingFormCode);
+        console.log('Form data to update:', formData);
+      }
+
+      console.log('Form data to send:', formData);
+      console.log('Calling API...');
+      const response = await apiService.saveAssessmentForm(formData);
+      console.log('API response:', response);
+
+      const savedForm = response.data;
+      console.log('Saved form:', savedForm);
+
+      // Update local state
+      if (isEditing && editingFormCode) {
+        // Update existing form in the list
+        setSavedAssessmentForms(prev =>
+          (Array.isArray(prev) ? prev : []).map(form =>
+            form.code === editingFormCode ? savedForm : form
+          )
+        );
+        alert(`Form updated successfully!\n\nForm Code: ${savedForm.code}\nTitle: ${savedForm.title}\nQuestions: ${savedForm.questions.length}\n\nThe existing form has been updated with your changes.`);
+
+        // Clear editing state
+        window.sessionStorage.removeItem('isEditingForm');
+        window.sessionStorage.removeItem('editingFormCode');
+
+        // Clear all form fields for next assessment
+        setAssessmentTitle('');
+        setAssessmentSubtitle('');
+        setAssessmentQuestions([]);
+        setAssessmentTimeLimit(30);
+        setPassingScore(70);
+      } else {
+        // Add new form to the list
+        setSavedAssessmentForms(prev => [...(Array.isArray(prev) ? prev : []), savedForm]);
+        alert(`Form saved successfully! Form Code: ${savedForm.code}\n\nUsers can use this code to access the assessment.`);
+      }
+
+      // Clear all form fields for next assessment
+      setAssessmentTitle('');
+      setAssessmentSubtitle('');
+      setAssessmentQuestions([]);
+      setAssessmentTimeLimit(30);
+      setPassingScore(70);
+
+      // Close the security modal
+      setShowSecurityNoticeModal(false);
+      return savedForm.code;
+    } catch (error) {
+      console.error('Error saving assessment form:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+      alert('Error saving form. Please try again.');
+      setShowSecurityNoticeModal(false);
+      return null;
     }
   };
 
@@ -2729,93 +2954,18 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   );
 
   const renderAssessmentManagement = () => {
-    const handleSaveForm = async () => {
-      try {
-        console.log('Starting form save process...');
-        console.log('Questions:', assessmentQuestions);
-        console.log('Time limit:', assessmentTimeLimit);
-
-        // Check if we're editing an existing form
-        const isEditing = window.sessionStorage.getItem('isEditingForm') === 'true';
-        const editingFormCode = window.sessionStorage.getItem('editingFormCode');
-
-        if (!assessmentTitle.trim()) {
-          alert('Please enter an assessment title before saving the form.');
-          return null;
-        }
-
-        if (assessmentQuestions.length === 0) {
-          alert('Please add at least one question before saving the form.');
-          return null;
-        }
-
-        const formData = {
-          title: assessmentTitle.trim(),
-          titleMalay: assessmentTitleMalay.trim(),
-          subtitle: assessmentSubtitle.trim(),
-          subtitleMalay: assessmentSubtitleMalay.trim(),
-          questions: [...assessmentQuestions],
-          timeLimit: assessmentTimeLimit,
-          passingScore: passingScore
-        };
-
-        if (isEditing && editingFormCode) {
-          // Update existing form
-          formData.code = editingFormCode;
-          console.log('Updating existing form:', editingFormCode);
-          console.log('Form data to update:', formData);
-        }
-
-        console.log('Form data to send:', formData);
-        console.log('Calling API...');
-        const response = await apiService.saveAssessmentForm(formData);
-        console.log('API response:', response);
-
-        const savedForm = response.data;
-        console.log('Saved form:', savedForm);
-
-        // Update local state
-        if (isEditing && editingFormCode) {
-          // Update existing form in the list
-          setSavedAssessmentForms(prev =>
-            (Array.isArray(prev) ? prev : []).map(form =>
-              form.code === editingFormCode ? savedForm : form
-            )
-          );
-          alert(`Form updated successfully!\n\nForm Code: ${savedForm.code}\nTitle: ${savedForm.title}\nQuestions: ${savedForm.questions.length}\n\nThe existing form has been updated with your changes.`);
-
-          // Clear editing state
-          window.sessionStorage.removeItem('isEditingForm');
-          window.sessionStorage.removeItem('editingFormCode');
-
-          // Clear all form fields for next assessment
-          setAssessmentTitle('');
-          setAssessmentSubtitle('');
-          setAssessmentQuestions([]);
-          setAssessmentTimeLimit(30);
-          setPassingScore(70);
-        } else {
-          // Add new form to the list
-          setSavedAssessmentForms(prev => [...(Array.isArray(prev) ? prev : []), savedForm]);
-          alert(`Form saved successfully! Form Code: ${savedForm.code}\n\nUsers can use this code to access the assessment.`);
-        }
-
-        // Clear all form fields for next assessment
-        setAssessmentTitle('');
-        setAssessmentSubtitle('');
-        setAssessmentQuestions([]);
-        setAssessmentTimeLimit(30);
-        setPassingScore(70);
-
-        return savedForm.code;
-      } catch (error) {
-        console.error('Error saving assessment form:', error);
-        console.error('Error details:', error.message);
-        console.error('Error stack:', error.stack);
-        alert('Error saving form. Please try again.');
-        return null;
+    // Show security notice modal before saving
+    const handleSaveForm = () => {
+      // Validate form first
+      if (!assessmentTitle.trim() || assessmentQuestions.length === 0) {
+        alert('Please provide an assessment title and at least one question.');
+        return;
       }
+
+      // Show security notice modal
+      setShowSecurityNoticeModal(true);
     };
+
 
     return (
       <div className="assessment-management-view">
@@ -3357,15 +3507,37 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
         <form className="tournament-form">
           {/* Saved Forms Section */}
           <div className="form-section" style={{ padding: '20px' }}>
-            <h3 style={{ marginBottom: '20px' }}>All Saved Forms ({savedAssessmentForms.length})</h3>
-            {savedAssessmentForms.length === 0 ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0 }}>All Saved Forms ({savedAssessmentForms.filter(form => !form.isTemporary).length})</h3>
+              <button
+                type="button"
+                onClick={openTempCodesListModal}
+                style={{
+                  backgroundColor: '#17a2b8',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                title="View and manage all generated temporary codes"
+              >
+                📋 Manage Temporary Codes
+              </button>
+            </div>
+            {savedAssessmentForms.filter(form => !form.isTemporary).length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(0, 0, 0, 0.5)' }}>
                 <p style={{ fontSize: '18px', marginBottom: '8px' }}>No saved forms yet</p>
                 <p style={{ fontSize: '14px' }}>Create and save assessment forms in the "Manage Questions" section</p>
               </div>
             ) : (
               <div style={{ display: 'grid', gap: '15px' }}>
-                {savedAssessmentForms.map((form) => (
+                {savedAssessmentForms.filter(form => !form.isTemporary).map((form) => (
                   <div key={form.code} style={{
                     background: 'rgba(0, 0, 0, 0.02)',
                     border: '1px solid rgba(0, 0, 0, 0.1)',
@@ -3463,6 +3635,24 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                         }}
                       >
                         Edit Form
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => generateTempCode(form)}
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '14px',
+                          backgroundColor: '#17a2b8',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          marginRight: '10px',
+                          fontWeight: 'bold'
+                        }}
+                        title="Generate 24-hour temporary assessment code"
+                      >
+                        Generate Temp Code
                       </button>
                       <button
                         type="button"
@@ -6222,6 +6412,448 @@ Settings
         </div>
       )}
 
+      {/* Temporary Code Modal */}
+      {showTempCodeModal && tempCodeData && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 2000,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '12px',
+            padding: '0',
+            width: '90%',
+            maxWidth: '600px',
+            border: '2px solid #28a745',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              backgroundColor: '#28a745',
+              color: '#fff',
+              padding: '20px',
+              borderRadius: '10px 10px 0 0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
+                ✅ Temporary Code Generated!
+              </h2>
+              <button
+                onClick={closeTempCodeModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '28px',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{
+              padding: '30px',
+              textAlign: 'center'
+            }}>
+              {/* Temporary Code Display */}
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                border: '2px solid #28a745',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '25px'
+              }}>
+                <div style={{
+                  fontSize: '16px',
+                  color: '#666',
+                  marginBottom: '8px'
+                }}>
+                  📋 Temporary Assessment Code
+                </div>
+                <div style={{
+                  fontSize: '32px',
+                  fontWeight: 'bold',
+                  color: '#28a745',
+                  fontFamily: 'monospace',
+                  letterSpacing: '4px',
+                  marginBottom: '15px'
+                }}>
+                  {tempCodeData.tempCode}
+                </div>
+                <button
+                  onClick={copyTempCodeToClipboard}
+                  style={{
+                    backgroundColor: '#17a2b8',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    margin: '0 auto'
+                  }}
+                >
+                  📋 Copy to Clipboard
+                </button>
+              </div>
+
+              {/* Assessment Details */}
+              <div style={{
+                backgroundColor: '#e3f2fd',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '20px',
+                textAlign: 'left'
+              }}>
+                <h3 style={{ margin: '0 0 15px 0', color: '#1976d2' }}>Assessment Details</h3>
+                <div style={{ marginBottom: '10px' }}>
+                  <strong>📚 Title:</strong> {tempCodeData.parentTitle}
+                </div>
+                <div style={{ marginBottom: '10px' }}>
+                  <strong>⏱️ Time Limit:</strong> {tempCodeData.timeLimit} minutes
+                </div>
+                <div style={{ marginBottom: '10px' }}>
+                  <strong>🕒 Expires at:</strong> {tempCodeData.expiryDate.toLocaleString()}
+                </div>
+                <div>
+                  <strong>⏰ Valid for:</strong> 24 hours
+                </div>
+              </div>
+
+              {/* Important Notes */}
+              <div style={{
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffeaa7',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '25px',
+                textAlign: 'left'
+              }}>
+                <h4 style={{ margin: '0 0 15px 0', color: '#856404' }}>⚠️ Important Notes:</h4>
+                <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                  <li>This code will automatically expire in 24 hours</li>
+                  <li>Each temporary code can only be used once</li>
+                  <li>Share this code with assessment participants</li>
+                  <li>Code starts with 'T' to indicate it's temporary</li>
+                </ul>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{
+                display: 'flex',
+                gap: '15px',
+                justifyContent: 'center'
+              }}>
+                <button
+                  onClick={copyTempCodeToClipboard}
+                  style={{
+                    backgroundColor: '#28a745',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  📋 Copy Code
+                </button>
+                <button
+                  onClick={closeTempCodeModal}
+                  style={{
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Temporary Codes List Modal */}
+      {showTempCodesListModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 2000,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '12px',
+            padding: '0',
+            width: '95%',
+            maxWidth: '1000px',
+            maxHeight: '90vh',
+            border: '2px solid #17a2b8',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              backgroundColor: '#17a2b8',
+              color: '#fff',
+              padding: '20px',
+              borderRadius: '10px 10px 0 0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
+                Manage Temporary Codes
+              </h2>
+              <button
+                onClick={closeTempCodesListModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '28px',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{
+              padding: '20px',
+              overflowY: 'auto',
+              flex: 1
+            }}>
+              {isLoadingTempCodes ? (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                  <p>Loading temporary codes...</p>
+                </div>
+              ) : temporaryCodesList.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                  <h3>No Active Temporary Codes</h3>
+                  <p>All temporary codes have expired or none have been generated yet.</p>
+                  <p>Generate a new temporary code from any saved assessment form.</p>
+                </div>
+              ) : (
+                <>
+                  <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '8px' }}>
+                    <h4 style={{ margin: '0 0 10px 0', color: '#1976d2' }}>Summary</h4>
+                    <p style={{ margin: 0 }}>
+                      <strong>{temporaryCodesList.length}</strong> active temporary codes •
+                      All codes expire automatically after 24 hours
+                    </p>
+                  </div>
+
+                  <div style={{
+                    display: 'grid',
+                    gap: '15px',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))'
+                  }}>
+                    {temporaryCodesList.map((tempCode) => {
+                      const expiryDate = new Date(tempCode.expiresAt);
+                      const timeRemaining = tempCode.timeRemaining;
+                      const hoursRemaining = Math.floor(timeRemaining / (1000 * 60 * 60));
+                      const minutesRemaining = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                      const isExpiringSoon = timeRemaining < 2 * 60 * 60 * 1000; // Less than 2 hours
+
+                      return (
+                        <div
+                          key={tempCode._id}
+                          style={{
+                            border: isExpiringSoon ? '2px solid #ffc107' : '2px solid #17a2b8',
+                            borderRadius: '8px',
+                            padding: '20px',
+                            backgroundColor: isExpiringSoon ? '#fff3cd' : '#f8f9fa'
+                          }}
+                        >
+                          {/* Header with Code */}
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '15px'
+                          }}>
+                            <div style={{
+                              fontSize: '24px',
+                              fontWeight: 'bold',
+                              fontFamily: 'monospace',
+                              color: '#17a2b8',
+                              letterSpacing: '2px'
+                            }}>
+                              {tempCode.tempCode}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                onClick={() => copyTempCodeFromList(tempCode.tempCode)}
+                                style={{
+                                  backgroundColor: '#28a745',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '8px 16px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                Copy
+                              </button>
+                              <button
+                                onClick={() => deleteTempCode(tempCode._id, tempCode.tempCode)}
+                                style={{
+                                  backgroundColor: '#dc3545',
+                                  color: 'white',
+                                  border: 'none',
+                                  padding: '8px 16px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Assessment Details */}
+                          <div style={{ marginBottom: '15px' }}>
+                            <div style={{ marginBottom: '8px' }}>
+                              <strong>Assessment:</strong> {tempCode.parentFormTitle}
+                            </div>
+                            <div style={{ marginBottom: '8px' }}>
+                              <strong>Original Code:</strong> {tempCode.parentFormCode}
+                            </div>
+                            <div style={{ marginBottom: '8px' }}>
+                              <strong>Time Limit:</strong> {tempCode.timeLimit} minutes
+                            </div>
+                          </div>
+
+                          {/* Timing Information */}
+                          <div style={{
+                            backgroundColor: isExpiringSoon ? '#ffeaa7' : '#e3f2fd',
+                            padding: '12px',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}>
+                            <div style={{ marginBottom: '6px' }}>
+                              <strong>Expires:</strong> {expiryDate.toLocaleString()}
+                            </div>
+                            <div style={{ marginBottom: '6px' }}>
+                              <strong>Time Remaining:</strong>
+                              <span style={{
+                                color: isExpiringSoon ? '#d68910' : '#28a745',
+                                fontWeight: 'bold',
+                                marginLeft: '5px'
+                              }}>
+                                {hoursRemaining}h {minutesRemaining}m
+                              </span>
+                            </div>
+                            <div>
+                              <strong>Generated:</strong> {new Date(tempCode.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+
+                          {isExpiringSoon && (
+                            <div style={{
+                              marginTop: '10px',
+                              padding: '8px',
+                              backgroundColor: '#d4910',
+                              color: '#856404',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: 'bold',
+                              textAlign: 'center'
+                            }}>
+                              ⚠️ EXPIRING SOON - Less than 2 hours remaining!
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '20px',
+              borderTop: '1px solid #dee2e6',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ fontSize: '14px', color: '#666' }}>
+                Tip: Temporary codes automatically delete when they expire
+              </div>
+              <button
+                onClick={closeTempCodesListModal}
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Form Modal */}
       {showEditFormModal && (
         <div style={{
@@ -6955,6 +7587,148 @@ Settings
         </div>
       )}
 
+      {/* Security Notice Modal */}
+      {showSecurityNoticeModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '10px',
+            padding: '0',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              backgroundColor: '#dc3545',
+              color: '#fff',
+              padding: '20px',
+              borderRadius: '10px 10px 0 0',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 'bold' }}>
+                Important Security Guidelines
+              </h2>
+              <button
+                onClick={handleCloseSecurityModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#fff',
+                  fontSize: '28px',
+                  cursor: 'pointer',
+                  padding: '0',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{
+              padding: '30px',
+              fontSize: '16px',
+              lineHeight: '1.6'
+            }}>
+              <div style={{
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffeaa7',
+                borderRadius: '8px',
+                padding: '20px',
+                marginBottom: '25px'
+              }}>
+                <h3 style={{
+                  color: '#856404',
+                  margin: '0 0 15px 0',
+                  fontSize: '18px',
+                  fontWeight: 'bold'
+                }}>
+                  Please read these security guidelines before saving your assessment:
+                </h3>
+
+                <div style={{ marginBottom: '15px' }}>
+                  <strong style={{ color: '#dc3545' }}>1)</strong> Do not share the original assessment or assessment code with participants.
+                </div>
+
+                <div>
+                  <strong style={{ color: '#dc3545' }}>2)</strong> Click the "Generate Temporary Code" button to obtain a code that starts with "T." This code will expire after 24 hours to ensure the system maintains the highest level of data integrity.
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                border: '1px solid #dee2e6',
+                borderRadius: '8px',
+                padding: '15px',
+                fontSize: '14px',
+                color: '#6c757d'
+              }}>
+                <strong>Why this matters:</strong> Using temporary codes ensures that assessment access is controlled and time-limited, preventing unauthorized access and maintaining the integrity of your assessment results.
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '20px',
+              borderTop: '1px solid #dee2e6',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <button
+                onClick={handleCloseSecurityModal}
+                style={{
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSave}
+                style={{
+                  backgroundColor: '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold'
+                }}
+              >
+                I Understand - Save Assessment Form
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

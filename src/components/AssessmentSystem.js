@@ -2,8 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import apiService from '../services/api';
 import mpaLogo from '../assets/images/mpa.png';
 import jsPDF from 'jspdf';
+import { useNotices } from '../contexts/NoticeContext';
 
 const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
+  const { getActiveNotices } = useNotices();
   const [currentView, setCurrentView] = useState('registration'); // registration, assessment, results
   const [questions, setQuestions] = useState([]);
   const [userInfo, setUserInfo] = useState(null);
@@ -12,6 +14,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
   const [allSubmissions, setAllSubmissions] = useState([]);
   const [savedForms, setSavedForms] = useState([]);
   const [assessmentFormData, setAssessmentFormData] = useState(null);
+  const [isNoticeExpanded, setIsNoticeExpanded] = useState(false);
 
   // Sample questions for demo
   const sampleQuestions = [
@@ -175,6 +178,25 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
       if (form) {
         console.log('Loaded form from API:', form);
         console.log('Form includeAnswers value:', form.includeAnswers);
+
+        // Check if it's a temporary form and show expiry information
+        if (form.isTemporary && form.expiresAt) {
+          const expiryDate = new Date(form.expiresAt);
+          const timeRemaining = expiryDate.getTime() - Date.now();
+
+          if (timeRemaining > 0) {
+            const hoursRemaining = Math.floor(timeRemaining / (1000 * 60 * 60));
+            const minutesRemaining = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+
+            console.log(`⏰ Temporary Assessment Code - Expires in ${hoursRemaining}h ${minutesRemaining}m`);
+
+            // Show warning if less than 2 hours remaining
+            if (timeRemaining < 2 * 60 * 60 * 1000) {
+              alert(`⚠️ Warning: This temporary assessment code will expire in ${hoursRemaining}h ${minutesRemaining}m!\n\nPlease complete your assessment soon.`);
+            }
+          }
+        }
+
         const enhancedQuestions = enhanceQuestionsWithMalay(form.questions);
         setQuestions(enhancedQuestions);
         setTimeLimit(form.timeLimit);
@@ -282,6 +304,87 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
         </button>
       </div>
 
+      {/* Notice Banner */}
+      {getActiveNotices().length > 0 && (
+        <div style={{
+          backgroundColor: '#fffbf0',
+          borderBottom: '2px solid #f39c12',
+          padding: '12px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '14px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '16px' }}>📢</span>
+            <span style={{ fontWeight: 'bold', color: '#d35400' }}>
+              {getActiveNotices().length} Active Notice{getActiveNotices().length > 1 ? 's' : ''}
+            </span>
+            <button
+              onClick={() => setIsNoticeExpanded(!isNoticeExpanded)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#d35400',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              {isNoticeExpanded ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded Notice Content */}
+      {isNoticeExpanded && getActiveNotices().length > 0 && (
+        <div style={{
+          backgroundColor: '#fff',
+          borderBottom: '1px solid #ddd',
+          padding: '20px 24px',
+          maxHeight: '200px',
+          overflow: 'auto'
+        }}>
+          {getActiveNotices().map((notice) => (
+            <div key={notice.id} style={{
+              marginBottom: '16px',
+              padding: '12px',
+              border: '1px solid #f39c12',
+              borderRadius: '4px',
+              backgroundColor: '#fffbf0'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '8px'
+              }}>
+                <span style={{
+                  fontSize: '12px',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  backgroundColor: notice.type === 'urgent' ? '#e74c3c' : notice.type === 'important' ? '#f39c12' : '#3498db',
+                  color: '#fff',
+                  fontWeight: 'bold'
+                }}>
+                  {notice.type === 'urgent' ? '🚨 URGENT' : notice.type === 'important' ? '⚠️ IMPORTANT' : 'ℹ️ INFO'}
+                </span>
+                <span style={{ fontSize: '12px', color: '#666' }}>
+                  {new Date(notice.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#2c3e50' }}>
+                {notice.title}
+              </h4>
+              <p style={{ margin: '0', fontSize: '13px', color: '#555', lineHeight: '1.4' }}>
+                {notice.content}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="assessment-system-content" style={{
         flex: 1,
         padding: '40px',
@@ -373,7 +476,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [] }) => {
     } else {
       const isValidCode = await loadForm(formCode);
       if (!isValidCode) {
-        newErrors.formCode = 'Invalid assessment code';
+        newErrors.formCode = 'Invalid or expired assessment code. Please check the code or request a new one.';
       }
     }
 

@@ -1364,6 +1364,31 @@ const assessmentFormSchema = new mongoose.Schema({
     min: 1,
     max: 180
   },
+  // Temporary form fields
+  isTemporary: {
+    type: Boolean,
+    default: false
+  },
+  parentFormId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'AssessmentForm',
+    required: function() {
+      return this.isTemporary;
+    }
+  },
+  expiresAt: {
+    type: Date,
+    required: function() {
+      return this.isTemporary;
+    },
+    index: { expireAfterSeconds: 0 } // MongoDB TTL index for auto-deletion
+  },
+  generatedBy: {
+    type: String, // Could be IP address or user identifier
+    required: function() {
+      return this.isTemporary;
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -1371,6 +1396,10 @@ const assessmentFormSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Index for faster queries on temporary forms
+assessmentFormSchema.index({ isTemporary: 1, expiresAt: 1 });
+assessmentFormSchema.index({ parentFormId: 1 });
 
 const AssessmentForm = mongoose.model('AssessmentForm', assessmentFormSchema);
 
@@ -1572,6 +1601,26 @@ const generateAssessmentFormCode = async () => {
     }
   }
 
+  return formCode;
+};
+
+// Generate unique temporary assessment form code
+const generateTemporaryAssessmentCode = async () => {
+  let formCode;
+  let isUnique = false;
+  while (!isUnique) {
+    // Generate 5-character random code with 'T' prefix for temporary
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    formCode = 'T';
+    for (let i = 0; i < 4; i++) {
+      formCode += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    // Check if this code already exists (including both temporary and permanent)
+    const existingForm = await AssessmentForm.findOne({ code: formCode });
+    if (!existingForm) {
+      isUnique = true;
+    }
+  }
   return formCode;
 };
 
@@ -3277,6 +3326,111 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 // ASSESSMENT FORM MANAGEMENT APIs
 // ===============================
 
+// Get all temporary assessment codes
+app.get('/api/assessment/temporary-codes', async (req, res) => {
+  try {
+    // Find all temporary forms that are not expired, populate parent form details
+    const tempForms = await AssessmentForm.find({
+      isTemporary: true,
+      expiresAt: { $gt: new Date() } // Only non-expired codes
+    }).populate('parentFormId', 'title code').sort({ createdAt: -1 });
+
+    // Format the response with relevant information
+    const formattedCodes = tempForms.map(form => ({
+      _id: form._id,
+      tempCode: form.code,
+      parentFormTitle: form.parentFormId ? form.parentFormId.title : form.title,
+      parentFormCode: form.parentFormId ? form.parentFormId.code : 'N/A',
+      expiresAt: form.expiresAt,
+      timeRemaining: Math.max(0, form.expiresAt.getTime() - Date.now()),
+      generatedBy: form.generatedBy,
+      createdAt: form.createdAt,
+      timeLimit: form.timeLimit
+    }));
+
+    res.json({
+      success: true,
+      data: formattedCodes
+    });
+
+  } catch (error) {
+    console.error('Error fetching temporary codes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to fetch temporary codes'
+    });
+  }
+});
+
+// Generate temporary assessment code from existing form
+app.post('/api/assessment/forms/:formId/generate-temp-code', async (req, res) => {
+  try {
+    const { formId } = req.params;
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+
+    // Find the parent form
+    const parentForm = await AssessmentForm.findById(formId);
+    if (!parentForm) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assessment form not found'
+      });
+    }
+
+    // Ensure we're not creating a temporary copy of another temporary form
+    if (parentForm.isTemporary) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot create temporary copy of a temporary form'
+      });
+    }
+
+    // Generate temporary code
+    const tempCode = await generateTemporaryAssessmentCode();
+
+    // Calculate expiry time (24 hours from now)
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+
+    // Create temporary form
+    const tempForm = new AssessmentForm({
+      code: tempCode,
+      title: parentForm.title,
+      titleMalay: parentForm.titleMalay,
+      subtitle: parentForm.subtitle,
+      subtitleMalay: parentForm.subtitleMalay,
+      questions: parentForm.questions,
+      timeLimit: parentForm.timeLimit,
+      isTemporary: true,
+      parentFormId: parentForm._id,
+      expiresAt: expiresAt,
+      generatedBy: clientIP
+    });
+
+    const savedTempForm = await tempForm.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Temporary assessment code generated successfully',
+      data: {
+        tempCode: savedTempForm.code,
+        expiresAt: savedTempForm.expiresAt,
+        parentTitle: parentForm.title,
+        timeLimit: savedTempForm.timeLimit
+      }
+    });
+
+  } catch (error) {
+    console.error('Error generating temporary assessment code:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to generate temporary assessment code'
+    });
+  }
+});
+
 // Save assessment form
 app.post('/api/assessment/forms', async (req, res) => {
   try {
@@ -3356,18 +3510,38 @@ app.get('/api/assessment/forms/:code', async (req, res) => {
   try {
     const { code } = req.params;
 
-    const form = await AssessmentForm.findOne({ code: code.toUpperCase() });
+    // Find form and check if it's expired (for temporary forms)
+    const form = await AssessmentForm.findOne({
+      code: code.toUpperCase(),
+      $or: [
+        { isTemporary: false }, // Permanent forms don't expire
+        {
+          isTemporary: true,
+          expiresAt: { $gt: new Date() } // Temporary forms must not be expired
+        }
+      ]
+    });
 
     if (!form) {
       return res.status(404).json({
         success: false,
-        message: 'Assessment form not found'
+        message: 'Assessment form not found or has expired'
       });
+    }
+
+    // Add expiry information to response for temporary forms
+    const responseData = {
+      ...form.toObject()
+    };
+
+    if (form.isTemporary) {
+      responseData.timeRemaining = Math.max(0, form.expiresAt.getTime() - Date.now());
+      responseData.isExpired = form.expiresAt <= new Date();
     }
 
     res.json({
       success: true,
-      data: form
+      data: responseData
     });
   } catch (error) {
     console.error('Error fetching assessment form:', error);
@@ -3430,17 +3604,27 @@ app.post('/api/assessment/submissions', async (req, res) => {
     }
     console.log('Validation passed');
 
-    // Verify form exists
-    console.log('Checking if form exists:', formCode.toUpperCase());
-    const form = await AssessmentForm.findOne({ code: formCode.toUpperCase() });
+    // Verify form exists and check expiry
+    console.log('Checking if form exists and is not expired:', formCode.toUpperCase());
+    const form = await AssessmentForm.findOne({
+      code: formCode.toUpperCase(),
+      $or: [
+        { isTemporary: false }, // Permanent forms don't expire
+        {
+          isTemporary: true,
+          expiresAt: { $gt: new Date() } // Temporary forms must not be expired
+        }
+      ]
+    });
+
     if (!form) {
-      console.log('Form not found:', formCode.toUpperCase());
+      console.log('Form not found or expired:', formCode.toUpperCase());
       return res.status(404).json({
         success: false,
-        message: 'Assessment form not found'
+        message: 'Assessment form not found or has expired'
       });
     }
-    console.log('Form found:', form.code);
+    console.log('Form found:', form.code, form.isTemporary ? `(Temporary, expires: ${form.expiresAt})` : '(Permanent)');
 
     // Generate unique submission ID
     console.log('Generating submission ID...');
