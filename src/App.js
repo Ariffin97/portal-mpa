@@ -725,11 +725,11 @@ function App() {
 
   return (
     <div className="App">
-      {currentPage !== 'login' && <Header currentPage={currentPage} setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
+      {currentPage !== 'login' && !showAssessmentModal && <Header currentPage={currentPage} setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
       <main className="App-main">
         {renderPage()}
       </main>
-      {currentPage !== 'login' && <Footer />}
+      {currentPage !== 'login' && !showAssessmentModal && <Footer />}
       
       <OrganizationLoginModal 
         isOpen={showLoginModal}

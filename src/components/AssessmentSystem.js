@@ -274,32 +274,6 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <div className="assessment-system-header" style={{
-        backgroundColor: '#000',
-        color: '#fff',
-        padding: '16px 24px',
-        borderBottom: '2px solid #000',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Assessment</h2>
-        <button
-          className="assessment-close-btn"
-          onClick={onClose}
-          style={{
-            backgroundColor: 'transparent',
-            color: '#fff',
-            border: '1px solid #fff',
-            padding: '8px 12px',
-            cursor: 'pointer',
-            fontSize: '16px',
-            borderRadius: '4px'
-          }}
-        >
-          × Close
-        </button>
-      </div>
 
       <div className="assessment-system-content" style={{
         flex: 1,
@@ -318,6 +292,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
             }}
             loadForm={loadForm}
             savedForms={savedForms}
+            onClose={onClose}
           />
         )}
 
@@ -353,7 +328,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
 };
 
 // User Registration Component
-const UserRegistration = ({ onRegister, loadForm, savedForms = [] }) => {
+const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) => {
   const [fullName, setFullName] = useState('');
   const [icNumber, setIcNumber] = useState('');
   const [formCode, setFormCode] = useState('');
@@ -554,6 +529,23 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [] }) => {
           Start Assessment
         </button>
       </form>
+
+      <div style={{ marginTop: '20px', textAlign: 'center' }}>
+        <button
+          onClick={onClose}
+          style={{
+            backgroundColor: 'transparent',
+            color: '#666',
+            border: '1px solid #ccc',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
+          ✕ Close
+        </button>
+      </div>
 
     </div>
   );
