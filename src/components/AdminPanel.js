@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessmentTitle, setAssessmentTitle, assessmentTitleMalay, setAssessmentTitleMalay, assessmentSubtitle, setAssessmentSubtitle, assessmentSubtitleMalay, setAssessmentSubtitleMalay, passingScore, setPassingScore, submissions = [], savedForms = [], onSaveForm }) => {
+const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessmentTitle, setAssessmentTitle, assessmentTitleMalay, setAssessmentTitleMalay, assessmentSubtitle, setAssessmentSubtitle, assessmentSubtitleMalay, setAssessmentSubtitleMalay, passingScore, setPassingScore, submissions = [], savedForms = [], onSaveForm, onSaveDraft }) => {
   const [newQuestion, setNewQuestion] = useState({
     question: '',
     questionMalay: '',
@@ -16,6 +16,15 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
     const formCode = await onSaveForm();
     if (formCode) {
       alert(`Form saved successfully! Form Code: ${formCode}\n\nUsers can use this code to access the assessment.`);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (onSaveDraft) {
+      const success = await onSaveDraft();
+      if (success) {
+        alert('Draft saved successfully! You can continue working on it later.');
+      }
     }
   };
 
@@ -900,11 +909,16 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
         {/* Save Form Section - Bottom of Page */}
         <div className="form-section" style={{ padding: '20px', marginTop: '20px', backgroundColor: 'rgba(0, 123, 255, 0.05)', border: '2px solid #007bff' }}>
           <div style={{ textAlign: 'center' }}>
-            <button type="button" onClick={handleSaveForm} className="home-btn" style={{ fontSize: '16px', padding: '12px 24px' }}>
-              Save Form & Generate Code
-            </button>
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button type="button" onClick={handleSaveForm} className="home-btn" style={{ fontSize: '16px', padding: '12px 24px' }}>
+                Save Form & Generate Code
+              </button>
+              <button type="button" onClick={handleSaveDraft} className="home-btn" style={{ fontSize: '16px', padding: '12px 24px', backgroundColor: '#6c757d', borderColor: '#6c757d' }}>
+                Save as Draft
+              </button>
+            </div>
             <p style={{ color: 'rgba(0, 0, 0, 0.6)', fontSize: '14px', margin: '10px 0 0 0' }}>
-              Generate a 5-character code for users to access this assessment
+              Generate a 5-character code for users to access this assessment, or save as draft to continue later
             </p>
           </div>
         </div>

@@ -2966,6 +2966,47 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
       setShowSecurityNoticeModal(true);
     };
 
+    const handleSaveDraft = async () => {
+      try {
+        console.log('Starting draft save process...');
+
+        // Basic validation for draft
+        if (!assessmentTitle.trim()) {
+          alert('Please provide an assessment title to save as draft.');
+          return false;
+        }
+
+        const formData = {
+          title: assessmentTitle,
+          titleMalay: assessmentTitleMalay || '',
+          subtitle: assessmentSubtitle || '',
+          subtitleMalay: assessmentSubtitleMalay || '',
+          questions: assessmentQuestions,
+          timeLimit: assessmentTimeLimit,
+          passingScore: passingScore,
+          isDraft: true // Mark as draft
+        };
+
+        console.log('Form data for draft:', formData);
+
+        const savedForm = await apiService.saveAssessmentForm(formData);
+        console.log('Saved draft:', savedForm);
+
+        if (savedForm && savedForm.code) {
+          // Update saved forms list
+          setSavedAssessmentForms(prev => [...prev, savedForm]);
+
+          console.log('Draft saved successfully');
+          return true;
+        }
+
+        return false;
+      } catch (error) {
+        console.error('Error saving draft:', error);
+        alert('Error saving draft. Please try again.');
+        return false;
+      }
+    };
 
     return (
       <div className="assessment-management-view">
@@ -2993,6 +3034,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
             submissions={assessmentSubmissions}
             savedForms={savedAssessmentForms}
             onSaveForm={handleSaveForm}
+            onSaveDraft={handleSaveDraft}
           />
         </div>
       </div>
