@@ -1364,6 +1364,11 @@ const assessmentFormSchema = new mongoose.Schema({
     min: 1,
     max: 180
   },
+  // Draft field
+  isDraft: {
+    type: Boolean,
+    default: false
+  },
   // Temporary form fields
   isTemporary: {
     type: Boolean,
@@ -3434,9 +3439,25 @@ app.post('/api/assessment/forms/:formId/generate-temp-code', async (req, res) =>
 // Save assessment form
 app.post('/api/assessment/forms', async (req, res) => {
   try {
-    const { questions, timeLimit, title, subtitle } = req.body;
+    const {
+      questions,
+      timeLimit,
+      title,
+      subtitle,
+      titleMalay,
+      subtitleMalay,
+      passingScore,
+      isDraft
+    } = req.body;
 
-    // Validation
+    console.log('Received form data:', {
+      title,
+      isDraft,
+      questionsLength: Array.isArray(questions) ? questions.length : 'not array',
+      timeLimit
+    });
+
+    // Validation - relax for drafts
     if (!title || !title.trim()) {
       return res.status(400).json({
         success: false,
@@ -3444,18 +3465,29 @@ app.post('/api/assessment/forms', async (req, res) => {
       });
     }
 
-    if (!questions || !Array.isArray(questions) || questions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Questions are required and must be a non-empty array'
-      });
-    }
+    // For non-drafts, require questions and timeLimit
+    if (!isDraft) {
+      if (!questions || !Array.isArray(questions) || questions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Questions are required and must be a non-empty array'
+        });
+      }
 
-    if (!timeLimit || timeLimit < 1 || timeLimit > 180) {
-      return res.status(400).json({
-        success: false,
-        message: 'Time limit must be between 1 and 180 minutes'
-      });
+      if (!timeLimit || timeLimit < 1 || timeLimit > 180) {
+        return res.status(400).json({
+          success: false,
+          message: 'Time limit must be between 1 and 180 minutes'
+        });
+      }
+    } else {
+      // For drafts, ensure questions is at least an array (can be empty)
+      if (questions && !Array.isArray(questions)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Questions must be an array'
+        });
+      }
     }
 
     // Generate unique form code
@@ -3465,15 +3497,19 @@ app.post('/api/assessment/forms', async (req, res) => {
       code: formCode,
       title: title.trim(),
       subtitle: subtitle ? subtitle.trim() : '',
-      questions: questions,
-      timeLimit: timeLimit,
+      titleMalay: titleMalay ? titleMalay.trim() : '',
+      subtitleMalay: subtitleMalay ? subtitleMalay.trim() : '',
+      questions: questions || [],
+      timeLimit: timeLimit || 30,
+      passingScore: passingScore || 70,
+      isDraft: isDraft || false,
     });
 
     const savedForm = await newForm.save();
 
     res.status(201).json({
       success: true,
-      message: 'Assessment form saved successfully',
+      message: isDraft ? 'Assessment draft saved successfully' : 'Assessment form saved successfully',
       data: savedForm
     });
   } catch (error) {
@@ -3482,6 +3518,91 @@ app.post('/api/assessment/forms', async (req, res) => {
       success: false,
       error: 'Internal server error',
       message: 'Failed to save assessment form'
+    });
+  }
+});
+
+// Update assessment form
+app.patch('/api/assessment/forms/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      questions,
+      timeLimit,
+      title,
+      subtitle,
+      titleMalay,
+      subtitleMalay,
+      passingScore,
+      isDraft
+    } = req.body;
+
+    console.log('Updating form with ID:', id);
+
+    // Validation - relax for drafts
+    if (!title || !title.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Assessment title is required'
+      });
+    }
+
+    // For non-drafts, require questions and timeLimit
+    if (!isDraft) {
+      if (!questions || !Array.isArray(questions) || questions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Questions are required and must be a non-empty array'
+        });
+      }
+
+      if (!timeLimit || timeLimit < 1 || timeLimit > 180) {
+        return res.status(400).json({
+          success: false,
+          message: 'Time limit must be between 1 and 180 minutes'
+        });
+      }
+    } else {
+      // For drafts, ensure questions is at least an array (can be empty)
+      if (questions && !Array.isArray(questions)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Questions must be an array'
+        });
+      }
+    }
+
+    const updateData = {
+      title: title.trim(),
+      subtitle: subtitle ? subtitle.trim() : '',
+      titleMalay: titleMalay ? titleMalay.trim() : '',
+      subtitleMalay: subtitleMalay ? subtitleMalay.trim() : '',
+      questions: questions || [],
+      timeLimit: timeLimit || 30,
+      passingScore: passingScore || 70,
+      isDraft: isDraft || false,
+    };
+
+    const updatedForm = await AssessmentForm.findByIdAndUpdate(id, updateData, { new: true });
+
+    if (!updatedForm) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assessment form not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: isDraft ? 'Assessment draft updated successfully' : 'Assessment form updated successfully',
+      data: updatedForm
+    });
+  } catch (error) {
+    console.error('Error updating assessment form:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to update assessment form'
     });
   }
 });

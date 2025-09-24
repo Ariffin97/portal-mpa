@@ -203,6 +203,14 @@ class ApiService {
     return response;
   }
 
+  async updateAssessmentForm(formId, formData) {
+    const response = await this.makeRequest(`/assessment/forms/${formId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(formData),
+    });
+    return response;
+  }
+
   async getAllAssessmentForms() {
     const response = await this.makeRequest('/assessment/forms');
     return response.data || [];

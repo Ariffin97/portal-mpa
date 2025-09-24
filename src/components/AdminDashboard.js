@@ -123,6 +123,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [assessmentSubtitleMalay, setAssessmentSubtitleMalay] = useState('');
   const [passingScore, setPassingScore] = useState(70); // Percentage required to pass
   const [savedAssessmentForms, setSavedAssessmentForms] = useState([]);
+  const [currentDraftId, setCurrentDraftId] = useState(null); // Track current draft being edited
   // Use global assessment submissions instead of local state
   const assessmentSubmissions = globalAssessmentSubmissions;
   const [assessmentManagementExpanded, setAssessmentManagementExpanded] = useState(false);
@@ -430,7 +431,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
 
       // Check if all questions have the required fields
       const invalidQuestions = assessmentQuestions.filter(q =>
-        !q.question.trim() || !q.section.trim() || q.options.length === 0 || !q.options.some(opt => opt.isCorrect)
+        !q.question.trim() || !q.section.trim() || q.options.length === 0 || !q.correctAnswer || !q.correctAnswer.trim()
       );
 
       if (invalidQuestions.length > 0) {
@@ -2966,6 +2967,62 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
       setShowSecurityNoticeModal(true);
     };
 
+    // Draft management functions
+    const loadDraftIntoForm = (draft) => {
+      console.log('Loading draft into form:', draft);
+
+      // Set all form fields from the draft
+      setAssessmentTitle(draft.title || '');
+      setAssessmentTitleMalay(draft.titleMalay || '');
+      setAssessmentSubtitle(draft.subtitle || '');
+      setAssessmentSubtitleMalay(draft.subtitleMalay || '');
+      setAssessmentQuestions(draft.questions || []);
+      setAssessmentTimeLimit(draft.timeLimit || 30);
+      setPassingScore(draft.passingScore || 70);
+
+      // Set this as the current draft being edited
+      setCurrentDraftId(draft._id);
+
+      console.log('Draft loaded successfully');
+    };
+
+    const deleteDraft = async (draftId) => {
+      try {
+        await apiService.deleteAssessmentForm(draftId);
+
+        // Remove from saved forms list
+        setSavedAssessmentForms(prev => prev.filter(form => form._id !== draftId));
+
+        // If this was the current draft, clear it
+        if (currentDraftId === draftId) {
+          clearCurrentDraft();
+        }
+
+        alert('Draft deleted successfully');
+      } catch (error) {
+        console.error('Error deleting draft:', error);
+        alert('Error deleting draft. Please try again.');
+      }
+    };
+
+    const clearCurrentDraft = () => {
+      console.log('Clearing current draft selection');
+
+      // Clear all form fields
+      setAssessmentTitle('');
+      setAssessmentTitleMalay('');
+      setAssessmentSubtitle('');
+      setAssessmentSubtitleMalay('');
+      setAssessmentQuestions([]);
+      setAssessmentTimeLimit(30);
+      setPassingScore(70);
+
+      // Clear current draft ID
+      setCurrentDraftId(null);
+
+      console.log('Form cleared for new assessment');
+    };
+
     const handleSaveDraft = async () => {
       try {
         console.log('Starting draft save process...');
@@ -2989,14 +3046,39 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
 
         console.log('Form data for draft:', formData);
 
-        const savedForm = await apiService.saveAssessmentForm(formData);
-        console.log('Saved draft:', savedForm);
+        let savedForm;
+        if (currentDraftId) {
+          // Update existing draft
+          console.log('Updating existing draft with ID:', currentDraftId);
+          savedForm = await apiService.updateAssessmentForm(currentDraftId, formData);
+          console.log('Updated draft:', savedForm);
 
-        if (savedForm && savedForm.code) {
-          // Update saved forms list
-          setSavedAssessmentForms(prev => [...prev, savedForm]);
+          if (savedForm && savedForm.data) {
+            // Update the form in the saved forms list
+            setSavedAssessmentForms(prev =>
+              prev.map(form => form._id === currentDraftId ? savedForm.data : form)
+            );
+          }
+        } else {
+          // Create new draft
+          console.log('Creating new draft');
+          savedForm = await apiService.saveAssessmentForm(formData);
+          console.log('Saved draft:', savedForm);
 
+          if (savedForm && savedForm.data) {
+            // Set the current draft ID for future updates
+            setCurrentDraftId(savedForm.data._id);
+
+            // Add to saved forms list
+            setSavedAssessmentForms(prev => [...prev, savedForm.data]);
+          }
+        }
+
+        if (savedForm && savedForm.success && savedForm.data) {
           console.log('Draft saved successfully');
+          alert('Draft saved successfully! You can continue editing in Assessment Management.');
+          // Keep the form in Assessment Management for continued editing
+          // Don't clear the form fields so user can continue working
           return true;
         }
 
@@ -3013,6 +3095,96 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
         <div className="dashboard-header">
           <h2>Assessment Management</h2>
           <p className="dashboard-subtitle">Manage assessment questions, forms, and submissions</p>
+        </div>
+
+        {/* Draft Selection Section */}
+        <div className="draft-selection-section" style={{ marginBottom: '20px', backgroundColor: 'rgba(0, 123, 255, 0.05)', border: '1px solid rgba(0, 123, 255, 0.2)', borderRadius: '8px', padding: '20px' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: '#007bff' }}>Continue Working on Draft</h3>
+          {savedAssessmentForms.filter(form => form.isDraft).length === 0 ? (
+            <p style={{ margin: 0, color: '#666', fontStyle: 'italic' }}>No drafts available. Create a new assessment form below.</p>
+          ) : (
+            <div>
+              <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#666' }}>
+                Select a draft to continue editing:
+              </p>
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {savedAssessmentForms.filter(form => form.isDraft).map((draft) => (
+                  <div key={draft._id} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px 15px',
+                    backgroundColor: currentDraftId === draft._id ? 'rgba(0, 123, 255, 0.1)' : 'white',
+                    border: currentDraftId === draft._id ? '2px solid #007bff' : '1px solid #dee2e6',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onClick={() => loadDraftIntoForm(draft)}>
+                    <div>
+                      <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+                        {draft.title} {draft.titleMalay && `(${draft.titleMalay})`}
+                        {currentDraftId === draft._id && <span style={{ marginLeft: '8px', color: '#007bff', fontSize: '12px' }}>● Currently editing</span>}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        {draft.questions?.length || 0} questions • Created {new Date(draft.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span style={{
+                        backgroundColor: '#ffc107',
+                        color: '#212529',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        textTransform: 'uppercase'
+                      }}>DRAFT</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Are you sure you want to delete the draft "${draft.title}"?`)) {
+                            deleteDraft(draft._id);
+                          }
+                        }}
+                        style={{
+                          background: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                        title="Delete draft"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {currentDraftId && (
+                <button
+                  type="button"
+                  onClick={clearCurrentDraft}
+                  style={{
+                    marginTop: '10px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear Selection & Start New Form
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="assessment-admin-wrapper">
