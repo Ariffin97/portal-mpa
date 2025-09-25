@@ -22,6 +22,9 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [pendingRejectionId, setPendingRejectionId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [showMoreInfoModal, setShowMoreInfoModal] = useState(false);
+  const [pendingMoreInfoId, setPendingMoreInfoId] = useState(null);
+  const [requiredInfoDetails, setRequiredInfoDetails] = useState('');
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState('Pending Review');
   const [isLoading, setIsLoading] = useState(true);
@@ -1074,6 +1077,10 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
         setPendingRejectionId(id);
         setShowRejectionModal(true);
         return; // Show modal first
+      } else if (newStatus === 'More Info Required') {
+        setPendingMoreInfoId(id);
+        setShowMoreInfoModal(true);
+        return; // Show modal first
       } else {
         // For other status changes, proceed normally
         await apiService.updateApplicationStatus(id, newStatus);
@@ -1165,6 +1172,65 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
       console.error('Failed to update application status:', error);
       alert('Failed to update application status. Please try again.');
     }
+  };
+
+  const handleMoreInfoSubmit = async () => {
+    if (!requiredInfoDetails.trim()) {
+      alert('Please specify what additional information is required.');
+      return;
+    }
+
+    try {
+      // Find the application to get details for the update
+      const app = applications.find(app => app.id === pendingMoreInfoId || app.applicationId === pendingMoreInfoId);
+      const previousStatus = app?.status || 'Unknown';
+
+      // Update local state with required info details
+      const updatedApplications = applications.map(app =>
+        (app.id === pendingMoreInfoId || app.applicationId === pendingMoreInfoId) ? {
+          ...app,
+          status: 'More Info Required',
+          requiredInfo: requiredInfoDetails.trim()
+        } : app
+      );
+      setApplications(updatedApplications);
+
+      await apiService.updateApplicationStatus(pendingMoreInfoId, 'More Info Required', requiredInfoDetails.trim());
+
+      // Add tournament update for more info required
+      if (app) {
+        addTournamentUpdate(
+          app.applicationId || pendingMoreInfoId,
+          app.eventTitle || 'Unknown Tournament',
+          app.organiserName || 'Unknown Organizer',
+          `Additional information requested: ${requiredInfoDetails.trim()}`,
+          {
+            previousStatus,
+            newStatus: 'More Info Required',
+            venue: app.venue,
+            eventDate: app.eventStartDate,
+            requiredInfo: requiredInfoDetails.trim()
+          }
+        );
+      }
+
+      // Close modal and reset
+      setShowMoreInfoModal(false);
+      setPendingMoreInfoId(null);
+      setRequiredInfoDetails('');
+
+      // Show success message
+      alert(`Additional information has been requested successfully. An email notification has been sent to the organizer at ${app && app.email ? app.email : 'their registered email address'}.`);
+    } catch (error) {
+      console.error('Failed to update application status:', error);
+      alert('Failed to update application status. Please try again.');
+    }
+  };
+
+  const handleMoreInfoCancel = () => {
+    setShowMoreInfoModal(false);
+    setPendingMoreInfoId(null);
+    setRequiredInfoDetails('');
   };
 
   const handleRejectionCancel = () => {
@@ -6336,6 +6402,139 @@ Settings
                 </div>
               </div>
 
+              {/* Tournament Categories and Fees Section */}
+              <div className="detail-section">
+                <h3>Tournament Categories & Entry Fees</h3>
+                {selectedApplication.categories && selectedApplication.categories.length > 0 ? (
+                  <div className="categories-grid">
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold' }}>Category</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold' }}>Malaysian Entry Fee (RM)</th>
+                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: 'bold' }}>International Entry Fee (RM)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedApplication.categories.map((category, index) => (
+                            <tr key={index} style={{ borderBottom: '1px solid #dee2e6' }}>
+                              <td style={{ padding: '12px', fontWeight: '500' }}>{category.category}</td>
+                              <td style={{
+                                padding: '12px',
+                                color: category.malaysianEntryFee > 200 ? '#dc3545' : '#000',
+                                fontWeight: category.malaysianEntryFee > 200 ? 'bold' : 'normal'
+                              }}>
+                                RM {category.malaysianEntryFee.toFixed(2)}
+                                {category.malaysianEntryFee > 200 && (
+                                  <span style={{ color: '#dc3545', fontSize: '12px', marginLeft: '5px' }}>
+                                    (Exceeds RM200 cap)
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                {category.internationalEntryFee > 0
+                                  ? `RM ${category.internationalEntryFee.toFixed(2)}`
+                                  : '-'
+                                }
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="no-categories" style={{
+                    padding: '20px',
+                    textAlign: 'center',
+                    color: '#666',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '4px',
+                    fontStyle: 'italic'
+                  }}>
+                    No categories have been added to this tournament application.
+                  </div>
+                )}
+              </div>
+
+              {/* Support Documents Section */}
+              <div className="detail-section">
+                <h3>Support Documents</h3>
+                {selectedApplication.supportDocuments && selectedApplication.supportDocuments.length > 0 ? (
+                  <div className="support-documents-grid">
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                      gap: '15px',
+                      marginTop: '15px'
+                    }}>
+                      {selectedApplication.supportDocuments.map((doc, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            border: '1px solid #e9ecef',
+                            borderRadius: '8px',
+                            padding: '15px',
+                            backgroundColor: '#f8f9fa',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}
+                        >
+                          <div style={{
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            color: '#333',
+                            wordBreak: 'break-all'
+                          }}>
+                            {doc.originalname || doc.filename || `Document ${index + 1}`}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            {doc.size && `Size: ${(doc.size / 1024 / 1024).toFixed(2)} MB`}
+                            {doc.mimetype && ` • Type: ${doc.mimetype.split('/')[1].toUpperCase()}`}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#999' }}>
+                            {doc.uploadDate && `Uploaded: ${new Date(doc.uploadDate).toLocaleDateString('en-MY')}`}
+                          </div>
+                          <div style={{ marginTop: '10px' }}>
+                            <a
+                              href={`/api/uploads/${doc.filename}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                backgroundColor: '#007bff',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '6px 12px',
+                                fontSize: '12px',
+                                textDecoration: 'none',
+                                cursor: 'pointer',
+                                display: 'inline-block'
+                              }}
+                            >
+                              View/Download
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="no-support-documents" style={{
+                    padding: '20px',
+                    textAlign: 'center',
+                    color: '#666',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '4px',
+                    fontStyle: 'italic'
+                  }}>
+                    No support documents were uploaded with this tournament application.
+                  </div>
+                )}
+              </div>
+
               <div className="detail-section">
                 <h3>Application Status</h3>
                 <div className="detail-grid">
@@ -6438,6 +6637,131 @@ Settings
                       </div>
                     </div>
                   </div>
+
+                  {/* Organization Documents Section */}
+                  {selectedApplication.documents && selectedApplication.documents.length > 0 && (
+                    <div className="detail-section">
+                      <h3>Uploaded Documents</h3>
+                      <div className="documents-grid" style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                        gap: '15px',
+                        marginTop: '15px'
+                      }}>
+                        {selectedApplication.documents.map((doc, index) => (
+                          <div key={index} style={{
+                            border: '1px solid #ddd',
+                            borderRadius: '8px',
+                            padding: '15px',
+                            backgroundColor: '#f9f9f9'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              marginBottom: '10px'
+                            }}>
+                              <span style={{
+                                fontSize: '20px',
+                                marginRight: '10px'
+                              }}>
+                                {doc.mimetype?.includes('pdf') ? '📄' :
+                                 doc.mimetype?.includes('image') ? '🖼️' :
+                                 doc.mimetype?.includes('document') ? '📝' : '📋'}
+                              </span>
+                              <div>
+                                <div style={{
+                                  fontSize: '14px',
+                                  fontWeight: 'bold',
+                                  color: '#333'
+                                }}>
+                                  {doc.originalName || doc.filename}
+                                </div>
+                                <div style={{
+                                  fontSize: '12px',
+                                  color: '#666'
+                                }}>
+                                  {doc.size ? `${(doc.size / 1024 / 1024).toFixed(2)} MB` : 'Unknown size'}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div style={{ marginBottom: '10px' }}>
+                              <div style={{
+                                fontSize: '12px',
+                                color: '#888'
+                              }}>
+                                <strong>Type:</strong> {doc.mimetype || 'Unknown'}
+                              </div>
+                              <div style={{
+                                fontSize: '12px',
+                                color: '#888'
+                              }}>
+                                <strong>Uploaded:</strong> {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('en-MY') : 'Unknown'}
+                              </div>
+                            </div>
+
+                            <div style={{
+                              display: 'flex',
+                              gap: '10px'
+                            }}>
+                              {doc.mimetype?.includes('image') && (
+                                <button
+                                  onClick={() => window.open(`/api/files/${doc.filename}`, '_blank')}
+                                  style={{
+                                    padding: '8px 12px',
+                                    backgroundColor: '#28a745',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px'
+                                  }}
+                                >
+                                  Preview
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = `/api/files/${doc.filename}`;
+                                  link.download = doc.originalName || doc.filename;
+                                  link.click();
+                                }}
+                                style={{
+                                  padding: '8px 12px',
+                                  backgroundColor: '#007bff',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px'
+                                }}
+                              >
+                                Download
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No Documents Message */}
+                  {(!selectedApplication.documents || selectedApplication.documents.length === 0) && (
+                    <div className="detail-section">
+                      <h3>Uploaded Documents</h3>
+                      <div style={{
+                        textAlign: 'center',
+                        padding: '30px',
+                        color: '#666',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '8px',
+                        fontStyle: 'italic'
+                      }}>
+                        No documents have been uploaded by this organization yet.
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -7939,6 +8263,60 @@ Settings
               >
                 I Understand - Save Assessment Form
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* More Info Required Modal */}
+      {showMoreInfoModal && (
+        <div className="modal-overlay" onClick={handleMoreInfoCancel}>
+          <div className="modal-content rejection-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Request Additional Information</h2>
+              <button className="close-btn" onClick={handleMoreInfoCancel}>×</button>
+            </div>
+
+            <div className="modal-body">
+              <p className="rejection-warning">
+                You are requesting additional information from the applicant. Please specify clearly what information is needed.
+              </p>
+
+              <div className="rejection-reason-input">
+                <label htmlFor="requiredInfoDetails">Required Information Details *</label>
+                <textarea
+                  id="requiredInfoDetails"
+                  value={requiredInfoDetails}
+                  onChange={(e) => setRequiredInfoDetails(e.target.value)}
+                  placeholder="Please specify what additional information is required (e.g., 'Please provide venue permits and insurance documentation', 'Need clarification on tournament format and age categories', etc.)..."
+                  rows="5"
+                  className="rejection-textarea"
+                  required
+                />
+              </div>
+
+              <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#e8f4fd', borderRadius: '4px', fontSize: '14px' }}>
+                <strong>💡 Tip:</strong> Be specific about what documents, details, or clarifications are needed. This will help the organizer provide the correct information quickly.
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <div className="button-group">
+                <button
+                  className="modal-btn modal-btn-cancel"
+                  onClick={handleMoreInfoCancel}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="modal-btn modal-btn-approve"
+                  onClick={handleMoreInfoSubmit}
+                  disabled={!requiredInfoDetails.trim()}
+                  style={{ backgroundColor: '#17a2b8', borderColor: '#17a2b8' }}
+                >
+                  Request Information
+                </button>
+              </div>
             </div>
           </div>
         </div>

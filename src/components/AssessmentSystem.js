@@ -280,9 +280,10 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
         padding: '40px',
         display: 'flex',
         justifyContent: 'center',
-        alignItems: currentView === 'results' ? 'flex-start' : 'center',
+        alignItems: 'flex-start',
         backgroundColor: '#fff',
-        overflow: 'auto'
+        overflow: 'auto',
+        minHeight: '100vh'
       }}>
         {currentView === 'registration' && (
           <UserRegistration
@@ -644,7 +645,8 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegist
       width: '100%',
       maxWidth: '800px',
       margin: '0 auto',
-      backgroundColor: '#fff'
+      backgroundColor: '#fff',
+      paddingTop: '20px'
     }}>
       {/* Header with user info and timer */}
       <div style={{
@@ -710,7 +712,9 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegist
         borderRadius: '8px',
         padding: '30px',
         marginBottom: '20px',
-        backgroundColor: '#fff'
+        backgroundColor: '#fff',
+        maxHeight: '70vh',
+        overflow: 'auto'
       }}>
         <div style={{ marginBottom: '20px' }}>
           <div style={{
@@ -757,12 +761,14 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegist
               }}>
                 <div style={{
                   display: 'flex',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                   padding: '16px',
                   border: answers[currentQ.id] === optionText ? '2px solid #000' : '1px solid #ccc',
                   borderRadius: '8px',
                   backgroundColor: answers[currentQ.id] === optionText ? '#f0f0f0' : '#fff',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  minHeight: '60px',
+                  boxSizing: 'border-box'
                 }}>
                   <input
                     type="radio"
@@ -784,22 +790,33 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegist
                     fontSize: '16px',
                     fontWeight: 'bold',
                     marginRight: '16px',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    marginTop: '2px'
                   }}>
                     {String.fromCharCode(65 + index)}
                   </div>
                   <div style={{
                     color: '#000',
                     fontSize: '16px',
-                    lineHeight: '1.4'
+                    lineHeight: '1.4',
+                    flex: 1,
+                    wordWrap: 'break-word',
+                    overflow: 'hidden'
                   }}>
-                    <div>{optionText}</div>
+                    <div style={{
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word'
+                    }}>
+                      {optionText}
+                    </div>
                     {optionMalay && (
                       <div style={{
                         fontStyle: 'italic',
                         fontSize: '14px',
                         color: '#666',
-                        marginTop: '4px'
+                        marginTop: '4px',
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word'
                       }}>
                         {optionMalay}
                       </div>
@@ -1262,35 +1279,6 @@ const Results = ({ results, userInfo, questions, assessmentFormData, onBackToHom
                   </div>
                 </div>
 
-                <div>
-                  <div style={{
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    color: '#000',
-                    marginBottom: '8px'
-                  }}>
-                    Correct Answer:
-                  </div>
-                  <div style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#e8f5e8',
-                    border: '1px solid #4caf50',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}>
-                    <div>{question.correctAnswer}</div>
-                    {correctAnswerMalay && (
-                      <div style={{
-                        fontStyle: 'italic',
-                        fontSize: '12px',
-                        color: '#666',
-                        marginTop: '4px'
-                      }}>
-                        {correctAnswerMalay}
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
             );
           })}

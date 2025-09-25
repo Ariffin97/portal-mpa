@@ -14,11 +14,14 @@ class ApiService {
 
   async makeRequest(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
+
+    // Don't set Content-Type for FormData - let browser set it
+    const headers = options.body instanceof FormData
+      ? { ...options.headers }
+      : { 'Content-Type': 'application/json', ...options.headers };
+
     const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     };
 
@@ -79,7 +82,7 @@ class ApiService {
   async submitTournamentApplication(applicationData) {
     return this.makeRequest('/applications', {
       method: 'POST',
-      body: JSON.stringify(applicationData),
+      body: applicationData instanceof FormData ? applicationData : JSON.stringify(applicationData),
     });
   }
 
@@ -99,6 +102,9 @@ class ApiService {
     const body = { status };
     if (rejectionReason && status === 'Rejected') {
       body.rejectionReason = rejectionReason;
+    }
+    if (rejectionReason && status === 'More Info Required') {
+      body.requiredInfo = rejectionReason;
     }
     // Include additional tournament data if provided (for admin edits)
     if (additionalData) {
@@ -126,6 +132,7 @@ class ApiService {
     });
   }
 
+
   async getApprovedTournaments() {
     return this.makeRequest('/approved-tournaments');
   }
@@ -149,6 +156,14 @@ class ApiService {
   async deleteOrganization(organizationId) {
     return this.makeRequest(`/organizations/${organizationId}`, {
       method: 'DELETE',
+    });
+  }
+
+  async updateOrganizationProfile(formData) {
+    return this.makeRequest('/organizations/profile', {
+      method: 'PATCH',
+      body: formData,
+      headers: {} // Remove Content-Type to let browser set it for FormData
     });
   }
 

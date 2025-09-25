@@ -75,6 +75,28 @@ const TournamentApplication = ({ setCurrentPage }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
+  // Update Profile Modal States
+  const [showUpdateProfileModal, setShowUpdateProfileModal] = useState(false);
+  const [profileUpdateData, setProfileUpdateData] = useState({
+    organizationName: '',
+    registrationNo: '',
+    applicantFullName: '',
+    phoneNumber: '',
+    email: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    postcode: '',
+    state: '',
+    country: ''
+  });
+  const [uploadedDocuments, setUploadedDocuments] = useState([]);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileUpdateError, setProfileUpdateError] = useState('');
+
+  // Support Documents States
+  const [supportDocuments, setSupportDocuments] = useState([]);
+
   // Load organization data on component mount
   useEffect(() => {
     const organizationData = localStorage.getItem('organizationData');
@@ -113,6 +135,26 @@ const TournamentApplication = ({ setCurrentPage }) => {
       setCurrentPage('home');
     }
   }, [setCurrentPage]);
+
+  // Populate profile update form when modal opens
+  useEffect(() => {
+    if (showUpdateProfileModal && organizationData) {
+      setProfileUpdateData({
+        organizationName: organizationData.organizationName || '',
+        registrationNo: organizationData.registrationNo || '',
+        applicantFullName: organizationData.applicantFullName || '',
+        phoneNumber: organizationData.phoneNumber || '',
+        email: organizationData.email || '',
+        addressLine1: organizationData.addressLine1 || '',
+        addressLine2: organizationData.addressLine2 || '',
+        city: organizationData.city || '',
+        postcode: organizationData.postcode || '',
+        state: organizationData.state || '',
+        country: organizationData.country || 'Malaysia'
+      });
+      setUploadedDocuments(organizationData.documents || []);
+    }
+  }, [showUpdateProfileModal, organizationData]);
 
   const loadAppliedTournaments = async (email) => {
     try {
@@ -666,33 +708,39 @@ const TournamentApplication = ({ setCurrentPage }) => {
     }
     
     try {
-      // Prepare data for API submission
-      const submissionData = {
-        organiserName: formData.organiserName,
-        registrationNo: formData.registrationNo,
-        telContact: formData.telContact,
-        personInCharge: formData.personInCharge,
-        email: formData.email,
-        organisingPartner: formData.organisingPartner,
-        eventTitle: formData.eventTitle,
-        eventStartDate: formData.eventStartDate,
-        eventEndDate: formData.eventEndDate,
-        eventStartDateFormatted: formData.eventStartDateFormatted,
-        eventEndDateFormatted: formData.eventEndDateFormatted,
-        state: formData.state,
-        city: formData.city,
-        venue: formData.venue,
-        classification: formData.classification,
-        eventType: formData.eventType,
-        categories: savedCategories, // Send all saved categories
-        expectedParticipants: parseInt(formData.expectedParticipants),
-        eventSummary: formData.eventSummary,
-        scoringFormat: formData.scoringFormat,
-        dataConsent: formData.dataConsent,
-        termsConsent: formData.termsConsent
-      };
+      // Create FormData for file upload
+      const submissionFormData = new FormData();
 
-      const response = await apiService.submitTournamentApplication(submissionData);
+      // Add form data
+      submissionFormData.append('organiserName', formData.organiserName);
+      submissionFormData.append('registrationNo', formData.registrationNo);
+      submissionFormData.append('telContact', formData.telContact);
+      submissionFormData.append('personInCharge', formData.personInCharge);
+      submissionFormData.append('email', formData.email);
+      submissionFormData.append('organisingPartner', formData.organisingPartner);
+      submissionFormData.append('eventTitle', formData.eventTitle);
+      submissionFormData.append('eventStartDate', formData.eventStartDate);
+      submissionFormData.append('eventEndDate', formData.eventEndDate);
+      submissionFormData.append('eventStartDateFormatted', formData.eventStartDateFormatted);
+      submissionFormData.append('eventEndDateFormatted', formData.eventEndDateFormatted);
+      submissionFormData.append('state', formData.state);
+      submissionFormData.append('city', formData.city);
+      submissionFormData.append('venue', formData.venue);
+      submissionFormData.append('classification', formData.classification);
+      submissionFormData.append('eventType', formData.eventType);
+      submissionFormData.append('categories', JSON.stringify(savedCategories));
+      submissionFormData.append('expectedParticipants', parseInt(formData.expectedParticipants));
+      submissionFormData.append('eventSummary', formData.eventSummary);
+      submissionFormData.append('scoringFormat', formData.scoringFormat);
+      submissionFormData.append('dataConsent', formData.dataConsent);
+      submissionFormData.append('termsConsent', formData.termsConsent);
+
+      // Add support documents
+      supportDocuments.forEach((file, index) => {
+        submissionFormData.append('supportDocuments', file);
+      });
+
+      const response = await apiService.submitTournamentApplication(submissionFormData);
       const newApplication = response.application;
       
       alert(`Application submitted successfully! Your application ID is: ${newApplication.applicationId}`);
@@ -738,8 +786,9 @@ const TournamentApplication = ({ setCurrentPage }) => {
         termsConsent: false
       });
       
-      // Clear saved categories
+      // Clear saved categories and support documents
       setSavedCategories([]);
+      setSupportDocuments([]);
       
     } catch (error) {
       console.error('Submission error:', error);
@@ -749,6 +798,126 @@ const TournamentApplication = ({ setCurrentPage }) => {
     }
   };
 
+  // Profile Update Handlers
+  const handleProfileInputChange = (e) => {
+    const { name, value } = e.target;
+    setProfileUpdateData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+
+    // Validate file types (only PDF, DOC, DOCX, JPG, PNG)
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'image/jpg'];
+    const validFiles = files.filter(file => {
+      const isValidType = allowedTypes.includes(file.type);
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+
+      if (!isValidType) {
+        alert(`File "${file.name}" is not a supported format. Please upload PDF, DOC, DOCX, JPG, or PNG files only.`);
+        return false;
+      }
+      if (!isValidSize) {
+        alert(`File "${file.name}" is too large. Please upload files smaller than 10MB.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      setUploadedDocuments(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const removeDocument = (index) => {
+    setUploadedDocuments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setIsUpdatingProfile(true);
+    setProfileUpdateError('');
+
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+
+      // Add profile data
+      Object.keys(profileUpdateData).forEach(key => {
+        formData.append(key, profileUpdateData[key]);
+      });
+
+      // Add organization ID
+      formData.append('organizationId', organizationData.organizationId);
+
+      // Add files
+      uploadedDocuments.forEach((file, index) => {
+        if (file instanceof File) {
+          formData.append('documents', file);
+        }
+      });
+
+      // Call API to update profile
+      const response = await apiService.updateOrganizationProfile(formData);
+
+      if (response.success) {
+        // Update local organization data
+        const updatedOrgData = { ...organizationData, ...response.organization };
+        setOrganizationData(updatedOrgData);
+        localStorage.setItem('organizationData', JSON.stringify(updatedOrgData));
+
+        alert('Profile updated successfully!');
+        setShowUpdateProfileModal(false);
+      } else {
+        throw new Error(response.message || 'Failed to update profile');
+      }
+
+    } catch (error) {
+      console.error('Profile update error:', error);
+      setProfileUpdateError(error.message || 'Failed to update profile. Please try again.');
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
+  const handleCloseProfileModal = () => {
+    setShowUpdateProfileModal(false);
+    setProfileUpdateError('');
+    setUploadedDocuments([]);
+  };
+
+  // Support Documents Handlers
+  const handleSupportDocumentUpload = (e) => {
+    const files = Array.from(e.target.files);
+
+    // Validate file types (only PDF, DOC, DOCX, JPG, PNG)
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'image/jpg'];
+    const validFiles = files.filter(file => {
+      const isValidType = allowedTypes.includes(file.type);
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+
+      if (!isValidType) {
+        alert(`File "${file.name}" is not a supported format. Please upload PDF, DOC, DOCX, JPG, or PNG files only.`);
+        return false;
+      }
+      if (!isValidSize) {
+        alert(`File "${file.name}" is too large. Please upload files smaller than 10MB.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length > 0) {
+      setSupportDocuments(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const removeSupportDocument = (index) => {
+    setSupportDocuments(prev => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <div className="tournament-application-container">
@@ -766,55 +935,31 @@ const TournamentApplication = ({ setCurrentPage }) => {
               <p className="profile-email">{organizationData?.email || 'N/A'}</p>
             </div>
           </div>
+          <button
+            className="update-profile-btn"
+            onClick={() => setShowUpdateProfileModal(true)}
+            style={{
+              width: '100%',
+              padding: '10px 15px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              marginBottom: '10px',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#0056b3'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#007bff'}
+          >
+            Update Profile
+          </button>
           <button className="logout-btn" onClick={handleLogout}>
             Logout
           </button>
         </div>
 
-        {/* Tournament Guidelines Section */}
-        <div className="sidebar-section guidelines-section">
-          <h3>Tournament Guidelines</h3>
-          <div className="guidelines-list">
-            <div className="guideline-item">
-              <h4>Scoring Format</h4>
-              <ul>
-                <li>Traditional scoring: 11+ pts</li>
-                <li>Rally scoring: 21+ pts (first round-robins only)</li>
-              </ul>
-            </div>
-
-            <div className="guideline-item">
-              <h4>Skill Ratings</h4>
-              <ul>
-                <li><strong>Intermediate:</strong> &lt; 3.5</li>
-                <li><strong>Advanced:</strong> &lt; 4.5</li>
-                <li><strong>Elite:</strong> &gt;= 4.5</li>
-              </ul>
-              <p className="guideline-note">
-                Players with lower ratings can play in higher rated categories,
-                but not vice versa.
-              </p>
-            </div>
-
-            <div className="guideline-item">
-              <h4>Important Notice</h4>
-              <ul>
-                <li>Endorsement logos must be displayed</li>
-                <li>Entry fees capped at RM200 per Malaysian player</li>
-                <li>Venue must be fully covered with valid permits</li>
-              </ul>
-            </div>
-
-            <div className="guideline-item">
-              <h4>Safe Sport Code</h4>
-              <ul>
-                <li>Follow all MPA safety guidelines</li>
-                <li>Report incidents immediately</li>
-                <li>Maintain fair play standards</li>
-              </ul>
-            </div>
-          </div>
-        </div>
 
         {/* Applied Tournaments Section */}
         <div className="sidebar-section tournaments-section">
@@ -1343,8 +1488,97 @@ const TournamentApplication = ({ setCurrentPage }) => {
             </div>
           </div>
         </div>
-        
-        
+
+        <div className="form-section">
+          <h3>Upload Support Documents</h3>
+          <div className="form-group">
+            <label htmlFor="supportDocuments">Upload Supporting Documents</label>
+            <input
+              type="file"
+              id="supportDocuments"
+              multiple
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              onChange={handleSupportDocumentUpload}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                boxSizing: 'border-box'
+              }}
+            />
+            <small className="form-note">
+              Upload relevant supporting documents such as venue permits, partnership agreements, event proposals, etc.
+              Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB each)
+            </small>
+          </div>
+
+          {/* Display uploaded support documents */}
+          {supportDocuments.length > 0 && (
+            <div style={{ marginTop: '15px', marginBottom: '15px' }}>
+              <h4>Uploaded Support Documents:</h4>
+              <div style={{
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                padding: '15px',
+                backgroundColor: '#f8f9fa',
+                maxHeight: '200px',
+                overflowY: 'auto'
+              }}>
+                {supportDocuments.map((doc, index) => (
+                  <div key={index} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '8px 12px',
+                    backgroundColor: 'white',
+                    borderRadius: '4px',
+                    marginBottom: index < supportDocuments.length - 1 ? '8px' : '0',
+                    border: '1px solid #e9ecef'
+                  }}>
+                    <div style={{ flex: '1', minWidth: '0' }}>
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        color: '#333',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }}>
+                        {doc.name}
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#666',
+                        marginTop: '2px'
+                      }}>
+                        {(doc.size / 1024 / 1024).toFixed(2)} MB • {doc.type.split('/')[1].toUpperCase()}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeSupportDocument(index)}
+                      style={{
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '3px',
+                        padding: '6px 10px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        marginLeft: '10px',
+                        flexShrink: '0'
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="form-section">
           <h3>Consent & Agreement</h3>
           <div className="consent-section">
@@ -1654,6 +1888,437 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Update Profile Modal */}
+      {showUpdateProfileModal && (
+        <div className="modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div className="modal-content" style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '0',
+            maxWidth: '800px',
+            maxHeight: '90vh',
+            width: '90%',
+            overflow: 'hidden',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div className="modal-header" style={{
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#f8f9fa'
+            }}>
+              <h2 style={{ margin: 0, color: '#333' }}>Update Organization Profile</h2>
+              <button
+                onClick={handleCloseProfileModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body" style={{
+              maxHeight: 'calc(90vh - 140px)',
+              overflowY: 'auto',
+              padding: '30px'
+            }}>
+              <form onSubmit={handleUpdateProfile}>
+                {/* Organization Information */}
+                <div style={{ marginBottom: '30px' }}>
+                  <h3 style={{ color: '#333', marginBottom: '20px', borderBottom: '2px solid #007bff', paddingBottom: '10px' }}>
+                    Organization Information
+                  </h3>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                        Organization Name *
+                      </label>
+                      <input
+                        type="text"
+                        name="organizationName"
+                        value={profileUpdateData.organizationName}
+                        onChange={handleProfileInputChange}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                        Registration Number *
+                      </label>
+                      <input
+                        type="text"
+                        name="registrationNo"
+                        value={profileUpdateData.registrationNo}
+                        onChange={handleProfileInputChange}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                        Contact Person *
+                      </label>
+                      <input
+                        type="text"
+                        name="applicantFullName"
+                        value={profileUpdateData.applicantFullName}
+                        onChange={handleProfileInputChange}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        name="phoneNumber"
+                        value={profileUpdateData.phoneNumber}
+                        onChange={handleProfileInputChange}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={profileUpdateData.email}
+                      onChange={handleProfileInputChange}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Address Information */}
+                <div style={{ marginBottom: '30px' }}>
+                  <h3 style={{ color: '#333', marginBottom: '20px', borderBottom: '2px solid #007bff', paddingBottom: '10px' }}>
+                    Address Information
+                  </h3>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                      Address Line 1 *
+                    </label>
+                    <input
+                      type="text"
+                      name="addressLine1"
+                      value={profileUpdateData.addressLine1}
+                      onChange={handleProfileInputChange}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                      Address Line 2
+                    </label>
+                    <input
+                      type="text"
+                      name="addressLine2"
+                      value={profileUpdateData.addressLine2}
+                      onChange={handleProfileInputChange}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                        City *
+                      </label>
+                      <input
+                        type="text"
+                        name="city"
+                        value={profileUpdateData.city}
+                        onChange={handleProfileInputChange}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                        Postcode *
+                      </label>
+                      <input
+                        type="text"
+                        name="postcode"
+                        value={profileUpdateData.postcode}
+                        onChange={handleProfileInputChange}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                        State *
+                      </label>
+                      <select
+                        name="state"
+                        value={profileUpdateData.state}
+                        onChange={handleProfileInputChange}
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          boxSizing: 'border-box'
+                        }}
+                      >
+                        <option value="">Select State</option>
+                        <option value="Johor">Johor</option>
+                        <option value="Kedah">Kedah</option>
+                        <option value="Kelantan">Kelantan</option>
+                        <option value="Kuala Lumpur">Kuala Lumpur</option>
+                        <option value="Labuan">Labuan</option>
+                        <option value="Malacca">Malacca</option>
+                        <option value="Negeri Sembilan">Negeri Sembilan</option>
+                        <option value="Pahang">Pahang</option>
+                        <option value="Penang">Penang</option>
+                        <option value="Perak">Perak</option>
+                        <option value="Perlis">Perlis</option>
+                        <option value="Putrajaya">Putrajaya</option>
+                        <option value="Sabah">Sabah</option>
+                        <option value="Sarawak">Sarawak</option>
+                        <option value="Selangor">Selangor</option>
+                        <option value="Terengganu">Terengganu</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                      Country *
+                    </label>
+                    <input
+                      type="text"
+                      name="country"
+                      value={profileUpdateData.country}
+                      onChange={handleProfileInputChange}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Document Upload */}
+                <div style={{ marginBottom: '30px' }}>
+                  <h3 style={{ color: '#333', marginBottom: '20px', borderBottom: '2px solid #007bff', paddingBottom: '10px' }}>
+                    Organization Documents
+                  </h3>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                      Upload Documents (PDF, DOC, DOCX, JPG, PNG - Max 10MB each)
+                    </label>
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      onChange={handleFileUpload}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                      You can upload organization certificate, business license, or other relevant documents.
+                    </p>
+                  </div>
+
+                  {/* Uploaded Documents List */}
+                  {uploadedDocuments.length > 0 && (
+                    <div style={{ marginBottom: '20px' }}>
+                      <h4 style={{ marginBottom: '10px' }}>Uploaded Documents:</h4>
+                      <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #ddd', borderRadius: '4px', padding: '10px' }}>
+                        {uploadedDocuments.map((doc, index) => (
+                          <div key={index} style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '8px',
+                            borderBottom: '1px solid #eee',
+                            marginBottom: '5px'
+                          }}>
+                            <span style={{ fontSize: '14px' }}>
+                              {doc.name || `Document ${index + 1}`}
+                              {doc.size && ` (${(doc.size / 1024 / 1024).toFixed(2)} MB)`}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeDocument(index)}
+                              style={{
+                                background: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '3px',
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Error Message */}
+                {profileUpdateError && (
+                  <div style={{
+                    backgroundColor: '#fee2e2',
+                    border: '1px solid #fecaca',
+                    color: '#dc2626',
+                    padding: '12px',
+                    borderRadius: '4px',
+                    marginBottom: '20px'
+                  }}>
+                    {profileUpdateError}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
+                  <button
+                    type="button"
+                    onClick={handleCloseProfileModal}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: '#6c757d',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '16px'
+                    }}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isUpdatingProfile}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: isUpdatingProfile ? '#ccc' : '#007bff',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: isUpdatingProfile ? 'not-allowed' : 'pointer',
+                      fontSize: '16px'
+                    }}
+                  >
+                    {isUpdatingProfile ? 'Updating...' : 'Update Profile'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

@@ -41,7 +41,38 @@ mongoose.connect(MONGODB_URI)
 .then(() => console.log(`✅ Connected to MongoDB (${dbConfig.type})`))
 .catch((err) => console.error('MongoDB connection error:', err));
 
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
 
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only images, PDFs, and documents are allowed'));
+    }
+  }
+});
 
 // Function to generate unique application ID
 function generateApplicationId() {
@@ -224,6 +255,60 @@ const emailTemplates = {
           </ul>
         </div>
         
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+          <p style="color: #666; font-size: 14px;">
+            Malaysia Pickleball Association<br>
+            Email: info@malaysiapickleball.my<br>
+            Phone: +6011-16197471
+          </p>
+        </div>
+      </div>
+    `
+  }),
+
+  applicationMoreInfoRequired: (applicationData, requiredInfo) => ({
+    subject: 'Additional Information Required - Malaysia Pickleball Association',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h2 style="color: #2c5aa0;">Malaysia Pickleball Association</h2>
+          <h3 style="color: #666;">Tournament Application Update</h3>
+        </div>
+
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #856404; margin-top: 0;">📋 Additional Information Required</h4>
+          <p><strong>Application ID:</strong> ${applicationData.applicationId}</p>
+          <p><strong>Event Title:</strong> ${applicationData.eventTitle}</p>
+          <p><strong>Organiser:</strong> ${applicationData.organiserName}</p>
+          <p><strong>Event Date:</strong> ${new Date(applicationData.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} - ${new Date(applicationData.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+          <p><strong>Location:</strong> ${applicationData.city}, ${applicationData.state}</p>
+        </div>
+
+        <div style="background-color: #e8f4fd; border-left: 4px solid #2c5aa0; padding: 20px; margin-bottom: 20px;">
+          <h4 style="color: #2c5aa0; margin-top: 0;">Required Information:</h4>
+          <p style="color: #1e3a8a; line-height: 1.6; margin-bottom: 0;">${requiredInfo}</p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h4>How to provide the information:</h4>
+          <ul style="line-height: 1.6;">
+            <li>Reply to this email with the requested information and documents</li>
+            <li>Ensure all documents are clear and properly formatted</li>
+            <li>Include your Application ID (${applicationData.applicationId}) in your response</li>
+            <li>Submit the information as soon as possible to avoid processing delays</li>
+          </ul>
+        </div>
+
+        <div style="background-color: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #0056b3; margin-top: 0;">Important Notes:</h4>
+          <ul style="margin-bottom: 0; line-height: 1.6;">
+            <li>Your application is on hold until we receive the requested information</li>
+            <li>Processing will resume immediately once you provide the required details</li>
+            <li>If you need clarification on what's required, please contact us</li>
+            <li>Please provide the information within 7 days to avoid delays</li>
+          </ul>
+        </div>
+
         <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
           <p style="color: #666; font-size: 14px;">
             Malaysia Pickleball Association<br>
@@ -862,6 +947,18 @@ const tournamentApplicationSchema = new mongoose.Schema({
     type: Boolean,
     required: true
   },
+  // Support Documents
+  supportDocuments: [{
+    filename: String,
+    originalname: String,
+    mimetype: String,
+    size: Number,
+    path: String,
+    uploadDate: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   // Application Metadata
   status: {
     type: String,
@@ -878,6 +975,10 @@ const tournamentApplicationSchema = new mongoose.Schema({
   },
   // Admin remarks/rejection reason
   remarks: {
+    type: String,
+    default: ''
+  },
+  requiredInfo: {
     type: String,
     default: ''
   },
@@ -969,7 +1070,18 @@ const organizationSchema = new mongoose.Schema({
   registeredAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  documents: [{
+    filename: String,
+    originalName: String,
+    mimetype: String,
+    size: Number,
+    path: String,
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 }, {
   timestamps: true
 });
@@ -2525,6 +2637,92 @@ app.delete('/api/organizations/:id', async (req, res) => {
   }
 });
 
+// Update organization profile with document upload
+app.patch('/api/organizations/profile', upload.array('documents', 10), async (req, res) => {
+  try {
+    const {
+      organizationId,
+      organizationName,
+      registrationNo,
+      applicantFullName,
+      phoneNumber,
+      email,
+      addressLine1,
+      addressLine2,
+      city,
+      postcode,
+      state,
+      country
+    } = req.body;
+
+    if (!organizationId) {
+      return res.status(400).json({ error: 'Organization ID is required' });
+    }
+
+    // Find organization by organizationId
+    const organization = await Organization.findOne({ organizationId });
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    // Update basic information
+    organization.organizationName = organizationName || organization.organizationName;
+    organization.registrationNo = registrationNo || organization.registrationNo;
+    organization.applicantFullName = applicantFullName || organization.applicantFullName;
+    organization.phoneNumber = phoneNumber || organization.phoneNumber;
+    organization.email = email || organization.email;
+    organization.addressLine1 = addressLine1 || organization.addressLine1;
+    organization.addressLine2 = addressLine2 || organization.addressLine2;
+    organization.city = city || organization.city;
+    organization.postcode = postcode || organization.postcode;
+    organization.state = state || organization.state;
+    organization.country = country || organization.country;
+
+    // Handle uploaded documents
+    if (req.files && req.files.length > 0) {
+      const newDocuments = req.files.map(file => ({
+        filename: file.filename,
+        originalName: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        path: file.path,
+        uploadedAt: new Date()
+      }));
+
+      // Add new documents to existing ones
+      organization.documents = [...(organization.documents || []), ...newDocuments];
+    }
+
+    await organization.save();
+
+    console.log(`Organization profile updated: ${organization.organizationId} - ${organization.organizationName}`);
+
+    res.json({
+      success: true,
+      message: 'Organization profile updated successfully',
+      organization: {
+        organizationId: organization.organizationId,
+        organizationName: organization.organizationName,
+        registrationNo: organization.registrationNo,
+        applicantFullName: organization.applicantFullName,
+        phoneNumber: organization.phoneNumber,
+        email: organization.email,
+        addressLine1: organization.addressLine1,
+        addressLine2: organization.addressLine2,
+        city: organization.city,
+        postcode: organization.postcode,
+        state: organization.state,
+        country: organization.country,
+        documents: organization.documents || []
+      }
+    });
+
+  } catch (error) {
+    console.error('Update organization profile error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get all tournament applications (for admin)
 app.get('/api/applications', async (req, res) => {
   try {
@@ -2616,9 +2814,34 @@ app.get('/api/applications/:id', async (req, res) => {
 });
 
 // Submit tournament application
-app.post('/api/applications', async (req, res) => {
+app.post('/api/applications', upload.array('supportDocuments', 10), async (req, res) => {
   try {
-    const applicationData = req.body;
+    let applicationData = req.body;
+
+    // If categories is a string (from FormData), parse it
+    if (typeof applicationData.categories === 'string') {
+      try {
+        applicationData.categories = JSON.parse(applicationData.categories);
+      } catch (e) {
+        console.error('Error parsing categories:', e);
+        applicationData.categories = [];
+      }
+    }
+
+    // Handle uploaded support documents
+    const supportDocuments = [];
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        supportDocuments.push({
+          filename: file.filename,
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          path: file.path
+        });
+      });
+      applicationData.supportDocuments = supportDocuments;
+    }
     
     // Generate unique application ID
     const generateApplicationId = () => {
@@ -2769,15 +2992,20 @@ app.post('/api/applications', async (req, res) => {
 // Update tournament application status (admin only)
 app.patch('/api/applications/:id/status', async (req, res) => {
   try {
-    const { status, rejectionReason } = req.body;
-    const updateData = { 
-      status, 
-      lastUpdated: Date.now() 
+    const { status, rejectionReason, requiredInfo } = req.body;
+    const updateData = {
+      status,
+      lastUpdated: Date.now()
     };
-    
+
     // Add rejection reason if status is rejected
     if (status === 'Rejected' && rejectionReason) {
       updateData.remarks = rejectionReason;
+    }
+
+    // Add required info if status is "More Info Required"
+    if (status === 'More Info Required' && requiredInfo) {
+      updateData.requiredInfo = requiredInfo;
     }
     
     const application = await TournamentApplication.findOneAndUpdate(
@@ -2876,9 +3104,20 @@ app.patch('/api/applications/:id/status', async (req, res) => {
     if (status === 'Rejected' && application.email && rejectionReason) {
       const emailTemplate = emailTemplates.applicationRejected(application, rejectionReason);
       const emailResult = await sendEmail(application.email, emailTemplate);
-      
+
       if (!emailResult.success) {
         console.error('Failed to send rejection email:', emailResult.error);
+        // Still return success for the status update, even if email fails
+      }
+    }
+
+    // Send "More Info Required" email if status is changed to 'More Info Required'
+    if (status === 'More Info Required' && application.email && requiredInfo) {
+      const emailTemplate = emailTemplates.applicationMoreInfoRequired(application, requiredInfo);
+      const emailResult = await sendEmail(application.email, emailTemplate);
+
+      if (!emailResult.success) {
+        console.error('Failed to send more info required email:', emailResult.error);
         // Still return success for the status update, even if email fails
       }
     }
@@ -3921,38 +4160,6 @@ app.get('/api/assessment/batches', async (req, res) => {
 // FILE UPLOAD APIs
 // ===============================
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
-  },
-  fileFilter: function (req, file, cb) {
-    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only images, PDFs, and documents are allowed'));
-    }
-  }
-});
 
 // Upload single file
 app.post('/api/upload', upload.single('file'), (req, res) => {
@@ -4178,6 +4385,21 @@ app.get('/api/search', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Serve uploaded files (for admin to download/view documents)
+app.get('/api/files/:filename', (req, res) => {
+  const { filename } = req.params;
+  const filePath = path.join(__dirname, 'uploads', filename);
+
+  // Check if file exists
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+
+  // Set appropriate headers
+  res.setHeader('Content-Disposition', 'inline'); // For viewing in browser
+  res.sendFile(filePath);
 });
 
 // Health check endpoint
