@@ -1865,9 +1865,23 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
         
         // Special handling for date fields
         if (key === 'eventStartDate' || key === 'eventEndDate') {
+          // Helper function to format date to YYYY-MM-DD without timezone issues
+          const formatDateToLocal = (dateStr) => {
+            if (!dateStr) return '';
+            if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+              return dateStr; // Already in correct format
+            }
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return '';
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          };
+
           // Convert both dates to YYYY-MM-DD format for comparison
-          const oldDateStr = oldValue ? new Date(oldValue).toISOString().split('T')[0] : '';
-          const newDateStr = newValue ? (newValue.length === 10 ? newValue : new Date(newValue).toISOString().split('T')[0]) : '';
+          const oldDateStr = formatDateToLocal(oldValue);
+          const newDateStr = formatDateToLocal(newValue);
           
           if (oldDateStr !== newDateStr && newDateStr !== '') {
             changes.push(`${fieldsToCheck[key]}: "${oldDateStr}" → "${newDateStr}"`);
@@ -1957,11 +1971,43 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   };
 
   const getTournamentsForDate = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    // Helper function to format date to YYYY-MM-DD without timezone issues
+    const formatDateToLocal = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    // Helper function to parse date string and handle timezone properly
+    const parseDateString = (dateStr) => {
+      if (!dateStr) return null;
+
+      // If it's already in YYYY-MM-DD format, create date at local midnight
+      if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [year, month, day] = dateStr.split('-');
+        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      }
+
+      // Otherwise parse normally and extract date part
+      const parsedDate = new Date(dateStr);
+      if (isNaN(parsedDate.getTime())) return null;
+
+      return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+    };
+
+    const dateStr = formatDateToLocal(date);
+
     return applications.filter(app => {
-      const startDate = new Date(app.eventStartDate).toISOString().split('T')[0];
-      const endDate = new Date(app.eventEndDate).toISOString().split('T')[0];
-      return dateStr >= startDate && dateStr <= endDate;
+      const startDateObj = parseDateString(app.eventStartDate);
+      const endDateObj = parseDateString(app.eventEndDate);
+
+      if (!startDateObj || !endDateObj) return false;
+
+      const startDateStr = formatDateToLocal(startDateObj);
+      const endDateStr = formatDateToLocal(endDateObj);
+
+      return dateStr >= startDateStr && dateStr <= endDateStr;
     });
   };
 
@@ -7976,29 +8022,48 @@ Settings
                       // Handle both array and object formats for answers
                       let answersToDisplay = [];
 
+                      // Find the correct form based on the submission's formCode
+                      const submissionFormCode = selectedSubmission.userInfo?.formCode || selectedSubmission.formCode;
+                      const submissionForm = savedAssessmentForms.find(form => form.code === submissionFormCode);
+                      const questionsToUse = submissionForm?.questions || [];
+
                       if (Array.isArray(selectedSubmission.answers)) {
                         // Database format: answers is an array
-                        answersToDisplay = selectedSubmission.answers.map((answerObj, index) => ({
-                          questionId: answerObj.questionId,
-                          userAnswer: answerObj.selectedAnswer || 'No answer',
-                          isCorrect: answerObj.isCorrect || false,
-                          correctAnswer: answerObj.correctAnswer || '',
-                          index: index
-                        }));
+                        answersToDisplay = selectedSubmission.answers.map((answerObj, index) => {
+                          const question = questionsToUse.find(q => q.id === answerObj.questionId);
+                          const correctAnswer = question?.correctAnswer || '';
+                          const isCorrect = answerObj.selectedAnswer === correctAnswer;
+
+                          return {
+                            questionId: answerObj.questionId,
+                            userAnswer: answerObj.selectedAnswer || 'No answer',
+                            isCorrect: isCorrect,
+                            correctAnswer: correctAnswer,
+                            index: index
+                          };
+                        });
                       } else if (selectedSubmission.results?.answers || selectedSubmission.answers) {
                         // Local format: answers is an object
                         const answersObj = selectedSubmission.results?.answers || selectedSubmission.answers || {};
-                        answersToDisplay = Object.entries(answersObj).map(([questionId, answer], index) => ({
-                          questionId: questionId,
-                          userAnswer: typeof answer === 'string' ? answer : (answer?.selectedAnswer || 'No answer'),
-                          isCorrect: answer?.isCorrect !== undefined ? answer.isCorrect : false,
-                          correctAnswer: answer?.correctAnswer || '',
-                          index: index
-                        }));
+                        answersToDisplay = Object.entries(answersObj).map(([questionId, answer], index) => {
+                          const question = questionsToUse.find(q => q.id === parseInt(questionId));
+                          const correctAnswer = question?.correctAnswer || '';
+                          const userAnswer = typeof answer === 'string' ? answer : (answer?.selectedAnswer || 'No answer');
+                          const isCorrect = userAnswer === correctAnswer;
+
+                          return {
+                            questionId: questionId,
+                            userAnswer: userAnswer,
+                            isCorrect: isCorrect,
+                            correctAnswer: correctAnswer,
+                            index: index
+                          };
+                        });
                       }
 
                       return answersToDisplay.map((answerData) => {
-                        const questionText = `Question ${answerData.index + 1}`;
+                        const question = questionsToUse.find(q => q.id === answerData.questionId);
+                        const questionText = question?.question || `Question ${answerData.index + 1}`;
 
                         return (
                         <div key={answerData.questionId} style={{
