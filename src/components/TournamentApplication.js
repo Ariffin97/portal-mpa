@@ -1076,7 +1076,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
             onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
             onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
           >
-            📅 Tournament Calendar
+            Tournament Calendar
           </button>
 
           <button className="logout-btn" onClick={handleLogout}>

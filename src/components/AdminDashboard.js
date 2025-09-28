@@ -3646,157 +3646,326 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
 
   const renderRegisteredOrganizations = () => (
     <div className="registered-organizations-view">
-      <div className="dashboard-header">
-        <h2>Registered Organizations</h2>
-        <p className="dashboard-subtitle">Organizations that have successfully registered in the system</p>
+
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1.5rem',
+        padding: '0 0.5rem'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            color: '#374151',
+            margin: '0'
+          }}>
+            Total Organizations: {registeredOrganizations.length}
+          </h3>
+          <div style={{
+            height: '1px',
+            width: '60px',
+            backgroundColor: '#e5e7eb'
+          }}></div>
+          <span style={{
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            fontWeight: '500'
+          }}>
+            Active: {registeredOrganizations.filter(org => org.status !== 'suspended').length}
+          </span>
+          <span style={{
+            fontSize: '0.875rem',
+            color: '#ef4444',
+            fontWeight: '500'
+          }}>
+            Suspended: {registeredOrganizations.filter(org => org.status === 'suspended').length}
+          </span>
+        </div>
       </div>
 
       {registeredOrganizations.length === 0 ? (
-        <div className="no-organizations">
-          <p>No registered organizations found.</p>
-          <p>Organizations will appear here once they complete the registration process.</p>
+        <div style={{
+          backgroundColor: '#f9fafb',
+          border: '2px dashed #d1d5db',
+          borderRadius: '12px',
+          padding: '3rem 2rem',
+          textAlign: 'center',
+          margin: '2rem 0'
+        }}>
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            No Organizations Found
+          </h3>
+          <p style={{
+            fontSize: '1rem',
+            color: '#6b7280',
+            margin: '0'
+          }}>
+            Organizations will appear here once they complete the registration process.
+          </p>
         </div>
       ) : (
-        <div className="organizations-table-container">
-          <table className="applications-table">
-            <thead>
-              <tr>
-                <th>No.</th>
-                <th>Organization ID</th>
-                <th>Organization Name</th>
-                <th>Applicant Name</th>
-                <th>Email</th>
-                <th>Documents</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registeredOrganizations.map((org, index) => (
-                <tr key={org._id}>
-                  <td>{index + 1}</td>
-                  <td>
-                    <span className="organization-id-badge" title="Unique Organization ID">
-                      {org.organizationId}
-                    </span>
-                  </td>
-                  <td>
-                    <span 
-                      className="organization-name-link clickable-link" 
-                      onClick={() => showApplicationDetails(org)}
-                      title="Click to view full organization details"
-                    >
-                      {org.organizationName}
-                    </span>
-                  </td>
-                  <td>{org.applicantFullName}</td>
-                  <td>{org.email}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    {org.documents && org.documents.length > 0 ? (
-                      <span
-                        style={{
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          padding: '3px 8px',
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                        title={`${org.documents.length} document(s) uploaded`}
-                      >
-                        📄 {org.documents.length}
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          backgroundColor: '#ffc107',
-                          color: '#212529',
-                          padding: '3px 8px',
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: 'bold'
-                        }}
-                        title="No documents uploaded"
-                      >
-                        ⚠️ None
-                      </span>
-                    )}
-                  </td>
-                  <td>
-                    <span 
-                      className={`status-badge-table ${org.status === 'suspended' ? 'suspended' : 'active'}`}
-                      style={{ 
-                        backgroundColor: org.status === 'suspended' ? '#dc3545' : '#28a745',
-                        color: 'white',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {org.status === 'suspended' ? 'SUSPENDED' : 'ACTIVE'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="table-actions">
-                      <button 
-                        onClick={() => showApplicationDetails(org)}
-                        className="view-btn-table"
-                        title="View Organization Details"
-                      >
-                        View Details
-                      </button>
-                      <button
-                        onClick={() => handleSendMessageToOrganiser(org.email, org.organizationName)}
-                        className="message-btn-table"
-                        title="Send Message to Organization"
-                        style={{
-                          backgroundColor: '#17a2b8',
-                          color: 'white',
-                          border: 'none',
-                          padding: '4px 8px',
-                          borderRadius: '3px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          marginLeft: '5px'
-                        }}
-                      >
-                        📧 Message
-                      </button>
-                      {org.status === 'suspended' ? (
-                        <button 
-                          onClick={() => handleUnsuspendOrganization(org._id, org.organizationName)}
-                          className="unsuspend-btn-table"
-                          title="Unsuspend Organization"
-                        >
-                          Unsuspend
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={() => handleSuspendOrganization(org._id, org.organizationName)}
-                          className="suspend-btn-table"
-                          title="Suspend Organization"
-                        >
-                          Suspend
-                        </button>
-                      )}
-                      <button 
-                        onClick={() => handleDeleteOrganization(org._id, org.organizationName, org.organizationId)}
-                        className="delete-btn-table danger"
-                        title="Permanently Delete Organization"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div style={{
+          display: 'grid',
+          gap: '1.5rem',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))'
+        }}>
+          {registeredOrganizations.map((org, index) => (
+            <div key={org._id} style={{
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+              e.currentTarget.style.transform = 'translateY(0px)';
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ flex: '1' }}>
+                  <h3 style={{
+                    fontSize: '1.25rem',
+                    fontWeight: '700',
+                    color: '#111827',
+                    margin: '0 0 0.25rem 0',
+                    lineHeight: '1.4'
+                  }}>
+                    {org.organizationName}
+                  </h3>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: '0',
+                    fontWeight: '500'
+                  }}>
+                    ID: {org.organizationId}
+                  </p>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{
+                    backgroundColor: org.status === 'suspended' ? '#fef2f2' : '#f0fdf4',
+                    color: org.status === 'suspended' ? '#dc2626' : '#16a34a',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '9999px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.025em',
+                    border: `1px solid ${org.status === 'suspended' ? '#fecaca' : '#bbf7d0'}`
+                  }}>
+                    {org.status === 'suspended' ? 'Suspended' : 'Active'}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '1rem',
+                marginBottom: '1rem'
+              }}>
+                <div>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: '#6b7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    margin: '0 0 0.25rem 0'
+                  }}>
+                    Applicant
+                  </p>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#374151',
+                    margin: '0',
+                    fontWeight: '500'
+                  }}>
+                    {org.applicantFullName}
+                  </p>
+                </div>
+                <div>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: '#6b7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    margin: '0 0 0.25rem 0'
+                  }}>
+                    Documents
+                  </p>
+                  <span style={{
+                    fontSize: '0.875rem',
+                    color: org.documents && org.documents.length > 0 ? '#16a34a' : '#ea580c',
+                    fontWeight: '600',
+                    backgroundColor: org.documents && org.documents.length > 0 ? '#f0fdf4' : '#fff7ed',
+                    padding: '0.125rem 0.5rem',
+                    borderRadius: '6px',
+                    border: `1px solid ${org.documents && org.documents.length > 0 ? '#bbf7d0' : '#fed7aa'}`
+                  }}>
+                    {org.documents && org.documents.length > 0 ?
+                      `${org.documents.length} Files` : 'No Files'
+                    }
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <p style={{
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  margin: '0 0 0.25rem 0'
+                }}>
+                  Contact Email
+                </p>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#374151',
+                  margin: '0',
+                  fontWeight: '500'
+                }}>
+                  {org.email}
+                </p>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '0.5rem',
+                flexWrap: 'wrap',
+                paddingTop: '1rem',
+                borderTop: '1px solid #f3f4f6'
+              }}>
+                <button
+                  onClick={() => showApplicationDetails(org)}
+                  style={{
+                    backgroundColor: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    flex: '1'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                >
+                  View Details
+                </button>
+                <button
+                  onClick={() => handleSendMessageToOrganiser(org.email, org.organizationName)}
+                  style={{
+                    backgroundColor: '#06b6d4',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    flex: '1'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#0891b2'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#06b6d4'}
+                >
+                  Message
+                </button>
+                {org.status === 'suspended' ? (
+                  <button
+                    onClick={() => handleUnsuspendOrganization(org._id, org.organizationName)}
+                    style={{
+                      backgroundColor: '#10b981',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s',
+                      flex: '1'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+                  >
+                    Unsuspend
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleSuspendOrganization(org._id, org.organizationName)}
+                    style={{
+                      backgroundColor: '#f59e0b',
+                      color: 'white',
+                      border: 'none',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s',
+                      flex: '1'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#d97706'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#f59e0b'}
+                  >
+                    Suspend
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDeleteOrganization(org._id, org.organizationName, org.organizationId)}
+                  style={{
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    minWidth: '80px'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
