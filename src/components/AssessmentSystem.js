@@ -580,7 +580,7 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, getAnswerStatu
 
     const timeSpent = (timeLimit * 60) - timeRemaining; // Time spent in seconds
 
-    return {
+    const scoreData = {
       score: correctAnswers,
       totalQuestions: questions.length,
       percentage: Math.round((correctAnswers / questions.length) * 100),
@@ -588,7 +588,34 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, getAnswerStatu
       timeSpent: timeSpent,
       completedAt: new Date()
     };
-  }, [answers, questions, timeLimit, timeRemaining]);
+
+    // Store assessment data locally as backup
+    try {
+      const backupData = {
+        userInfo: {
+          name: userInfo?.name || 'Unknown',
+          email: userInfo?.email || 'Unknown',
+          icNumber: userInfo?.icNumber || 'Unknown'
+        },
+        questions,
+        scoreData,
+        assessmentFormData: {
+          code: assessmentFormData?.code || 'Unknown',
+          title: assessmentFormData?.title || 'Unknown'
+        },
+        submissionTime: new Date().toISOString(),
+        backupVersion: '1.0'
+      };
+
+      const backupKey = `assessment_backup_${userInfo?.name || 'unknown'}_${Date.now()}`;
+      localStorage.setItem(backupKey, JSON.stringify(backupData));
+      console.log('Assessment data backed up to localStorage with key:', backupKey);
+    } catch (error) {
+      console.warn('Failed to backup assessment data:', error);
+    }
+
+    return scoreData;
+  }, [answers, questions, timeLimit, timeRemaining, userInfo, assessmentFormData]);
 
   const handleSubmit = useCallback(() => {
     if (!isSubmitted) {

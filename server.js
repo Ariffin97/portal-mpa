@@ -1667,6 +1667,10 @@ const assessmentSubmissionSchema = new mongoose.Schema({
     type: String,
     required: true,
     index: true
+  },
+  submittedAfterExpiry: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
@@ -4060,27 +4064,23 @@ app.post('/api/assessment/submissions', async (req, res) => {
     }
     console.log('Validation passed');
 
-    // Verify form exists and check expiry
-    console.log('Checking if form exists and is not expired:', formCode.toUpperCase());
+    // Verify form exists (don't block expired forms, but track their status)
+    console.log('Checking if form exists:', formCode.toUpperCase());
     const form = await AssessmentForm.findOne({
-      code: formCode.toUpperCase(),
-      $or: [
-        { isTemporary: false }, // Permanent forms don't expire
-        {
-          isTemporary: true,
-          expiresAt: { $gt: new Date() } // Temporary forms must not be expired
-        }
-      ]
+      code: formCode.toUpperCase()
     });
 
     if (!form) {
-      console.log('Form not found or expired:', formCode.toUpperCase());
+      console.log('Form not found:', formCode.toUpperCase());
       return res.status(404).json({
         success: false,
-        message: 'Assessment form not found or has expired'
+        message: 'Assessment form not found'
       });
     }
-    console.log('Form found:', form.code, form.isTemporary ? `(Temporary, expires: ${form.expiresAt})` : '(Permanent)');
+
+    // Check if form is expired (for tracking purposes, but don't block submission)
+    const isExpired = form.isTemporary && form.expiresAt && form.expiresAt <= new Date();
+    console.log('Form found:', form.code, form.isTemporary ? `(Temporary, expires: ${form.expiresAt}, expired: ${isExpired})` : '(Permanent)');
 
     // Generate unique submission ID
     console.log('Generating submission ID...');
@@ -4105,7 +4105,8 @@ app.post('/api/assessment/submissions', async (req, res) => {
       totalQuestions: totalQuestions,
       timeSpent: timeSpent,
       batchId: finalBatchId,
-      batchDate: finalBatchDate
+      batchDate: finalBatchDate,
+      submittedAfterExpiry: isExpired
     });
 
     console.log('Saving submission to database...');
@@ -4114,8 +4115,11 @@ app.post('/api/assessment/submissions', async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Assessment submission saved successfully',
-      data: savedSubmission
+      message: isExpired ?
+        'Assessment submission saved successfully. Note: This form code has expired, but your submission has been recorded.' :
+        'Assessment submission saved successfully',
+      data: savedSubmission,
+      warnings: isExpired ? ['Form code was expired at time of submission'] : []
     });
   } catch (error) {
     console.error('Error saving assessment submission:', error);
@@ -4123,6 +4127,98 @@ app.post('/api/assessment/submissions', async (req, res) => {
       success: false,
       error: 'Internal server error',
       message: 'Failed to save assessment submission'
+    });
+  }
+});
+
+// Recover lost assessment submissions
+app.post('/api/assessment/recover', async (req, res) => {
+  try {
+    console.log('=== Assessment Recovery Request ===');
+    const { backupData, adminNote } = req.body;
+
+    if (!backupData || !Array.isArray(backupData)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid backup data provided'
+      });
+    }
+
+    const recoveredSubmissions = [];
+    const errors = [];
+
+    for (const backup of backupData) {
+      try {
+        // Validate backup data structure
+        if (!backup.userInfo || !backup.scoreData || !backup.assessmentFormData) {
+          errors.push(`Invalid backup structure for ${backup.userInfo?.name || 'unknown'}`);
+          continue;
+        }
+
+        // Check if this submission already exists
+        const existingSubmission = await AssessmentSubmission.findOne({
+          participantName: backup.userInfo.name,
+          participantEmail: backup.userInfo.email,
+          formCode: backup.assessmentFormData.code,
+          submittedAt: new Date(backup.submissionTime)
+        });
+
+        if (existingSubmission) {
+          errors.push(`Submission already exists for ${backup.userInfo.name}`);
+          continue;
+        }
+
+        // Generate unique submission ID
+        const submissionId = await generateSubmissionId();
+
+        // Create submission from backup data
+        const newSubmission = new AssessmentSubmission({
+          submissionId: submissionId,
+          formCode: backup.assessmentFormData.code.toUpperCase(),
+          participantName: backup.userInfo.name,
+          participantEmail: backup.userInfo.email,
+          answers: backup.scoreData.answers ? Object.keys(backup.scoreData.answers).map(questionId => ({
+            questionId: parseInt(questionId),
+            selectedAnswer: backup.scoreData.answers[questionId],
+            isCorrect: false // Will be recalculated if needed
+          })) : [],
+          score: backup.scoreData.percentage || 0,
+          correctAnswers: backup.scoreData.score || 0,
+          totalQuestions: backup.scoreData.totalQuestions || 0,
+          timeSpent: backup.scoreData.timeSpent || 0,
+          batchId: `RECOVERED-${backup.assessmentFormData.code}-${new Date().toISOString().split('T')[0]}`,
+          batchDate: new Date(backup.submissionTime).toISOString().split('T')[0],
+          submittedAfterExpiry: true, // Mark as recovered data
+          completedAt: new Date(backup.submissionTime)
+        });
+
+        const savedSubmission = await newSubmission.save();
+        recoveredSubmissions.push(savedSubmission);
+        console.log('Recovered submission:', savedSubmission.submissionId);
+
+      } catch (error) {
+        console.error('Error recovering individual submission:', error);
+        errors.push(`Failed to recover submission for ${backup.userInfo?.name}: ${error.message}`);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Recovery completed. ${recoveredSubmissions.length} submissions recovered, ${errors.length} errors.`,
+      data: {
+        recovered: recoveredSubmissions.length,
+        errors: errors.length,
+        recoveredSubmissions: recoveredSubmissions.map(s => s.submissionId),
+        errorDetails: errors
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in assessment recovery:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to recover assessment submissions'
     });
   }
 });
