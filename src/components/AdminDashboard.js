@@ -9328,10 +9328,14 @@ Settings
                         answersToDisplay = selectedSubmission.answers.map((answerObj, index) => {
                           const question = questionsToUse.find(q => q.id === answerObj.questionId);
                           const correctAnswer = question?.correctAnswer || '';
-                          const isCorrect = answerObj.selectedAnswer === correctAnswer;
+                          // Normalize strings by trimming whitespace and comparing case-insensitively
+                          const normalizedUserAnswer = (answerObj.selectedAnswer || '').toString().trim().toLowerCase();
+                          const normalizedCorrectAnswer = correctAnswer.toString().trim().toLowerCase();
+                          const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
 
                           return {
                             questionId: answerObj.questionId,
+                            questionText: question?.question || `Question ${index + 1}`,
                             userAnswer: answerObj.selectedAnswer || 'No answer',
                             isCorrect: isCorrect,
                             correctAnswer: correctAnswer,
@@ -9345,10 +9349,14 @@ Settings
                           const question = questionsToUse.find(q => q.id === parseInt(questionId));
                           const correctAnswer = question?.correctAnswer || '';
                           const userAnswer = typeof answer === 'string' ? answer : (answer?.selectedAnswer || 'No answer');
-                          const isCorrect = userAnswer === correctAnswer;
+                          // Normalize strings by trimming whitespace and comparing case-insensitively
+                          const normalizedUserAnswer = userAnswer.toString().trim().toLowerCase();
+                          const normalizedCorrectAnswer = correctAnswer.toString().trim().toLowerCase();
+                          const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
 
                           return {
                             questionId: questionId,
+                            questionText: question?.question || `Question ${index + 1}`,
                             userAnswer: userAnswer,
                             isCorrect: isCorrect,
                             correctAnswer: correctAnswer,
@@ -9358,9 +9366,6 @@ Settings
                       }
 
                       return answersToDisplay.map((answerData) => {
-                        const question = questionsToUse.find(q => q.id === answerData.questionId);
-                        const questionText = question?.question || `Question ${answerData.index + 1}`;
-
                         return (
                         <div key={answerData.questionId} style={{
                           border: '1px solid #ddd',
@@ -9376,12 +9381,13 @@ Settings
                           }}>
                             <div style={{ flex: 1 }}>
                               <div style={{
-                                fontSize: '14px',
-                                color: '#666',
-                                marginBottom: '8px',
-                                fontWeight: 'bold'
+                                fontSize: '16px',
+                                color: '#333',
+                                marginBottom: '12px',
+                                fontWeight: 'bold',
+                                lineHeight: '1.4'
                               }}>
-                                {questionText}
+                                Q{answerData.index + 1}: {answerData.questionText}
                               </div>
                             </div>
                             <div style={{
