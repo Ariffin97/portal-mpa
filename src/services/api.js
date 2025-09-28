@@ -65,10 +65,24 @@ class ApiService {
 
   // Organization Registration APIs
   async registerOrganization(organizationData) {
-    return this.makeRequest('/organizations/register', {
-      method: 'POST',
-      body: JSON.stringify(organizationData),
-    });
+    // Check if organizationData is FormData (for file uploads)
+    if (organizationData instanceof FormData) {
+      return this.makeRequest('/organizations/register', {
+        method: 'POST',
+        body: organizationData,
+        // Don't set Content-Type header for FormData - browser will set it with boundary
+        headers: {
+          ...this.getHeaders(),
+          'Content-Type': undefined
+        }
+      });
+    } else {
+      // Regular JSON data
+      return this.makeRequest('/organizations/register', {
+        method: 'POST',
+        body: JSON.stringify(organizationData),
+      });
+    }
   }
 
   async organizationLogin(credentials) {
@@ -294,6 +308,55 @@ class ApiService {
     return this.makeRequest('/assessment/submissions/clear', {
       method: 'DELETE',
     });
+  }
+
+  // Messaging APIs
+  async sendMessage(messageData) {
+    return this.makeRequest('/messages/send', {
+      method: 'POST',
+      body: JSON.stringify(messageData),
+    });
+  }
+
+  async getInboxMessages(userType, userId, options = {}) {
+    const { limit = 50, offset = 0, unreadOnly = false } = options;
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+      unreadOnly: unreadOnly.toString()
+    });
+
+    return this.makeRequest(`/messages/inbox/${userType}/${userId}?${params.toString()}`);
+  }
+
+  async getSentMessages(userType, userId, options = {}) {
+    const { limit = 50, offset = 0 } = options;
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString()
+    });
+
+    return this.makeRequest(`/messages/sent/${userType}/${userId}?${params.toString()}`);
+  }
+
+  async markMessageAsRead(messageId) {
+    return this.makeRequest(`/messages/${messageId}/read`, {
+      method: 'PATCH',
+    });
+  }
+
+  async getUnreadMessageCount(userType, userId) {
+    return this.makeRequest(`/messages/unread-count/${userType}/${userId}`);
+  }
+
+  async deleteMessage(messageId) {
+    return this.makeRequest(`/messages/${messageId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getMessageById(messageId) {
+    return this.makeRequest(`/messages/${messageId}`);
   }
 }
 

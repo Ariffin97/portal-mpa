@@ -60,6 +60,20 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
     isExporting: false
   });
 
+  // Message to Organiser States
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [messageData, setMessageData] = useState({
+    recipientEmail: '',
+    recipientName: '',
+    subject: '',
+    content: '',
+    priority: 'normal',
+    category: 'general',
+    relatedApplicationId: ''
+  });
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [messageError, setMessageError] = useState('');
+
   // Create Tournament Form States
   const malaysianStatesAndCities = {
     'Johor': ['Johor Bahru', 'Batu Pahat', 'Muar', 'Kluang', 'Pontian', 'Segamat', 'Mersing', 'Kota Tinggi', 'Kulai', 'Skudai'],
@@ -1028,6 +1042,89 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
       console.error('Failed to delete organization:', error);
       alert(`Failed to delete organization: ${error.message}. Please try again.`);
     }
+  };
+
+  // Message handling functions
+  const handleSendMessageToOrganiser = (orgEmail, orgName, applicationId = null) => {
+    setMessageData({
+      recipientEmail: orgEmail,
+      recipientName: orgName,
+      subject: applicationId ? `Re: Tournament Application ${applicationId}` : '',
+      content: '',
+      priority: 'normal',
+      category: applicationId ? 'tournament' : 'general',
+      relatedApplicationId: applicationId || ''
+    });
+    setShowMessageModal(true);
+    setMessageError('');
+  };
+
+  const handleMessageInputChange = (e) => {
+    const { name, value } = e.target;
+    setMessageData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    setIsSendingMessage(true);
+    setMessageError('');
+
+    try {
+      const adminUsername = localStorage.getItem('adminUsername') || 'Admin';
+
+      const messagePayload = {
+        fromType: 'admin',
+        fromId: adminUsername,
+        fromName: `Admin - ${adminUsername}`,
+        toType: 'organiser',
+        toId: messageData.recipientEmail,
+        toName: messageData.recipientName,
+        subject: messageData.subject,
+        content: messageData.content,
+        priority: messageData.priority,
+        category: messageData.category,
+        relatedApplicationId: messageData.relatedApplicationId || null
+      };
+
+      await apiService.sendMessage(messagePayload);
+
+      alert(`Message sent successfully to ${messageData.recipientName}!`);
+      setShowMessageModal(false);
+
+      // Reset form
+      setMessageData({
+        recipientEmail: '',
+        recipientName: '',
+        subject: '',
+        content: '',
+        priority: 'normal',
+        category: 'general',
+        relatedApplicationId: ''
+      });
+
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      setMessageError(error.message || 'Failed to send message. Please try again.');
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  const handleCloseMessageModal = () => {
+    setShowMessageModal(false);
+    setMessageError('');
+    setMessageData({
+      recipientEmail: '',
+      recipientName: '',
+      subject: '',
+      content: '',
+      priority: 'normal',
+      category: 'general',
+      relatedApplicationId: ''
+    });
   };
 
   const getStatusColor = (status) => {
@@ -2601,76 +2698,951 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
     </div>
   );
 
-  const renderAnalytics = () => (
-    <div className="analytics-view">
-      <div className="dashboard-header">
-        <h2>Analytics Dashboard</h2>
-        <p className="dashboard-subtitle">Tournament application insights and statistics</p>
-      </div>
+  const renderAnalytics = () => {
+    const totalApplications = applications.length;
+    const approvedApplications = applications.filter(app => app.status === 'Approved').length;
+    const pendingApplications = applications.filter(app => app.status === 'Pending Review').length;
+    const rejectedApplications = applications.filter(app => app.status === 'Rejected').length;
+    const approvalRate = totalApplications > 0 ? ((approvedApplications / totalApplications) * 100).toFixed(1) : 0;
+    const totalParticipants = applications.reduce((sum, app) => sum + parseInt(app.expectedParticipants || 0), 0);
 
-      <div className="analytics-stats">
-        <div className="analytics-card">
-          <div className="analytics-icon"></div>
-          <div className="analytics-content">
-            <div className="analytics-number">{applications.length}</div>
-            <div className="analytics-label">Total Applications</div>
-            <div className="analytics-change">+12% from last month</div>
-          </div>
+    return (
+      <div style={{
+        padding: '24px',
+        backgroundColor: '#f8f9fa',
+        minHeight: '100vh'
+      }}>
+        {/* Header Section */}
+        <div style={{
+          marginBottom: '32px',
+          backgroundColor: '#fff',
+          padding: '24px',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          borderLeft: '4px solid #2563eb'
+        }}>
+          <h1 style={{
+            fontSize: '28px',
+            fontWeight: '700',
+            color: '#1f2937',
+            margin: '0 0 8px 0'
+          }}>
+            Analytics Dashboard
+          </h1>
+          <p style={{
+            fontSize: '16px',
+            color: '#6b7280',
+            margin: '0'
+          }}>
+            Comprehensive insights and statistics for tournament applications
+          </p>
         </div>
-        
-        <div className="analytics-card">
-          <div className="analytics-icon"></div>
-          <div className="analytics-content">
-            <div className="analytics-number">
-              {((applications.filter(app => app.status === 'Approved').length / applications.length) * 100).toFixed(1)}%
-            </div>
-            <div className="analytics-label">Approval Rate</div>
-            <div className="analytics-change">+5% from last month</div>
-          </div>
-        </div>
-        
-        <div className="analytics-card">
-          <div className="analytics-icon"></div>
-          <div className="analytics-content">
-            <div className="analytics-number">2.3</div>
-            <div className="analytics-label">Avg. Processing Days</div>
-            <div className="analytics-change">-0.5 days improved</div>
-          </div>
-        </div>
-        
-        <div className="analytics-card">
-          <div className="analytics-icon"></div>
-          <div className="analytics-content">
-            <div className="analytics-number">
-              {applications.reduce((sum, app) => sum + parseInt(app.expectedParticipants || 0), 0)}
-            </div>
-            <div className="analytics-label">Total Expected Participants</div>
-            <div className="analytics-change">+18% from last month</div>
-          </div>
-        </div>
-      </div>
 
-      <div className="analytics-charts">
-        <div className="chart-card">
-          <h3>Application Status Distribution</h3>
-          <div className="chart-placeholder">
-            <p>Chart visualization would be displayed here</p>
-            <p>Status breakdown: Pending ({applications.filter(app => app.status === 'Pending Review').length}), 
-               Approved ({applications.filter(app => app.status === 'Approved').length}), 
-               Rejected ({applications.filter(app => app.status === 'Rejected').length})</p>
+        {/* Key Metrics Grid */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '20px',
+          marginBottom: '32px'
+        }}>
+          {/* Total Applications */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: '0 0 8px 0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Total Applications
+                </h3>
+                <div style={{
+                  fontSize: '32px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  lineHeight: '1'
+                }}>
+                  {totalApplications}
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: '#dbeafe',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#1d4ed8'
+              }}>
+                +12% month
+              </div>
+            </div>
+            <div style={{
+              height: '4px',
+              backgroundColor: '#e5e7eb',
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                backgroundColor: '#2563eb',
+                width: '75%',
+                borderRadius: '2px'
+              }}></div>
+            </div>
+          </div>
+
+          {/* Approval Rate */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: '0 0 8px 0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Approval Rate
+                </h3>
+                <div style={{
+                  fontSize: '32px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  lineHeight: '1'
+                }}>
+                  {approvalRate}%
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: '#dcfce7',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#166534'
+              }}>
+                +5% month
+              </div>
+            </div>
+            <div style={{
+              height: '4px',
+              backgroundColor: '#e5e7eb',
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                backgroundColor: '#16a34a',
+                width: `${approvalRate}%`,
+                borderRadius: '2px'
+              }}></div>
+            </div>
+          </div>
+
+          {/* Processing Time */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: '0 0 8px 0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Avg. Processing Time
+                </h3>
+                <div style={{
+                  fontSize: '32px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  lineHeight: '1'
+                }}>
+                  2.3 <span style={{ fontSize: '16px', color: '#6b7280' }}>days</span>
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: '#fef3c7',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#92400e'
+              }}>
+                -0.5 days
+              </div>
+            </div>
+            <div style={{
+              height: '4px',
+              backgroundColor: '#e5e7eb',
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                backgroundColor: '#f59e0b',
+                width: '60%',
+                borderRadius: '2px'
+              }}></div>
+            </div>
+          </div>
+
+          {/* Total Participants */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: '0 0 8px 0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Expected Participants
+                </h3>
+                <div style={{
+                  fontSize: '32px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  lineHeight: '1'
+                }}>
+                  {totalParticipants.toLocaleString()}
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: '#fce7f3',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#be185d'
+              }}>
+                +18% month
+              </div>
+            </div>
+            <div style={{
+              height: '4px',
+              backgroundColor: '#e5e7eb',
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                backgroundColor: '#ec4899',
+                width: '85%',
+                borderRadius: '2px'
+              }}></div>
+            </div>
           </div>
         </div>
-        
-        <div className="chart-card">
-          <h3>Applications Over Time</h3>
-          <div className="chart-placeholder">
-            <p>Timeline chart would be displayed here</p>
-            <p>Showing application submission trends over the past 6 months</p>
+
+        {/* Status Overview and Breakdown */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+          gap: '24px',
+          marginBottom: '32px'
+        }}>
+          {/* Status Distribution */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#1f2937',
+              margin: '0 0 20px 0'
+            }}>
+              Application Status Distribution
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Approved */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: '#16a34a'
+                  }}></div>
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Approved</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{approvedApplications}</span>
+                  <span style={{ fontSize: '12px', color: '#6b7280' }}>({((approvedApplications / Math.max(totalApplications, 1)) * 100).toFixed(0)}%)</span>
+                </div>
+              </div>
+
+              {/* Pending */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: '#f59e0b'
+                  }}></div>
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Pending Review</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{pendingApplications}</span>
+                  <span style={{ fontSize: '12px', color: '#6b7280' }}>({((pendingApplications / Math.max(totalApplications, 1)) * 100).toFixed(0)}%)</span>
+                </div>
+              </div>
+
+              {/* Rejected */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: '#dc2626'
+                  }}></div>
+                  <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Rejected</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{rejectedApplications}</span>
+                  <span style={{ fontSize: '12px', color: '#6b7280' }}>({((rejectedApplications / Math.max(totalApplications, 1)) * 100).toFixed(0)}%)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Visual Bar */}
+            <div style={{
+              marginTop: '20px',
+              height: '8px',
+              backgroundColor: '#f3f4f6',
+              borderRadius: '4px',
+              overflow: 'hidden',
+              display: 'flex'
+            }}>
+              <div style={{
+                backgroundColor: '#16a34a',
+                width: `${(approvedApplications / Math.max(totalApplications, 1)) * 100}%`,
+                height: '100%'
+              }}></div>
+              <div style={{
+                backgroundColor: '#f59e0b',
+                width: `${(pendingApplications / Math.max(totalApplications, 1)) * 100}%`,
+                height: '100%'
+              }}></div>
+              <div style={{
+                backgroundColor: '#dc2626',
+                width: `${(rejectedApplications / Math.max(totalApplications, 1)) * 100}%`,
+                height: '100%'
+              }}></div>
+            </div>
           </div>
+
+          {/* Recent Activity */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#1f2937',
+              margin: '0 0 20px 0'
+            }}>
+              Application Trends
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '8px',
+                borderLeft: '4px solid #2563eb'
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>This Month</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                  {applications.filter(app => {
+                    const appDate = new Date(app.dateApplied);
+                    const now = new Date();
+                    return appDate.getMonth() === now.getMonth() && appDate.getFullYear() === now.getFullYear();
+                  }).length} new applications submitted
+                </div>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '8px',
+                borderLeft: '4px solid #16a34a'
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>Processing Performance</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                  Average review time improved by 0.5 days
+                </div>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '8px',
+                borderLeft: '4px solid #f59e0b'
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>Peak Season</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                  Tournament season approaching - expect 25% increase
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Assessment Analytics Section */}
+        <div style={{
+          marginTop: '48px',
+          marginBottom: '32px',
+          backgroundColor: '#fff',
+          padding: '24px',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          borderLeft: '4px solid #7c3aed'
+        }}>
+          <h2 style={{
+            fontSize: '24px',
+            fontWeight: '700',
+            color: '#1f2937',
+            margin: '0 0 8px 0'
+          }}>
+            Assessment Analytics
+          </h2>
+          <p style={{
+            fontSize: '16px',
+            color: '#6b7280',
+            margin: '0'
+          }}>
+            Performance insights and statistics for assessment submissions
+          </p>
+        </div>
+
+        {/* Assessment Key Metrics */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '20px',
+          marginBottom: '32px'
+        }}>
+          {/* Total Submissions */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: '0 0 8px 0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Total Submissions
+                </h3>
+                <div style={{
+                  fontSize: '32px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  lineHeight: '1'
+                }}>
+                  {assessmentSubmissions.length}
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: '#ede9fe',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#7c3aed'
+              }}>
+                {assessmentSubmissions.filter(sub => {
+                  const subDate = new Date(sub.submittedAt || sub.batchDate);
+                  const now = new Date();
+                  return subDate.getMonth() === now.getMonth() && subDate.getFullYear() === now.getFullYear();
+                }).length} this month
+              </div>
+            </div>
+            <div style={{
+              height: '4px',
+              backgroundColor: '#e5e7eb',
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                backgroundColor: '#7c3aed',
+                width: '70%',
+                borderRadius: '2px'
+              }}></div>
+            </div>
+          </div>
+
+          {/* Average Score */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: '0 0 8px 0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Average Score
+                </h3>
+                <div style={{
+                  fontSize: '32px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  lineHeight: '1'
+                }}>
+                  {assessmentSubmissions.length > 0 ?
+                    Math.round(assessmentSubmissions.reduce((sum, sub) => sum + (sub.score || 0), 0) / assessmentSubmissions.length) : 0}%
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: '#dcfce7',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#166534'
+              }}>
+                +3% avg
+              </div>
+            </div>
+            <div style={{
+              height: '4px',
+              backgroundColor: '#e5e7eb',
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                backgroundColor: '#16a34a',
+                width: `${assessmentSubmissions.length > 0 ?
+                  Math.round(assessmentSubmissions.reduce((sum, sub) => sum + (sub.score || 0), 0) / assessmentSubmissions.length) : 0}%`,
+                borderRadius: '2px'
+              }}></div>
+            </div>
+          </div>
+
+          {/* Pass Rate */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: '0 0 8px 0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Pass Rate (&ge;70%)
+                </h3>
+                <div style={{
+                  fontSize: '32px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  lineHeight: '1'
+                }}>
+                  {assessmentSubmissions.length > 0 ?
+                    Math.round((assessmentSubmissions.filter(sub => (sub.score || 0) >= 70).length / assessmentSubmissions.length) * 100) : 0}%
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: '#dbeafe',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#1d4ed8'
+              }}>
+                {assessmentSubmissions.filter(sub => (sub.score || 0) >= 70).length} passed
+              </div>
+            </div>
+            <div style={{
+              height: '4px',
+              backgroundColor: '#e5e7eb',
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                backgroundColor: '#2563eb',
+                width: `${assessmentSubmissions.length > 0 ?
+                  Math.round((assessmentSubmissions.filter(sub => (sub.score || 0) >= 70).length / assessmentSubmissions.length) * 100) : 0}%`,
+                borderRadius: '2px'
+              }}></div>
+            </div>
+          </div>
+
+          {/* Unique Participants */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: '16px'
+            }}>
+              <div>
+                <h3 style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#6b7280',
+                  margin: '0 0 8px 0',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Unique Participants
+                </h3>
+                <div style={{
+                  fontSize: '32px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  lineHeight: '1'
+                }}>
+                  {new Set(assessmentSubmissions.map(sub => sub.participantName || 'Unknown')).size}
+                </div>
+              </div>
+              <div style={{
+                backgroundColor: '#fef3c7',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#92400e'
+              }}>
+                Active users
+              </div>
+            </div>
+            <div style={{
+              height: '4px',
+              backgroundColor: '#e5e7eb',
+              borderRadius: '2px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                backgroundColor: '#f59e0b',
+                width: '65%',
+                borderRadius: '2px'
+              }}></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Assessment Performance Analysis */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+          gap: '24px',
+          marginBottom: '32px'
+        }}>
+          {/* Score Distribution */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#1f2937',
+              margin: '0 0 20px 0'
+            }}>
+              Score Distribution
+            </h3>
+
+            {(() => {
+              const excellent = assessmentSubmissions.filter(sub => (sub.score || 0) >= 80).length;
+              const good = assessmentSubmissions.filter(sub => (sub.score || 0) >= 70 && (sub.score || 0) < 80).length;
+              const needsImprovement = assessmentSubmissions.filter(sub => (sub.score || 0) < 70).length;
+              const total = Math.max(assessmentSubmissions.length, 1);
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Excellent */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: '#16a34a'
+                      }}></div>
+                      <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Excellent (80-100%)</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{excellent}</span>
+                      <span style={{ fontSize: '12px', color: '#6b7280' }}>({Math.round((excellent / total) * 100)}%)</span>
+                    </div>
+                  </div>
+
+                  {/* Good */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: '#2563eb'
+                      }}></div>
+                      <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Good (70-79%)</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{good}</span>
+                      <span style={{ fontSize: '12px', color: '#6b7280' }}>({Math.round((good / total) * 100)}%)</span>
+                    </div>
+                  </div>
+
+                  {/* Needs Improvement */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: '#dc2626'
+                      }}></div>
+                      <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Needs Improvement (&lt;70%)</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>{needsImprovement}</span>
+                      <span style={{ fontSize: '12px', color: '#6b7280' }}>({Math.round((needsImprovement / total) * 100)}%)</span>
+                    </div>
+                  </div>
+
+                  {/* Visual Bar */}
+                  <div style={{
+                    marginTop: '20px',
+                    height: '8px',
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    display: 'flex'
+                  }}>
+                    <div style={{
+                      backgroundColor: '#16a34a',
+                      width: `${(excellent / total) * 100}%`,
+                      height: '100%'
+                    }}></div>
+                    <div style={{
+                      backgroundColor: '#2563eb',
+                      width: `${(good / total) * 100}%`,
+                      height: '100%'
+                    }}></div>
+                    <div style={{
+                      backgroundColor: '#dc2626',
+                      width: `${(needsImprovement / total) * 100}%`,
+                      height: '100%'
+                    }}></div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Assessment Activity */}
+          <div style={{
+            backgroundColor: '#fff',
+            padding: '24px',
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            border: '1px solid #e5e7eb'
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#1f2937',
+              margin: '0 0 20px 0'
+            }}>
+              Assessment Activity
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '8px',
+                borderLeft: '4px solid #7c3aed'
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>Recent Activity</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                  {assessmentSubmissions.filter(sub => {
+                    const subDate = new Date(sub.submittedAt || sub.batchDate);
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    return subDate >= yesterday;
+                  }).length} assessments completed in last 24 hours
+                </div>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '8px',
+                borderLeft: '4px solid #16a34a'
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>Performance Trend</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                  {assessmentSubmissions.filter(sub => (sub.score || 0) >= 70).length > assessmentSubmissions.length / 2 ?
+                    'Above average performance maintained' : 'Performance improvement needed'}
+                </div>
+              </div>
+
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '8px',
+                borderLeft: '4px solid #f59e0b'
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>Form Codes Active</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                  {new Set(assessmentSubmissions.map(sub => sub.formCode)).size} unique assessment forms in use
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Summary Footer */}
+        <div style={{
+          backgroundColor: '#fff',
+          padding: '24px',
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          border: '1px solid #e5e7eb',
+          textAlign: 'center'
+        }}>
+          <h3 style={{
+            fontSize: '16px',
+            fontWeight: '600',
+            color: '#1f2937',
+            margin: '0 0 8px 0'
+          }}>
+            System Overview
+          </h3>
+          <p style={{
+            fontSize: '14px',
+            color: '#6b7280',
+            margin: '0',
+            lineHeight: '1.5'
+          }}>
+            Dashboard last updated: {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()} |
+            Total active tournaments tracked: {applications.filter(app => app.status === 'Approved').length} |
+            Total assessments completed: {assessmentSubmissions.length} |
+            System uptime: 99.9%
+          </p>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderRegisteredOrganizations = () => (
     <div className="registered-organizations-view">
@@ -2694,6 +3666,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                 <th>Organization Name</th>
                 <th>Applicant Name</th>
                 <th>Email</th>
+                <th>Documents</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -2718,6 +3691,40 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                   </td>
                   <td>{org.applicantFullName}</td>
                   <td>{org.email}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {org.documents && org.documents.length > 0 ? (
+                      <span
+                        style={{
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          padding: '3px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title={`${org.documents.length} document(s) uploaded`}
+                      >
+                        📄 {org.documents.length}
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          backgroundColor: '#ffc107',
+                          color: '#212529',
+                          padding: '3px 8px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: 'bold'
+                        }}
+                        title="No documents uploaded"
+                      >
+                        ⚠️ None
+                      </span>
+                    )}
+                  </td>
                   <td>
                     <span 
                       className={`status-badge-table ${org.status === 'suspended' ? 'suspended' : 'active'}`}
@@ -2741,6 +3748,24 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                         title="View Organization Details"
                       >
                         View Details
+                      </button>
+                      <button
+                        onClick={() => handleSendMessageToOrganiser(org.email, org.organizationName)}
+                        className="message-btn-table"
+                        title="Send Message to Organization"
+                        style={{
+                          backgroundColor: '#17a2b8',
+                          color: 'white',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          marginLeft: '5px'
+                        }}
+                      >
+                        📧 Message
                       </button>
                       {org.status === 'suspended' ? (
                         <button 
@@ -6663,6 +7688,108 @@ Settings
                     </div>
                   </div>
 
+                  {/* Registration Documents Section */}
+                  <div className="detail-section">
+                    <h3>Registration Documents</h3>
+                    <div className="detail-grid">
+                      {selectedApplication.documents && selectedApplication.documents.length > 0 ? (
+                        selectedApplication.documents.map((doc, index) => (
+                          <div key={index} className="detail-item document-item" style={{
+                            gridColumn: '1 / -1',
+                            marginBottom: '16px',
+                            padding: '16px',
+                            backgroundColor: '#f8f9fa',
+                            border: '1px solid #dee2e6',
+                            borderRadius: '8px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ fontSize: '24px' }}>
+                                  {doc.mimetype?.startsWith('image/') ? '🖼️' : '📄'}
+                                </span>
+                                <div>
+                                  <div style={{ fontWeight: 'bold', color: '#495057' }}>
+                                    {doc.originalName || 'Registration Document'}
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: '#6c757d' }}>
+                                    {doc.mimetype} • {(doc.size / 1024 / 1024).toFixed(2)} MB
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: '#868e96' }}>
+                                    Uploaded: {doc.uploadedAt ? formatDate(doc.uploadedAt) : 'Unknown date'}
+                                  </div>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={() => {
+                                    if (doc.filename) {
+                                      window.open(`/uploads/${doc.filename}`, '_blank');
+                                    } else {
+                                      alert('File not available for viewing');
+                                    }
+                                  }}
+                                  style={{
+                                    backgroundColor: '#007bff',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '6px 12px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                  title="View document in new tab"
+                                >
+                                  👁️ View
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (doc.filename) {
+                                      const link = document.createElement('a');
+                                      link.href = `/uploads/${doc.filename}`;
+                                      link.download = doc.originalName || 'registration-document';
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                    } else {
+                                      alert('File not available for download');
+                                    }
+                                  }}
+                                  style={{
+                                    backgroundColor: '#28a745',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '6px 12px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                  title="Download document"
+                                >
+                                  💾 Download
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="detail-item" style={{
+                          gridColumn: '1 / -1',
+                          padding: '16px',
+                          backgroundColor: '#fff3cd',
+                          border: '1px solid #ffeaa7',
+                          borderRadius: '4px',
+                          color: '#856404',
+                          fontStyle: 'italic',
+                          textAlign: 'center'
+                        }}>
+                          No registration documents uploaded
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="detail-section">
                     <h3>Registration Status</h3>
                     <div className="detail-grid">
@@ -8382,6 +9509,228 @@ Settings
                   Request Information
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Message to Organiser Modal */}
+      {showMessageModal && (
+        <div className="modal-overlay" onClick={handleCloseMessageModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+            maxWidth: '600px',
+            width: '90%',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div className="modal-header" style={{
+              padding: '20px',
+              borderBottom: '1px solid #ddd',
+              backgroundColor: '#f8f9fa',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h2 style={{ margin: 0, color: '#333', fontSize: '18px' }}>
+                📧 Send Message to Organiser
+              </h2>
+              <button
+                onClick={handleCloseMessageModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666',
+                  padding: '0',
+                  lineHeight: '1'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '20px' }}>
+              <form onSubmit={handleSendMessage}>
+                {/* Recipient Information */}
+                <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e8f4fd', borderRadius: '6px' }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#0056b3' }}>Message Recipient</h4>
+                  <div style={{ fontSize: '14px' }}>
+                    <strong>Organization:</strong> {messageData.recipientName}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#666' }}>
+                    <strong>Email:</strong> {messageData.recipientEmail}
+                  </div>
+                  {messageData.relatedApplicationId && (
+                    <div style={{ fontSize: '14px', color: '#666' }}>
+                      <strong>Related Application:</strong> {messageData.relatedApplicationId}
+                    </div>
+                  )}
+                </div>
+
+                {/* Priority & Category */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                      Priority Level *
+                    </label>
+                    <select
+                      name="priority"
+                      value={messageData.priority}
+                      onChange={handleMessageInputChange}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <option value="low">🔵 Low</option>
+                      <option value="normal">🟢 Normal</option>
+                      <option value="high">🟠 High</option>
+                      <option value="urgent">🔴 Urgent</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                      Category *
+                    </label>
+                    <select
+                      name="category"
+                      value={messageData.category}
+                      onChange={handleMessageInputChange}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <option value="general">💬 General</option>
+                      <option value="tournament">🏆 Tournament</option>
+                      <option value="technical">⚙️ Technical</option>
+                      <option value="urgent">⚡ Urgent</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Subject */}
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    Subject *
+                  </label>
+                  <input
+                    type="text"
+                    name="subject"
+                    value={messageData.subject}
+                    onChange={handleMessageInputChange}
+                    placeholder="Enter message subject"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                {/* Message Content */}
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                    Message Content *
+                  </label>
+                  <textarea
+                    name="content"
+                    value={messageData.content}
+                    onChange={handleMessageInputChange}
+                    placeholder="Enter your message content here..."
+                    required
+                    rows="6"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      border: '1px solid #ccc',
+                      borderRadius: '4px',
+                      boxSizing: 'border-box',
+                      resize: 'vertical'
+                    }}
+                  />
+                  <small style={{ color: '#666', fontSize: '12px' }}>
+                    Be clear and concise in your message. The organiser will receive this via email and in their portal inbox.
+                  </small>
+                </div>
+
+                {/* Error Message */}
+                {messageError && (
+                  <div style={{
+                    backgroundColor: '#fee2e2',
+                    border: '1px solid #fecaca',
+                    color: '#dc2626',
+                    padding: '10px',
+                    borderRadius: '4px',
+                    marginBottom: '15px',
+                    fontSize: '14px'
+                  }}>
+                    ⚠️ {messageError}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={handleCloseMessageModal}
+                    disabled={isSendingMessage}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: '#6c757d',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: isSendingMessage ? 'not-allowed' : 'pointer',
+                      opacity: isSendingMessage ? 0.6 : 1
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSendingMessage || !messageData.subject.trim() || !messageData.content.trim()}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: isSendingMessage || !messageData.subject.trim() || !messageData.content.trim()
+                        ? '#ccc'
+                        : '#007bff',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: isSendingMessage || !messageData.subject.trim() || !messageData.content.trim()
+                        ? 'not-allowed'
+                        : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    {isSendingMessage ? (
+                      <>
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <>
+                        📤 Send Message
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

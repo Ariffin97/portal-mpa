@@ -1088,6 +1088,88 @@ const organizationSchema = new mongoose.Schema({
 
 const Organization = mongoose.model('Organization', organizationSchema);
 
+// Message Schema for Admin-Organiser Communication
+const messageSchema = new mongoose.Schema({
+  messageId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  fromType: {
+    type: String,
+    required: true,
+    enum: ['admin', 'organiser']
+  },
+  fromId: {
+    type: String,
+    required: true
+  },
+  fromName: {
+    type: String,
+    required: true
+  },
+  toType: {
+    type: String,
+    required: true,
+    enum: ['admin', 'organiser']
+  },
+  toId: {
+    type: String,
+    required: true
+  },
+  toName: {
+    type: String,
+    required: true
+  },
+  subject: {
+    type: String,
+    required: true
+  },
+  content: {
+    type: String,
+    required: true
+  },
+  isRead: {
+    type: Boolean,
+    default: false
+  },
+  priority: {
+    type: String,
+    enum: ['low', 'normal', 'high', 'urgent'],
+    default: 'normal'
+  },
+  category: {
+    type: String,
+    enum: ['tournament', 'general', 'technical', 'urgent'],
+    default: 'general'
+  },
+  relatedApplicationId: {
+    type: String,
+    default: null
+  },
+  attachments: [{
+    fileName: String,
+    filePath: String,
+    fileSize: Number,
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  readAt: {
+    type: Date,
+    default: null
+  }
+}, {
+  timestamps: true
+});
+
+const Message = mongoose.model('Message', messageSchema);
+
 // Admin Login Schema
 const adminLoginSchema = new mongoose.Schema({
   username: {
@@ -2345,7 +2427,7 @@ app.delete('/api/news/:id', async (req, res) => {
 // ===============================
 
 // Organization registration endpoint
-app.post('/api/organizations/register', async (req, res) => {
+app.post('/api/organizations/register', upload.single('registrationDocument'), async (req, res) => {
   try {
     const {
       organizationName,
@@ -2381,6 +2463,19 @@ app.post('/api/organizations/register', async (req, res) => {
     // Generate unique organization ID
     const organizationId = await generateOrganizationId();
 
+    // Prepare documents array for uploaded files
+    const documents = [];
+    if (req.file) {
+      documents.push({
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path,
+        uploadedAt: new Date()
+      });
+    }
+
     // Create new organization
     const organization = new Organization({
       organizationId,
@@ -2395,7 +2490,8 @@ app.post('/api/organizations/register', async (req, res) => {
       city,
       postcode,
       state,
-      country
+      country,
+      documents
     });
 
     await organization.save();
@@ -4155,6 +4251,265 @@ app.get('/api/assessment/batches', async (req, res) => {
   }
 });
 
+// ===============================
+// MESSAGING APIs
+// ===============================
+
+// Helper function to generate message ID
+const generateMessageId = () => {
+  return 'MSG' + Date.now() + Math.random().toString(36).substr(2, 6).toUpperCase();
+};
+
+// Send message from admin to organiser
+app.post('/api/messages/send', async (req, res) => {
+  try {
+    const {
+      fromType,
+      fromId,
+      fromName,
+      toType,
+      toId,
+      toName,
+      subject,
+      content,
+      priority = 'normal',
+      category = 'general',
+      relatedApplicationId = null
+    } = req.body;
+
+    const messageId = generateMessageId();
+
+    const newMessage = new Message({
+      messageId,
+      fromType,
+      fromId,
+      fromName,
+      toType,
+      toId,
+      toName,
+      subject,
+      content,
+      priority,
+      category,
+      relatedApplicationId
+    });
+
+    await newMessage.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Message sent successfully',
+      data: newMessage
+    });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send message',
+      message: error.message
+    });
+  }
+});
+
+// Get messages for a specific user (inbox)
+app.get('/api/messages/inbox/:userType/:userId', async (req, res) => {
+  try {
+    const { userType, userId } = req.params;
+    const { limit = 50, offset = 0, unreadOnly = false } = req.query;
+
+    let query = {
+      toType: userType,
+      toId: userId
+    };
+
+    if (unreadOnly === 'true') {
+      query.isRead = false;
+    }
+
+    const messages = await Message.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset));
+
+    const totalCount = await Message.countDocuments(query);
+    const unreadCount = await Message.countDocuments({
+      toType: userType,
+      toId: userId,
+      isRead: false
+    });
+
+    res.json({
+      success: true,
+      data: {
+        messages,
+        totalCount,
+        unreadCount,
+        hasMore: (parseInt(offset) + messages.length) < totalCount
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching inbox messages:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch messages',
+      message: error.message
+    });
+  }
+});
+
+// Get sent messages for a specific user
+app.get('/api/messages/sent/:userType/:userId', async (req, res) => {
+  try {
+    const { userType, userId } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+
+    const messages = await Message.find({
+      fromType: userType,
+      fromId: userId
+    })
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip(parseInt(offset));
+
+    const totalCount = await Message.countDocuments({
+      fromType: userType,
+      fromId: userId
+    });
+
+    res.json({
+      success: true,
+      data: {
+        messages,
+        totalCount,
+        hasMore: (parseInt(offset) + messages.length) < totalCount
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching sent messages:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch sent messages',
+      message: error.message
+    });
+  }
+});
+
+// Mark message as read
+app.patch('/api/messages/:messageId/read', async (req, res) => {
+  try {
+    const { messageId } = req.params;
+
+    const message = await Message.findOneAndUpdate(
+      { messageId },
+      {
+        isRead: true,
+        readAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        error: 'Message not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Message marked as read',
+      data: message
+    });
+  } catch (error) {
+    console.error('Error marking message as read:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to mark message as read',
+      message: error.message
+    });
+  }
+});
+
+// Get unread message count
+app.get('/api/messages/unread-count/:userType/:userId', async (req, res) => {
+  try {
+    const { userType, userId } = req.params;
+
+    const unreadCount = await Message.countDocuments({
+      toType: userType,
+      toId: userId,
+      isRead: false
+    });
+
+    res.json({
+      success: true,
+      data: { unreadCount }
+    });
+  } catch (error) {
+    console.error('Error fetching unread count:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch unread count',
+      message: error.message
+    });
+  }
+});
+
+// Delete message
+app.delete('/api/messages/:messageId', async (req, res) => {
+  try {
+    const { messageId } = req.params;
+
+    const message = await Message.findOneAndDelete({ messageId });
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        error: 'Message not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Message deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete message',
+      message: error.message
+    });
+  }
+});
+
+// Get message by ID
+app.get('/api/messages/:messageId', async (req, res) => {
+  try {
+    const { messageId } = req.params;
+
+    const message = await Message.findOne({ messageId });
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        error: 'Message not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: message
+    });
+  } catch (error) {
+    console.error('Error fetching message:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch message',
+      message: error.message
+    });
+  }
+});
 
 // ===============================
 // FILE UPLOAD APIs

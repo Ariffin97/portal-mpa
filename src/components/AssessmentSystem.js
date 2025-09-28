@@ -128,6 +128,15 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
     }
   }, []);
 
+  // Helper function to compare answers (moved to parent scope)
+  const getAnswerStatus = (question, userAnswer) => {
+    if (!userAnswer || !question.correctAnswer) return false;
+    // Normalize strings by trimming whitespace and comparing case-insensitively
+    const normalizedUserAnswer = userAnswer.toString().trim().toLowerCase();
+    const normalizedCorrectAnswer = question.correctAnswer.toString().trim().toLowerCase();
+    return normalizedUserAnswer === normalizedCorrectAnswer;
+  };
+
   const generateFormCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code;
@@ -233,7 +242,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
         answers: assessmentResults.answers ? Object.entries(assessmentResults.answers).map(([questionId, selectedAnswer]) => ({
           questionId: parseInt(questionId),
           selectedAnswer: selectedAnswer,
-          isCorrect: questions.find(q => q.id == questionId)?.correctAnswer === selectedAnswer
+          isCorrect: getAnswerStatus(questions.find(q => q.id == questionId), selectedAnswer)
         })) : [],
         score: assessmentResults.percentage,
         correctAnswers: assessmentResults.score,
@@ -303,6 +312,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
             userInfo={userInfo}
             timeLimit={timeLimit}
             onComplete={handleAssessmentComplete}
+            getAnswerStatus={getAnswerStatus}
             onBackToRegistration={() => {
               setCurrentView('registration');
               setUserInfo(null);
@@ -316,6 +326,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
             userInfo={userInfo}
             questions={questions}
             assessmentFormData={assessmentFormData}
+            getAnswerStatus={getAnswerStatus}
             onBackToHome={() => {
               setCurrentView('registration');
               setUserInfo(null);
@@ -553,7 +564,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) =>
 };
 
 // Assessment Component (3-column layout from original)
-const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegistration }) => {
+const Assessment = ({ questions, userInfo, timeLimit, onComplete, getAnswerStatus, onBackToRegistration }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
   const [timeRemaining, setTimeRemaining] = useState(timeLimit * 60);
@@ -562,7 +573,7 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegist
   const calculateScore = useCallback(() => {
     let correctAnswers = 0;
     questions.forEach(question => {
-      if (answers[question.id] === question.correctAnswer) {
+      if (getAnswerStatus(question, answers[question.id])) {
         correctAnswers++;
       }
     });
@@ -918,7 +929,7 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, onBackToRegist
 
 
 // Results Component
-const Results = ({ results, userInfo, questions, assessmentFormData, onBackToHome }) => {
+const Results = ({ results, userInfo, questions, assessmentFormData, getAnswerStatus, onBackToHome }) => {
   const [showReview, setShowReview] = useState(false);
 
   const downloadResultPDF = () => {
@@ -1034,10 +1045,6 @@ const Results = ({ results, userInfo, questions, assessmentFormData, onBackToHom
     if (percentage >= 80) return 'score-excellent';
     if (percentage >= 60) return 'score-good';
     return 'score-needs-improvement';
-  };
-
-  const getAnswerStatus = (question, userAnswer) => {
-    return userAnswer === question.correctAnswer;
   };
 
   return (
@@ -1274,6 +1281,36 @@ const Results = ({ results, userInfo, questions, assessmentFormData, onBackToHom
                         marginTop: '4px'
                       }}>
                         {userAnswerMalay}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    color: '#000',
+                    marginBottom: '8px'
+                  }}>
+                    Correct Answer:
+                  </div>
+                  <div style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#e8f5e8',
+                    border: '1px solid #4caf50',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}>
+                    <div>{question.correctAnswer}</div>
+                    {correctAnswerMalay && (
+                      <div style={{
+                        fontStyle: 'italic',
+                        fontSize: '12px',
+                        color: '#666',
+                        marginTop: '4px'
+                      }}>
+                        {correctAnswerMalay}
                       </div>
                     )}
                   </div>

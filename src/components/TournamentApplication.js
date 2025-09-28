@@ -2,11 +2,17 @@ import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import mpaLogo from '../assets/images/mpa.png';
 import apiService from '../services/api';
+import OrganiserInbox, { InboxButton } from './OrganiserInbox';
 
 const TournamentApplication = ({ setCurrentPage }) => {
   const [organizationData, setOrganizationData] = useState(null);
   const [appliedTournaments, setAppliedTournaments] = useState([]);
   const [isLoadingTournaments, setIsLoadingTournaments] = useState(true);
+
+  // Calendar popup states
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState(new Date());
 
   // Edit Tournament States
   const [editingTournament, setEditingTournament] = useState(null);
@@ -97,6 +103,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
   // Support Documents States
   const [supportDocuments, setSupportDocuments] = useState([]);
 
+  // Inbox States
+  const [showInboxModal, setShowInboxModal] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   // Load organization data on component mount
   useEffect(() => {
     const organizationData = localStorage.getItem('organizationData');
@@ -117,13 +127,17 @@ const TournamentApplication = ({ setCurrentPage }) => {
 
       // Load applied tournaments for this organization
       loadAppliedTournaments(orgData.email);
-      
+
+      // Load unread message count
+      loadUnreadCount(orgData.email);
+
       // Set up periodic refresh to sync with admin changes
       const refreshInterval = setInterval(() => {
         console.log('Auto-refreshing organization tournaments to sync with admin changes...');
         loadAppliedTournaments(orgData.email);
+        loadUnreadCount(orgData.email);
       }, 30000); // Refresh every 30 seconds
-      
+
       // Cleanup interval on component unmount
       return () => {
         console.log('Cleaning up tournament refresh interval');
@@ -168,6 +182,17 @@ const TournamentApplication = ({ setCurrentPage }) => {
       setAppliedTournaments([]);
     } finally {
       setIsLoadingTournaments(false);
+    }
+  };
+
+  const loadUnreadCount = async (email) => {
+    try {
+      const response = await apiService.getUnreadMessageCount('organiser', email);
+      if (response.success) {
+        setUnreadCount(response.data.unreadCount);
+      }
+    } catch (error) {
+      console.error('Failed to load unread count:', error);
     }
   };
 
@@ -919,6 +944,69 @@ const TournamentApplication = ({ setCurrentPage }) => {
     setSupportDocuments(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Calendar helper functions
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const getTournamentsForDate = (date) => {
+    // Helper function to format date to YYYY-MM-DD without timezone issues
+    const formatDateToLocal = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    // Helper function to parse date string and handle timezone properly
+    const parseDateString = (dateStr) => {
+      if (!dateStr) return null;
+
+      // If it's already in YYYY-MM-DD format, create date at local midnight
+      if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [year, month, day] = dateStr.split('-');
+        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      }
+
+      // Otherwise parse normally and extract date part
+      const parsedDate = new Date(dateStr);
+      if (isNaN(parsedDate.getTime())) return null;
+
+      return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+    };
+
+    const dateStr = formatDateToLocal(date);
+
+    return appliedTournaments.filter(app => {
+      const startDateObj = parseDateString(app.eventStartDate);
+      const endDateObj = parseDateString(app.eventEndDate);
+
+      if (!startDateObj || !endDateObj) return false;
+
+      const startDateStr = formatDateToLocal(startDateObj);
+      const endDateStr = formatDateToLocal(endDateObj);
+
+      return dateStr >= startDateStr && dateStr <= endDateStr;
+    });
+  };
+
+  const handleDateClick = (day) => {
+    const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    setCalendarSelectedDate(clickedDate);
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
   return (
     <div className="tournament-application-container">
       {/* Sidebar */}
@@ -955,6 +1043,42 @@ const TournamentApplication = ({ setCurrentPage }) => {
           >
             Update Profile
           </button>
+
+          {/* Messages Button */}
+          <div style={{ marginBottom: '10px' }}>
+            <InboxButton
+              organizationData={organizationData}
+              unreadCount={unreadCount}
+              onClick={() => setShowInboxModal(true)}
+            />
+          </div>
+
+          {/* Calendar Button */}
+          <button
+            className="calendar-btn"
+            onClick={() => setShowCalendarModal(true)}
+            style={{
+              width: '100%',
+              padding: '10px 15px',
+              backgroundColor: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              marginBottom: '10px',
+              transition: 'background-color 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+          >
+            📅 Tournament Calendar
+          </button>
+
           <button className="logout-btn" onClick={handleLogout}>
             Logout
           </button>
@@ -1022,6 +1146,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
             </div>
           )}
         </div>
+
       </div>
 
       {/* Main Content */}
@@ -2318,6 +2443,283 @@ const TournamentApplication = ({ setCurrentPage }) => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inbox Modal */}
+      <OrganiserInbox
+        organizationData={organizationData}
+        isOpen={showInboxModal}
+        onClose={() => setShowInboxModal(false)}
+      />
+
+      {/* Calendar Modal */}
+      {showCalendarModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '900px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '24px',
+              paddingBottom: '16px',
+              borderBottom: '2px solid #e9ecef'
+            }}>
+              <h2 style={{ margin: 0, color: '#495057', fontSize: '24px', fontWeight: '600' }}>
+                Tournament Calendar
+              </h2>
+              <button
+                onClick={() => setShowCalendarModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6c757d',
+                  padding: '0',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Calendar Content */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr 1fr',
+              gap: '24px',
+              minHeight: '500px'
+            }}>
+              {/* Calendar Grid */}
+              <div className="calendar-grid">
+                <div className="calendar-header" style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '20px',
+                  paddingBottom: '15px',
+                  borderBottom: '2px solid #e9ecef'
+                }}>
+                  <button
+                    onClick={handlePrevMonth}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: '16px'
+                    }}
+                  >
+                    ←
+                  </button>
+                  <h3 style={{ margin: 0 }}>
+                    {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                  </h3>
+                  <button
+                    onClick={handleNextMonth}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: '16px'
+                    }}
+                  >
+                    →
+                  </button>
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="calendar-month" style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: '1px',
+                  backgroundColor: '#dee2e6',
+                  borderRadius: '8px',
+                  overflow: 'hidden'
+                }}>
+                  {/* Day headers */}
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                    <div key={day} style={{
+                      padding: '12px',
+                      backgroundColor: '#495057',
+                      color: 'white',
+                      textAlign: 'center',
+                      fontWeight: '500',
+                      fontSize: '14px'
+                    }}>
+                      {day}
+                    </div>
+                  ))}
+
+                  {/* Empty cells for days before month starts */}
+                  {Array.from({ length: getFirstDayOfMonth(currentMonth) }, (_, i) => (
+                    <div key={`empty-${i}`} style={{
+                      padding: '12px',
+                      backgroundColor: '#f8f9fa',
+                      minHeight: '60px'
+                    }} />
+                  ))}
+
+                  {/* Calendar days */}
+                  {Array.from({ length: getDaysInMonth(currentMonth) }, (_, i) => {
+                    const day = i + 1;
+                    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                    const tournaments = getTournamentsForDate(date);
+                    const isToday = new Date().toDateString() === date.toDateString();
+                    const isSelected = calendarSelectedDate.toDateString() === date.toDateString();
+
+                    return (
+                      <div
+                        key={day}
+                        onClick={() => handleDateClick(day)}
+                        style={{
+                          padding: '8px',
+                          backgroundColor: isSelected ? '#007bff' : isToday ? '#e3f2fd' : 'white',
+                          minHeight: '60px',
+                          cursor: 'pointer',
+                          border: isToday ? '2px solid #2196f3' : 'none',
+                          position: 'relative',
+                          color: isSelected ? 'white' : '#212529'
+                        }}
+                      >
+                        <div style={{ fontWeight: isToday ? '600' : '400', fontSize: '14px' }}>
+                          {day}
+                        </div>
+                        {tournaments.length > 0 && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '4px',
+                            left: '4px',
+                            right: '4px',
+                            display: 'flex',
+                            gap: '2px',
+                            flexWrap: 'wrap'
+                          }}>
+                            {tournaments.slice(0, 3).map((tournament, idx) => (
+                              <div
+                                key={idx}
+                                style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  backgroundColor: tournament.status === 'Approved' ? '#28a745' :
+                                                 tournament.status === 'Pending Review' ? '#ffc107' : '#dc3545'
+                                }}
+                              />
+                            ))}
+                            {tournaments.length > 3 && (
+                              <div style={{
+                                fontSize: '8px',
+                                color: isSelected ? 'white' : '#6c757d',
+                                marginLeft: '2px'
+                              }}>
+                                +{tournaments.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="calendar-legend" style={{
+                  marginTop: '15px',
+                  padding: '10px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '4px',
+                  fontSize: '12px'
+                }}>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: '#28a745', borderRadius: '50%', marginRight: '5px' }}></span>
+                  <small style={{ marginRight: '15px' }}>Approved</small>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: '#ffc107', borderRadius: '50%', marginRight: '5px' }}></span>
+                  <small style={{ marginRight: '15px' }}>Pending</small>
+                  <span style={{ display: 'inline-block', width: '8px', height: '8px', backgroundColor: '#dc3545', borderRadius: '50%', marginRight: '5px' }}></span>
+                  <small>Rejected</small>
+                </div>
+              </div>
+
+              {/* Selected Date Details */}
+              <div className="selected-date-details">
+                <h4 style={{ marginTop: 0, color: '#495057' }}>
+                  {calendarSelectedDate.toLocaleDateString('default', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </h4>
+
+                <div style={{ marginTop: '20px' }}>
+                  <h5 style={{ margin: '0 0 15px 0', color: '#6c757d' }}>Your Tournaments</h5>
+                  {getTournamentsForDate(calendarSelectedDate).length === 0 ? (
+                    <p style={{ color: '#6c757d', fontStyle: 'italic' }}>No tournaments on this date</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {getTournamentsForDate(calendarSelectedDate).map((tournament, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            padding: '12px',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '6px',
+                            borderLeft: `4px solid ${
+                              tournament.status === 'Approved' ? '#28a745' :
+                              tournament.status === 'Pending Review' ? '#ffc107' : '#dc3545'
+                            }`
+                          }}
+                        >
+                          <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                            {tournament.eventTitle}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '4px' }}>
+                            {tournament.venue}, {tournament.eventCity}
+                          </div>
+                          <div style={{
+                            fontSize: '11px',
+                            fontWeight: '500',
+                            color: tournament.status === 'Approved' ? '#28a745' :
+                                   tournament.status === 'Pending Review' ? '#856404' : '#721c24'
+                          }}>
+                            {tournament.status}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

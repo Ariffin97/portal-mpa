@@ -40,6 +40,9 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
     country: 'Malaysia'
   });
 
+  // Registration document file state
+  const [registrationDocument, setRegistrationDocument] = useState(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -94,23 +97,31 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
+
+    // Update form data
+    const updatedFormData = {
+      ...formData,
       [name]: value
-    }));
+    };
+
+    setFormData(updatedFormData);
 
     // Check password strength when password field changes
     if (name === 'password') {
       setPasswordStrength(checkPasswordStrength(value));
-      // Also check if confirm password still matches
-      if (formData.confirmPassword) {
-        setPasswordMatch(value === formData.confirmPassword);
+      // Also check if confirm password still matches with the new password
+      if (updatedFormData.confirmPassword) {
+        setPasswordMatch(value === updatedFormData.confirmPassword);
+      } else {
+        // Reset password match state if confirm password is empty
+        setPasswordMatch(true);
       }
     }
-    
+
     // Check password match when confirm password field changes
     if (name === 'confirmPassword') {
-      setPasswordMatch(value === formData.password);
+      // Compare new confirm password value with current password
+      setPasswordMatch(value === updatedFormData.password);
     }
   };
 
@@ -123,9 +134,43 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
     }));
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+
+    if (file) {
+      // Validate file type (PDF, DOC, DOCX, JPG, PNG)
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'image/jpg'];
+
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please upload a valid file format (PDF, DOC, DOCX, JPG, PNG)');
+        e.target.value = '';
+        return;
+      }
+
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File size must be less than 10MB');
+        e.target.value = '';
+        return;
+      }
+
+      setRegistrationDocument(file);
+    }
+  };
+
+  const removeRegistrationDocument = () => {
+    setRegistrationDocument(null);
+    // Reset the file input
+    const fileInput = document.getElementById('registrationDocument');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
   const isFormValid = () => {
     return formData.organizationName.trim() !== '' &&
            formData.registrationNo.trim() !== '' &&
+           registrationDocument !== null &&
            formData.applicantFullName.trim() !== '' &&
            formData.phoneNumber.trim() !== '' &&
            formData.email.trim() !== '' &&
@@ -161,12 +206,25 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
     }
 
     try {
-      const response = await apiService.registerOrganization(formData);
-      
+      // Create FormData to handle file upload
+      const submissionData = new FormData();
+
+      // Add all form fields
+      Object.keys(formData).forEach(key => {
+        submissionData.append(key, formData[key]);
+      });
+
+      // Add the registration document file
+      if (registrationDocument) {
+        submissionData.append('registrationDocument', registrationDocument);
+      }
+
+      const response = await apiService.registerOrganization(submissionData);
+
       // Store organization info and set login status
       localStorage.setItem('organizationData', JSON.stringify(response.organization));
       localStorage.setItem('organizationLoggedIn', 'true');
-      
+
       alert('Organization registered successfully! You can now proceed to submit your tournament application.');
       setIsSubmitted(true);
       
@@ -223,6 +281,84 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
             </div>
 
             <div className="form-group">
+              <label htmlFor="registrationDocument">
+                Upload Registration Document *
+                <small style={{ display: 'block', color: '#666', fontSize: '12px', marginTop: '4px' }}>
+                  Upload a copy of your PJS/ROS/Company Registration document (PDF, DOC, DOCX, JPG, PNG - Max 10MB)
+                </small>
+              </label>
+              <input
+                type="file"
+                id="registrationDocument"
+                name="registrationDocument"
+                onChange={handleFileUpload}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                required
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  border: '2px dashed #ccc',
+                  borderRadius: '4px',
+                  backgroundColor: '#f9f9f9',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              />
+
+              {registrationDocument && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '10px',
+                  backgroundColor: '#e8f5e8',
+                  border: '1px solid #4caf50',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ color: '#4caf50', fontSize: '16px' }}>📄</span>
+                    <span style={{ fontSize: '14px', color: '#2e7d32' }}>
+                      {registrationDocument.name}
+                    </span>
+                    <span style={{ fontSize: '12px', color: '#666' }}>
+                      ({(registrationDocument.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeRegistrationDocument}
+                    style={{
+                      backgroundColor: '#f44336',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+
+              {!registrationDocument && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px',
+                  backgroundColor: '#fff3cd',
+                  border: '1px solid #ffeaa7',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  color: '#856404'
+                }}>
+                  ⚠️ Please upload your registration document to proceed
+                </div>
+              )}
+            </div>
+
+            <div className="form-group">
               <label htmlFor="applicantFullName">Full Name of Applicant/Representative *</label>
               <input
                 type="text"
@@ -269,6 +405,14 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
                 placeholder="Create a secure password"
                 minLength="8"
                 required
+                style={{
+                  borderColor: formData.password && formData.confirmPassword ?
+                    (passwordMatch ? '#28a745' : '#dc3545') :
+                    '#ccc',
+                  borderWidth: '2px',
+                  outline: 'none',
+                  transition: 'border-color 0.3s ease'
+                }}
               />
               
               {formData.password && (
@@ -310,6 +454,21 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
                   </li>
                 </ul>
               </div>
+
+              {/* Password matching hint */}
+              {formData.password && !formData.confirmPassword && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '6px 10px',
+                  backgroundColor: '#e3f2fd',
+                  border: '1px solid #bbdefb',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  color: '#1565c0'
+                }}>
+                  💡 Please confirm your password in the next field
+                </div>
+              )}
             </div>
 
             <div className="form-group">
@@ -322,17 +481,39 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
                 onChange={handleInputChange}
                 placeholder="Re-enter your password"
                 required
+                style={{
+                  borderColor: formData.confirmPassword ?
+                    (passwordMatch ? '#28a745' : '#dc3545') :
+                    '#ccc',
+                  borderWidth: '2px',
+                  outline: 'none',
+                  transition: 'border-color 0.3s ease'
+                }}
               />
               {formData.confirmPassword && (
-                <div className="password-match-indicator">
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: passwordMatch ? '#d4edda' : '#f8d7da',
+                  border: `1px solid ${passwordMatch ? '#c3e6cb' : '#f5c6cb'}`,
+                  color: passwordMatch ? '#155724' : '#721c24'
+                }}>
                   {passwordMatch ? (
-                    <span className="password-match-success">
-                      ✓ Passwords match
-                    </span>
+                    <>
+                      <span style={{ color: '#28a745', fontSize: '16px' }}>✓</span>
+                      <span>Passwords match</span>
+                    </>
                   ) : (
-                    <span className="password-match-error">
-                      ✗ Passwords do not match
-                    </span>
+                    <>
+                      <span style={{ color: '#dc3545', fontSize: '16px' }}>✗</span>
+                      <span>Passwords do not match</span>
+                    </>
                   )}
                 </div>
               )}
