@@ -311,6 +311,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
             questions={questions}
             userInfo={userInfo}
             timeLimit={timeLimit}
+            assessmentFormData={assessmentFormData}
             onComplete={handleAssessmentComplete}
             getAnswerStatus={getAnswerStatus}
             onBackToRegistration={() => {
@@ -564,7 +565,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) =>
 };
 
 // Assessment Component (3-column layout from original)
-const Assessment = ({ questions, userInfo, timeLimit, onComplete, getAnswerStatus, onBackToRegistration }) => {
+const Assessment = ({ questions, userInfo, timeLimit, onComplete, getAnswerStatus, onBackToRegistration, assessmentFormData }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
   const [timeRemaining, setTimeRemaining] = useState(timeLimit * 60);
