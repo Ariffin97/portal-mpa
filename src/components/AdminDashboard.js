@@ -8058,7 +8058,7 @@ Settings
                             }}>
                               {doc.mimetype?.includes('image') && (
                                 <button
-                                  onClick={() => window.open(`/api/files/${doc.filename}`, '_blank')}
+                                  onClick={() => window.open(`/uploads/${doc.filename}`, '_blank')}
                                   style={{
                                     padding: '8px 12px',
                                     backgroundColor: '#28a745',
@@ -8074,10 +8074,7 @@ Settings
                               )}
                               <button
                                 onClick={() => {
-                                  const link = document.createElement('a');
-                                  link.href = `/api/files/${doc.filename}`;
-                                  link.download = doc.originalName || doc.filename;
-                                  link.click();
+                                  window.open(`/uploads/${doc.filename}`, '_blank');
                                 }}
                                 style={{
                                   padding: '8px 12px',
