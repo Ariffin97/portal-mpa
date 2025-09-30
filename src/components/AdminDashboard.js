@@ -9258,16 +9258,16 @@ Settings
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
                   <div>
-                    <strong>Name:</strong> {selectedSubmission.userInfo?.fullName || selectedSubmission.participantName || 'Unknown'}
+                    <strong>Name:</strong> {selectedSubmission.participantName || 'Unknown'}
                   </div>
                   <div>
-                    <strong>IC Number:</strong> {selectedSubmission.userInfo?.icNumber || 'N/A'}
+                    <strong>IC Number:</strong> {selectedSubmission.participantIcNumber || 'N/A'}
                   </div>
                   <div>
-                    <strong>Form Code:</strong> {selectedSubmission.userInfo?.formCode || selectedSubmission.formCode || 'N/A'}
+                    <strong>Form Code:</strong> {selectedSubmission.formCode || 'N/A'}
                   </div>
                   <div>
-                    <strong>Submission Date:</strong> {new Date(selectedSubmission.submittedAt || selectedSubmission.completedAt).toLocaleString()}
+                    <strong>Submission Date:</strong> {new Date(selectedSubmission.completedAt || selectedSubmission.submittedAt).toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -9285,10 +9285,10 @@ Settings
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                   <div>
-                    <strong>Score:</strong> {selectedSubmission.results?.score || selectedSubmission.correctAnswers || 0} / {selectedSubmission.results?.totalQuestions || selectedSubmission.totalQuestions || 0}
+                    <strong>Score:</strong> {selectedSubmission.correctAnswers || 0} / {selectedSubmission.totalQuestions || 0}
                   </div>
                   <div>
-                    <strong>Percentage:</strong> {selectedSubmission.results?.percentage || selectedSubmission.score || 0}%
+                    <strong>Percentage:</strong> {selectedSubmission.score || 0}%
                   </div>
                   <div>
                     <strong>Status:</strong>
@@ -9298,14 +9298,14 @@ Settings
                       borderRadius: '4px',
                       fontSize: '12px',
                       fontWeight: 'bold',
-                      backgroundColor: (selectedSubmission.results?.percentage || selectedSubmission.score || 0) >= 70 ? '#28a745' : '#dc3545',
+                      backgroundColor: (selectedSubmission.score || 0) >= 70 ? '#28a745' : '#dc3545',
                       color: 'white'
                     }}>
-                      {(selectedSubmission.results?.percentage || selectedSubmission.score || 0) >= 70 ? 'PASSED' : 'FAILED'}
+                      {(selectedSubmission.score || 0) >= 70 ? 'PASSED' : 'FAILED'}
                     </span>
                   </div>
                   <div>
-                    <strong>Time Spent:</strong> {Math.floor((selectedSubmission.results?.timeSpent || selectedSubmission.timeSpent || 0) / 60)}m {(selectedSubmission.results?.timeSpent || selectedSubmission.timeSpent || 0) % 60}s
+                    <strong>Time Spent:</strong> {Math.floor((selectedSubmission.timeSpent || 0) / 60)}m {(selectedSubmission.timeSpent || 0) % 60}s
                   </div>
                 </div>
               </div>
