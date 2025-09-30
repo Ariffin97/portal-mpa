@@ -5,7 +5,7 @@ import mpaLogo from '../assets/images/mpa.png';
 import AdminPanel from './AdminPanel';
 import jsPDF from 'jspdf';
 
-const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) => {
+const AdminDashboard = ({ setCurrentPage }) => {
   // Use shared notices context
   const { 
     notices, 
@@ -4676,14 +4676,14 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                           color: '#212529',
                           fontWeight: '500'
                         }}>
-                          {submission.userInfo?.fullName || 'Unknown User'}
+                          {submission.participantName || 'Unknown User'}
                         </td>
                         <td style={{
                           padding: '12px 16px',
                           fontSize: '14px',
                           color: '#495057'
                         }}>
-                          {submission.userInfo?.icNumber || 'N/A'}
+                          {submission.participantIcNumber || 'N/A'}
                         </td>
                         <td style={{
                           padding: '12px 16px',
@@ -4692,16 +4692,16 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                           textAlign: 'center',
                           fontWeight: '500'
                         }}>
-                          {submission.results?.score || 0}/{submission.results?.totalQuestions || 0}
+                          {submission.correctAnswers || 0}/{submission.totalQuestions || 0}
                         </td>
                         <td style={{
                           padding: '12px 16px',
                           fontSize: '14px',
                           textAlign: 'center',
                           fontWeight: '600',
-                          color: submission.results?.percentage >= 70 ? '#28a745' : '#dc3545'
+                          color: submission.score >= 70 ? '#28a745' : '#dc3545'
                         }}>
-                          {submission.results?.percentage || 0}%
+                          {submission.score || 0}%
                         </td>
                         <td style={{
                           padding: '12px 16px',
@@ -4722,11 +4722,11 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
                             fontSize: '12px',
                             fontWeight: '600',
                             textTransform: 'uppercase',
-                            backgroundColor: (submission.results?.percentage >= 70) ? '#d4edda' : '#f8d7da',
-                            color: (submission.results?.percentage >= 70) ? '#155724' : '#721c24',
-                            border: `1px solid ${(submission.results?.percentage >= 70) ? '#c3e6cb' : '#f5c6cb'}`
+                            backgroundColor: (submission.score >= 70) ? '#d4edda' : '#f8d7da',
+                            color: (submission.score >= 70) ? '#155724' : '#721c24',
+                            border: `1px solid ${(submission.score >= 70) ? '#c3e6cb' : '#f5c6cb'}`
                           }}>
-                            {(submission.results?.percentage >= 70) ? 'PASS' : 'FAIL'}
+                            {(submission.score >= 70) ? 'PASS' : 'FAIL'}
                           </span>
                         </td>
                       </tr>

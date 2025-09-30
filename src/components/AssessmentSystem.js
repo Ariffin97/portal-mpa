@@ -3,7 +3,7 @@ import apiService from '../services/api';
 import mpaLogo from '../assets/images/mpa.png';
 import jsPDF from 'jspdf';
 
-const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
+const AssessmentSystem = ({ isOpen, onClose }) => {
   const [currentView, setCurrentView] = useState('registration'); // registration, assessment, results
   const [questions, setQuestions] = useState([]);
   const [userInfo, setUserInfo] = useState(null);
@@ -239,6 +239,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
       const submissionData = {
         formCode: userInfo.formCode,
         participantName: userInfo.fullName,
+        participantIcNumber: userInfo.icNumber,
         participantEmail: null,
         answers: assessmentResults.answers ? Object.entries(assessmentResults.answers).map(([questionId, selectedAnswer]) => ({
           questionId: parseInt(questionId),
@@ -263,11 +264,6 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
     setAllSubmissions(prev => [...prev, submission]);
     setResults(finalResults);
     setCurrentView('results');
-
-    // Save to global state if callback provided
-    if (onSubmissionSave) {
-      onSubmissionSave(submission);
-    }
   };
 
   if (!isOpen) return null;

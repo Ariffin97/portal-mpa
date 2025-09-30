@@ -30,54 +30,8 @@ function App() {
   const [showApplyDropdown, setShowApplyDropdown] = useState(false);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
 
-  // Global assessment submissions state
-  const [globalAssessmentSubmissions, setGlobalAssessmentSubmissions] = useState(() => {
-    try {
-      const saved = localStorage.getItem('assessmentSubmissions');
-      return saved ? JSON.parse(saved) : [];
-    } catch (error) {
-      console.error('Error loading assessment submissions:', error);
-      return [];
-    }
-  });
-
-  // Function to save assessment submissions
-  const saveAssessmentSubmission = (submission) => {
-    const newSubmission = {
-      ...submission,
-      id: Date.now() + Math.random(), // Ensure unique ID
-      submittedAt: new Date().toISOString(),
-      completedAt: new Date().toISOString()
-    };
-
-    const updatedSubmissions = [...globalAssessmentSubmissions, newSubmission];
-    setGlobalAssessmentSubmissions(updatedSubmissions);
-
-    // Save to localStorage
-    try {
-      localStorage.setItem('assessmentSubmissions', JSON.stringify(updatedSubmissions));
-    } catch (error) {
-      console.error('Error saving assessment submission:', error);
-    }
-  };
-
-  // Function to clear all assessment submissions
-  const clearAllAssessmentSubmissions = () => {
-    setGlobalAssessmentSubmissions([]);
-    try {
-      localStorage.removeItem('assessmentSubmissions');
-    } catch (error) {
-      console.error('Error clearing assessment submissions:', error);
-    }
-  };
-
-  // Make clear function available globally
-  useEffect(() => {
-    window.clearAllAssessmentSubmissions = clearAllAssessmentSubmissions;
-    return () => {
-      delete window.clearAllAssessmentSubmissions;
-    };
-  }, []);
+  // Assessment submissions are now saved directly to database
+  // AdminDashboard loads them from the database via API
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -445,7 +399,7 @@ function App() {
       case 'login':
         return <Login setCurrentPage={setCurrentPage} setIsLoggedIn={setIsLoggedIn} />;
       case 'admin':
-        return isLoggedIn ? <AdminDashboard setCurrentPage={setCurrentPage} globalAssessmentSubmissions={globalAssessmentSubmissions} /> : <Login setCurrentPage={setCurrentPage} setIsLoggedIn={setIsLoggedIn} />;
+        return isLoggedIn ? <AdminDashboard setCurrentPage={setCurrentPage} /> : <Login setCurrentPage={setCurrentPage} setIsLoggedIn={setIsLoggedIn} />;
       case 'register-organization':
         return <OrganizationRegistration setCurrentPage={setCurrentPage} />;
       case 'organization-terms':
@@ -751,7 +705,6 @@ function App() {
       <AssessmentSystem
         isOpen={showAssessmentModal}
         onClose={() => setShowAssessmentModal(false)}
-        onSubmissionSave={saveAssessmentSubmission}
       />
     </div>
   );

@@ -1618,6 +1618,11 @@ const assessmentSubmissionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  participantIcNumber: {
+    type: String,
+    required: false,
+    default: null
+  },
   participantEmail: {
     type: String,
     required: false,
@@ -4052,7 +4057,7 @@ app.post('/api/assessment/submissions', async (req, res) => {
     console.log('=== Assessment Submission Request ===');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
 
-    const { formCode, participantName, participantEmail, answers, score, correctAnswers, totalQuestions, timeSpent, batchId, batchDate } = req.body;
+    const { formCode, participantName, participantIcNumber, participantEmail, answers, score, correctAnswers, totalQuestions, timeSpent, batchId, batchDate } = req.body;
 
     // Validation
     console.log('Validating fields...');
@@ -4099,6 +4104,7 @@ app.post('/api/assessment/submissions', async (req, res) => {
       submissionId: submissionId,
       formCode: formCode.toUpperCase(),
       participantName: participantName,
+      participantIcNumber: participantIcNumber || null,
       participantEmail: participantEmail || null,
       answers: answers,
       score: score,
