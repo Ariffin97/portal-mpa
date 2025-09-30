@@ -239,6 +239,7 @@ const AssessmentSystem = ({ isOpen, onClose, onSubmissionSave }) => {
       const submissionData = {
         formCode: userInfo.formCode,
         participantName: userInfo.fullName,
+        participantEmail: null,
         answers: assessmentResults.answers ? Object.entries(assessmentResults.answers).map(([questionId, selectedAnswer]) => ({
           questionId: parseInt(questionId),
           selectedAnswer: selectedAnswer,

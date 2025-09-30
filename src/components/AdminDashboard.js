@@ -141,8 +141,8 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   const [passingScore, setPassingScore] = useState(70); // Percentage required to pass
   const [savedAssessmentForms, setSavedAssessmentForms] = useState([]);
   const [currentDraftId, setCurrentDraftId] = useState(null); // Track current draft being edited
-  // Use global assessment submissions instead of local state
-  const assessmentSubmissions = globalAssessmentSubmissions;
+  // Load assessment submissions from database instead of localStorage
+  const [assessmentSubmissions, setAssessmentSubmissions] = useState([]);
   const [assessmentManagementExpanded, setAssessmentManagementExpanded] = useState(false);
   const [isLoadingUpdates, setIsLoadingUpdates] = useState(false);
 
@@ -185,7 +185,7 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
   // Sidebar Sub-menu state
   const [createTournamentExpanded, setCreateTournamentExpanded] = useState(false);
 
-  // Load saved assessment forms on component mount
+  // Load saved assessment forms and submissions on component mount
   useEffect(() => {
     const loadAssessmentForms = async () => {
       try {
@@ -197,7 +197,18 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
       }
     };
 
+    const loadAssessmentSubmissions = async () => {
+      try {
+        const submissions = await apiService.getAllAssessmentSubmissions();
+        setAssessmentSubmissions(Array.isArray(submissions) ? submissions : []);
+      } catch (error) {
+        console.error('Error loading assessment submissions:', error);
+        setAssessmentSubmissions([]);
+      }
+    };
+
     loadAssessmentForms();
+    loadAssessmentSubmissions();
   }, []);
 
   // Toggle batch folder collapse state
@@ -4536,17 +4547,16 @@ const AdminDashboard = ({ setCurrentPage, globalAssessmentSubmissions = [] }) =>
               {assessmentSubmissions.length > 0 && (
                 <button
                   type="button"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.preventDefault();
                     if (window.confirm('Are you sure you want to clear all assessment submissions? This action cannot be undone.')) {
-                      // Clear from global state via the parent component
-                      if (window.clearAllAssessmentSubmissions) {
-                        window.clearAllAssessmentSubmissions();
-                        alert('All assessment submissions have been cleared.');
-                      } else {
-                        // Fallback: clear from localStorage directly
-                        localStorage.removeItem('assessmentSubmissions');
-                        alert('All assessment submissions have been cleared. Please refresh the page to see changes.');
+                      try {
+                        const response = await apiService.clearAllAssessmentSubmissions();
+                        setAssessmentSubmissions([]);
+                        alert(`Successfully cleared ${response.deletedCount || 0} assessment submissions.`);
+                      } catch (error) {
+                        console.error('Error clearing submissions:', error);
+                        alert('Error clearing submissions. Please try again.');
                       }
                     }
                   }}

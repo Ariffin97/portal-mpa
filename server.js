@@ -1620,7 +1620,8 @@ const assessmentSubmissionSchema = new mongoose.Schema({
   },
   participantEmail: {
     type: String,
-    required: true
+    required: false,
+    default: null
   },
   answers: [{
     questionId: {
@@ -4055,8 +4056,8 @@ app.post('/api/assessment/submissions', async (req, res) => {
 
     // Validation
     console.log('Validating fields...');
-    if (!formCode || !participantName || !participantEmail || !answers || score === undefined) {
-      console.log('Validation failed:', { formCode, participantName, participantEmail, answers: !!answers, score });
+    if (!formCode || !participantName || !answers || score === undefined) {
+      console.log('Validation failed:', { formCode, participantName, answers: !!answers, score });
       return res.status(400).json({
         success: false,
         message: 'All required fields must be provided'
@@ -4098,7 +4099,7 @@ app.post('/api/assessment/submissions', async (req, res) => {
       submissionId: submissionId,
       formCode: formCode.toUpperCase(),
       participantName: participantName,
-      participantEmail: participantEmail,
+      participantEmail: participantEmail || null,
       answers: answers,
       score: score,
       correctAnswers: correctAnswers,
