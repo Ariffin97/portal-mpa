@@ -7749,7 +7749,7 @@ Settings
                           </div>
                           <div style={{ marginTop: '10px' }}>
                             <a
-                              href={`/api/uploads/${doc.filename}`}
+                              href={`/uploads/${doc.filename}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{
