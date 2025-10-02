@@ -564,6 +564,17 @@ function App() {
                         Check Application Status
                       </button>
                     </div>
+
+                    {/* Windows Platform Note */}
+                    <div style={{
+                      textAlign: 'center',
+                      marginTop: '20px',
+                      fontSize: '0.85em',
+                      color: 'red'
+                    }}>
+                      For optimal performance, please access this portal using Windows.
+                    </div>
+
                   </div>
                 </div>
               </div>
@@ -684,7 +695,7 @@ function App() {
         {renderPage()}
       </main>
       {currentPage !== 'login' && !showAssessmentModal && <Footer />}
-      
+
       <OrganizationLoginModal 
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}

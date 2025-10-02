@@ -125,23 +125,11 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
   };
 
   const getPriorityIcon = (priority) => {
-    switch (priority) {
-      case 'urgent': return '🔴';
-      case 'high': return '🟠';
-      case 'normal': return '🟢';
-      case 'low': return '🔵';
-      default: return '🟢';
-    }
+    return '';
   };
 
   const getCategoryIcon = (category) => {
-    switch (category) {
-      case 'tournament': return '🏆';
-      case 'technical': return '⚙️';
-      case 'urgent': return '⚡';
-      case 'general': return '💬';
-      default: return '💬';
-    }
+    return '';
   };
 
   const closeMessageModal = () => {
@@ -195,16 +183,6 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
         alignItems: 'center'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: '8px',
-            padding: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <span style={{ fontSize: '16px' }}>✉️</span>
-          </div>
           <div>
             <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>Admin Messages</h3>
             {unreadCount > 0 && (
@@ -252,7 +230,6 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
               e.target.style.transform = 'translateY(0)';
             }}
           >
-            <span style={{ fontSize: '12px' }}>🔄</span>
             <span>Refresh</span>
           </button>
           <button
@@ -512,17 +489,6 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1, paddingRight: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      borderRadius: '8px',
-                      padding: '6px 8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}>
-                      <span style={{ fontSize: '14px' }}>{getPriorityIcon(selectedMessage.priority)}</span>
-                      <span style={{ fontSize: '14px' }}>{getCategoryIcon(selectedMessage.category)}</span>
-                    </div>
                     <h3 style={{
                       margin: 0,
                       fontSize: '20px',
