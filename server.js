@@ -6,6 +6,7 @@ const path = require('path');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const fs = require('fs');
 const multer = require('multer');
+const { profileStorage, newsStorage, journeyStorage } = require('./cloudinaryConfig');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
@@ -43,38 +44,30 @@ mongoose.connect(MONGODB_URI)
 .then(() => console.log(`✅ Connected to MongoDB (${dbConfig.type})`))
 .catch((err) => console.error('MongoDB connection error:', err));
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({
-  storage: storage,
+// Configure multer for file uploads with Cloudinary
+const uploadProfile = multer({
+  storage: profileStorage,
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
-  },
-  fileFilter: function (req, file, cb) {
-    const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-
-    if (mimetype && extname) {
-      return cb(null, true);
-    } else {
-      cb(new Error('Only images, PDFs, and documents are allowed'));
-    }
   }
 });
+
+const uploadNews = multer({
+  storage: newsStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+const uploadJourney = multer({
+  storage: journeyStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+// Legacy upload (keep for backward compatibility if needed)
+const upload = uploadProfile;
 
 // Function to generate unique application ID
 function generateApplicationId() {
@@ -1903,7 +1896,7 @@ app.get('/api/players/check-ic/:icNumber', async (req, res) => {
   }
 });
 
-app.post('/api/players/register', upload.single('profilePicture'), async (req, res) => {
+app.post('/api/players/register', uploadProfile.single('profilePicture'), async (req, res) => {
   try {
     const formData = req.body;
 
@@ -1962,7 +1955,7 @@ app.post('/api/players/register', upload.single('profilePicture'), async (req, r
 
     // Add profile picture path if uploaded
     if (req.file) {
-      playerData.profilePicture = `/uploads/${req.file.filename}`;
+      playerData.profilePicture = req.file.path; // Cloudinary URL
     }
 
     const newPlayer = new Player(playerData);
@@ -2525,7 +2518,7 @@ app.patch('/api/bookings/:id/cancel', async (req, res) => {
 // ===============================
 
 // Create news/announcement
-app.post('/api/news', upload.single('newsImage'), async (req, res) => {
+app.post('/api/news', uploadNews.single('newsImage'), async (req, res) => {
   try {
     console.log('📰 Creating news...');
     console.log('File received:', req.file ? req.file.filename : 'No file');
@@ -2540,7 +2533,7 @@ app.post('/api/news', upload.single('newsImage'), async (req, res) => {
       console.log('✅ Image uploaded:', req.file.filename);
       media.push({
         type: 'image',
-        url: `/uploads/${req.file.filename}`,
+        url: req.file.path // Cloudinary URL,
         caption: newsData.title
       });
     }
@@ -2615,7 +2608,7 @@ app.get('/api/news/:id', async (req, res) => {
 });
 
 // Update news
-app.patch('/api/news/:id', upload.single('newsImage'), async (req, res) => {
+app.patch('/api/news/:id', uploadNews.single('newsImage'), async (req, res) => {
   try {
     const newsData = req.body;
     const updateData = {
@@ -2630,7 +2623,7 @@ app.patch('/api/news/:id', upload.single('newsImage'), async (req, res) => {
     if (req.file) {
       updateData.media = [{
         type: 'image',
-        url: `/uploads/${req.file.filename}`,
+        url: req.file.path // Cloudinary URL,
         caption: newsData.title
       }];
     }
@@ -3322,7 +3315,7 @@ app.post('/api/applications', upload.array('supportDocuments', 10), async (req, 
     if (savedApplication.createdByAdmin && savedApplication.status === 'Approved') {
       try {
         console.log('🚨 Sending INSTANT admin-created tournament webhook to main site...');
-        const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhooks/tournament-updated' : 'https://malaysiapickleball.my/api/webhooks/tournament-updated';
+        const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhooks/tournament-updated' : 'https://malaysiapickleball-fbab5112dbaf.herokuapp.com/api/webhooks/tournament-updated';
         
         const webhookPayload = {
           tournament: {
@@ -3467,7 +3460,7 @@ app.patch('/api/applications/:id/status', async (req, res) => {
     // INSTANT WEBHOOK - Notify main site of status change immediately
     try {
       console.log('🚨 Sending INSTANT status change webhook to main site...');
-      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhooks/tournament-updated' : 'https://malaysiapickleball.my/api/webhooks/tournament-updated';
+      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhooks/tournament-updated' : 'https://malaysiapickleball-fbab5112dbaf.herokuapp.com/api/webhooks/tournament-updated';
       
       const webhookPayload = {
         tournament: {
@@ -3595,6 +3588,52 @@ app.patch('/api/applications/:id', async (req, res) => {
     }
     
     
+    // INSTANT WEBHOOK - Notify main site if tournament is approved
+    if (application.status === 'Approved') {
+      try {
+        console.log('🚨 Sending INSTANT update webhook to main site...');
+        const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhooks/tournament-updated' : 'https://malaysiapickleball-fbab5112dbaf.herokuapp.com/api/webhooks/tournament-updated';
+        
+        const webhookPayload = {
+          tournament: application,
+          action: 'updated'
+        };
+        
+        const https = require('https');
+        const http = require('http');
+        const url = require('url');
+        
+        const parsedUrl = url.parse(webhookUrl);
+        const postData = JSON.stringify(webhookPayload);
+        
+        const options = {
+          hostname: parsedUrl.hostname,
+          port: parsedUrl.port,
+          path: parsedUrl.path,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+          }
+        };
+        
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        
+        const req = client.request(options, (webhookRes) => {
+          console.log(`⚡ INSTANT update webhook response: ${webhookRes.statusCode}`);
+        });
+        
+        req.on('error', (error) => {
+          console.error('❌ Update webhook failed:', error.message);
+        });
+        
+        req.write(postData);
+        req.end();
+      } catch (webhookError) {
+        console.error('❌ Update webhook error:', webhookError.message);
+      }
+    }
+    
     res.json({
       message: 'Application updated successfully',
       application: application
@@ -3623,7 +3662,7 @@ app.delete('/api/applications/:id', async (req, res) => {
     // INSTANT WEBHOOK - Notify main site immediately
     try {
       console.log('🚨 Sending INSTANT deletion webhook to main site...');
-      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhooks/tournament-updated' : 'https://malaysiapickleball.my/api/webhooks/tournament-updated';
+      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhooks/tournament-updated' : 'https://malaysiapickleball-fbab5112dbaf.herokuapp.com/api/webhooks/tournament-updated';
       
       const webhookPayload = {
         tournament: {
