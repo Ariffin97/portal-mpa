@@ -6,6 +6,8 @@ const path = require('path');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const fs = require('fs');
 const multer = require('multer');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 // Load environment variables - check for .env.local first (for local development)
 if (fs.existsSync('.env.local')) {
@@ -1241,6 +1243,19 @@ const playerSchema = new mongoose.Schema({
     unique: true,
     required: true
   },
+  username: {
+    type: String,
+    unique: true,
+    required: true,
+    sparse: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  profilePicture: {
+    type: String
+  },
   personalInfo: {
     fullName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
@@ -1475,7 +1490,7 @@ const newsSchema = new mongoose.Schema({
     authorEmail: String
   },
   media: [{
-    type: String,
+    type: { type: String },
     url: String,
     caption: String
   }],
@@ -1484,6 +1499,16 @@ const newsSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const News = mongoose.model('News', newsSchema);
+
+// Featured Video Schema
+const featuredVideoSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: String,
+  videoUrl: { type: String, required: true },  // YouTube embed URL
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+const FeaturedVideo = mongoose.model('FeaturedVideo', featuredVideoSchema);
 
 // Assessment Form Schema
 const assessmentFormSchema = new mongoose.Schema({
@@ -1688,17 +1713,22 @@ const AssessmentSubmission = mongoose.model('AssessmentSubmission', assessmentSu
 const generatePlayerId = async () => {
   let playerId;
   let isUnique = false;
-  
+
   while (!isUnique) {
-    const randomNum = Math.floor(Math.random() * 900000) + 100000;
-    playerId = `PL${randomNum}`;
-    
+    // Generate 5-character alphanumeric string (A-Z, 0-9)
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let alphanumeric = '';
+    for (let i = 0; i < 5; i++) {
+      alphanumeric += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    playerId = `MPA${alphanumeric}`;
+
     const existingPlayer = await Player.findOne({ playerId });
     if (!existingPlayer) {
       isUnique = true;
     }
   }
-  
+
   return playerId;
 };
 
@@ -1858,25 +1888,161 @@ const generateSubmissionId = async () => {
 // ===============================
 
 // Register new player
-app.post('/api/players/register', async (req, res) => {
+// Check if IC number already exists
+app.get('/api/players/check-ic/:icNumber', async (req, res) => {
   try {
-    const playerData = req.body;
-    const playerId = await generatePlayerId();
-    
-    const newPlayer = new Player({
-      playerId,
-      ...playerData
+    const { icNumber } = req.params;
+    const existingPlayer = await Player.findOne({ 'personalInfo.icNumber': icNumber });
+
+    res.json({
+      exists: !!existingPlayer,
+      message: existingPlayer ? 'I/C number already registered' : 'I/C number available'
     });
-    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/players/register', upload.single('profilePicture'), async (req, res) => {
+  try {
+    const formData = req.body;
+
+    // Check if IC number already exists
+    const existingPlayer = await Player.findOne({ 'personalInfo.icNumber': formData.icNumber });
+    if (existingPlayer) {
+      return res.status(400).json({
+        error: 'This I/C number is already registered. Each I/C number can only be used once.'
+      });
+    }
+
+    // Calculate date of birth from IC number (YYMMDD format)
+    const icDigits = formData.icNumber.replace(/\D/g, '');
+    const year = parseInt(icDigits.substring(0, 2));
+    const month = icDigits.substring(2, 4);
+    const day = icDigits.substring(4, 6);
+    const currentYear = new Date().getFullYear() % 100;
+    const fullYear = year > currentYear ? 1900 + year : 2000 + year;
+    const dateOfBirth = new Date(`${fullYear}-${month}-${day}`);
+
+    const playerId = await generatePlayerId();
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(formData.password, 10);
+
+    // Map form data to Player schema structure
+    const playerData = {
+      playerId,
+      username: formData.username,
+      password: hashedPassword,
+      personalInfo: {
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phoneNumber,
+        dateOfBirth: dateOfBirth,
+        gender: formData.gender,
+        nationality: 'Malaysian',
+        icNumber: formData.icNumber,
+        address: {
+          street: formData.addressLine1 + (formData.addressLine2 ? ', ' + formData.addressLine2 : ''),
+          city: formData.city,
+          state: formData.state,
+          country: 'Malaysia'
+        }
+      },
+      playerInfo: {
+        skillLevel: 'Beginner',
+        playingHand: 'Right'
+      },
+      membership: {
+        status: 'active',
+        membershipType: 'Standard',
+        registrationDate: new Date()
+      }
+    };
+
+    // Add profile picture path if uploaded
+    if (req.file) {
+      playerData.profilePicture = `/uploads/${req.file.filename}`;
+    }
+
+    const newPlayer = new Player(playerData);
     await newPlayer.save();
-    
+
     res.status(201).json({
       success: true,
       message: 'Player registered successfully',
       player: newPlayer
     });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Player login
+app.post('/api/players/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Find player by username
+    const player = await Player.findOne({ username });
+
+    if (!player) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    // Check if account is active
+    if (player.membership.status !== 'active') {
+      return res.status(403).json({ error: 'Account is not active. Please contact support.' });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, player.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        playerId: player._id,
+        username: player.username,
+        email: player.personalInfo.email
+      },
+      process.env.JWT_SECRET || 'mpa-secret-key-2024',
+      { expiresIn: '7d' }
+    );
+
+    // Return player data (excluding password)
+    const playerData = {
+      id: player._id,
+      playerId: player.playerId,
+      username: player.username,
+      fullName: player.personalInfo.fullName,
+      email: player.personalInfo.email,
+      profilePicture: player.profilePicture,
+      gender: player.personalInfo.gender,
+      icNumber: player.personalInfo.icNumber,
+      age: new Date().getFullYear() - new Date(player.personalInfo.dateOfBirth).getFullYear(),
+      phoneNumber: player.personalInfo.phone,
+      addressLine1: player.personalInfo.address.street,
+      city: player.personalInfo.address.city,
+      state: player.personalInfo.address.state,
+      membershipStatus: player.membership.status,
+      membershipType: player.membership.membershipType,
+      skillLevel: player.playerInfo.skillLevel
+    };
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      player: playerData
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'An error occurred during login' });
   }
 });
 
@@ -1911,11 +2077,37 @@ app.get('/api/players', async (req, res) => {
 // Get player by ID
 app.get('/api/players/:id', async (req, res) => {
   try {
-    const player = await Player.findOne({ playerId: req.params.id });
+    // Try to find by playerId first, then by MongoDB _id
+    let player = await Player.findOne({ playerId: req.params.id });
+    if (!player) {
+      player = await Player.findById(req.params.id);
+    }
     if (!player) {
       return res.status(404).json({ error: 'Player not found' });
     }
-    res.json(player);
+
+    // Return player data without sensitive information
+    const playerData = {
+      id: player._id,
+      playerId: player.playerId,
+      username: player.username,
+      fullName: player.personalInfo.fullName,
+      email: player.personalInfo.email,
+      profilePicture: player.profilePicture,
+      gender: player.personalInfo.gender,
+      icNumber: player.personalInfo.icNumber,
+      age: new Date().getFullYear() - new Date(player.personalInfo.dateOfBirth).getFullYear(),
+      phoneNumber: player.personalInfo.phone,
+      addressLine1: player.personalInfo.address.street,
+      addressLine2: '',
+      city: player.personalInfo.address.city,
+      state: player.personalInfo.address.state,
+      membershipStatus: player.membership.status,
+      membershipType: player.membership.membershipType,
+      skillLevel: player.playerInfo.skillLevel
+    };
+
+    res.json(playerData);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -2333,24 +2525,48 @@ app.patch('/api/bookings/:id/cancel', async (req, res) => {
 // ===============================
 
 // Create news/announcement
-app.post('/api/news', async (req, res) => {
+app.post('/api/news', upload.single('newsImage'), async (req, res) => {
   try {
+    console.log('📰 Creating news...');
+    console.log('File received:', req.file ? req.file.filename : 'No file');
+    console.log('Body data:', req.body);
+
     const newsData = req.body;
-    const newsId = await generateNewsId();
-    
+    const newsId = newsData.newsId || await generateNewsId();
+
+    // Handle image upload
+    let media = [];
+    if (req.file) {
+      console.log('✅ Image uploaded:', req.file.filename);
+      media.push({
+        type: 'image',
+        url: `/uploads/${req.file.filename}`,
+        caption: newsData.title
+      });
+    }
+
     const newNews = new News({
       newsId,
-      ...newsData
+      title: newsData.title,
+      content: newsData.content,
+      summary: newsData.summary,
+      category: newsData.category || 'General',
+      priority: newsData.priority || 'Medium',
+      status: newsData.status || 'Published',
+      publishDate: newsData.publishDate || new Date(),
+      media: media
     });
-    
+
     await newNews.save();
-    
+    console.log('✅ News created successfully:', newsId);
+
     res.status(201).json({
       success: true,
       message: 'News created successfully',
       news: newNews
     });
   } catch (error) {
+    console.error('❌ Error creating news:', error);
     res.status(400).json({ error: error.message });
   }
 });
@@ -2358,15 +2574,22 @@ app.post('/api/news', async (req, res) => {
 // Get all news
 app.get('/api/news', async (req, res) => {
   try {
-    const { category, status, priority } = req.query;
-    
+    const { category, status, priority, limit } = req.query;
+
     let query = {};
     if (category) query.category = category;
     if (status) query.status = status;
     if (priority) query.priority = priority;
-    
-    const news = await News.find(query).sort({ publishDate: -1 });
-    
+
+    let newsQuery = News.find(query).sort({ publishDate: -1 });
+
+    // Apply limit if provided
+    if (limit) {
+      newsQuery = newsQuery.limit(parseInt(limit));
+    }
+
+    const news = await newsQuery;
+
     res.json(news);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -2392,18 +2615,36 @@ app.get('/api/news/:id', async (req, res) => {
 });
 
 // Update news
-app.patch('/api/news/:id', async (req, res) => {
+app.patch('/api/news/:id', upload.single('newsImage'), async (req, res) => {
   try {
+    const newsData = req.body;
+    const updateData = {
+      title: newsData.title,
+      content: newsData.content,
+      summary: newsData.summary,
+      status: newsData.status,
+      publishDate: newsData.publishDate
+    };
+
+    // Handle image upload if new file is provided
+    if (req.file) {
+      updateData.media = [{
+        type: 'image',
+        url: `/uploads/${req.file.filename}`,
+        caption: newsData.title
+      }];
+    }
+
     const news = await News.findOneAndUpdate(
       { newsId: req.params.id },
-      req.body,
+      updateData,
       { new: true }
     );
-    
+
     if (!news) {
       return res.status(404).json({ error: 'News not found' });
     }
-    
+
     res.json({
       success: true,
       message: 'News updated successfully',
@@ -2418,14 +2659,113 @@ app.patch('/api/news/:id', async (req, res) => {
 app.delete('/api/news/:id', async (req, res) => {
   try {
     const news = await News.findOneAndDelete({ newsId: req.params.id });
-    
+
     if (!news) {
       return res.status(404).json({ error: 'News not found' });
     }
-    
+
     res.json({
       success: true,
       message: 'News deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===============================
+// FEATURED VIDEO APIs
+// ===============================
+
+// Get active featured video
+app.get('/api/featured-video', async (req, res) => {
+  try {
+    const video = await FeaturedVideo.findOne({ isActive: true }).sort({ createdAt: -1 });
+    res.json(video || null);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all featured videos
+app.get('/api/featured-videos', async (req, res) => {
+  try {
+    const videos = await FeaturedVideo.find().sort({ createdAt: -1 });
+    res.json(videos);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create or update featured video
+app.post('/api/featured-video', async (req, res) => {
+  try {
+    const { title, description, videoUrl } = req.body;
+
+    // Deactivate all existing videos
+    await FeaturedVideo.updateMany({}, { isActive: false });
+
+    // Create new featured video
+    const video = new FeaturedVideo({
+      title,
+      description,
+      videoUrl,
+      isActive: true
+    });
+
+    await video.save();
+    res.status(201).json({
+      success: true,
+      message: 'Featured video saved successfully',
+      video
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Update featured video
+app.patch('/api/featured-video/:id', async (req, res) => {
+  try {
+    const { title, description, videoUrl, isActive } = req.body;
+
+    // If setting this video as active, deactivate all others
+    if (isActive) {
+      await FeaturedVideo.updateMany({ _id: { $ne: req.params.id } }, { isActive: false });
+    }
+
+    const video = await FeaturedVideo.findByIdAndUpdate(
+      req.params.id,
+      { title, description, videoUrl, isActive },
+      { new: true }
+    );
+
+    if (!video) {
+      return res.status(404).json({ error: 'Featured video not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Featured video updated successfully',
+      video
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Delete featured video
+app.delete('/api/featured-video/:id', async (req, res) => {
+  try {
+    const video = await FeaturedVideo.findByIdAndDelete(req.params.id);
+
+    if (!video) {
+      return res.status(404).json({ error: 'Featured video not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Featured video deleted successfully'
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -2982,7 +3322,7 @@ app.post('/api/applications', upload.array('supportDocuments', 10), async (req, 
     if (savedApplication.createdByAdmin && savedApplication.status === 'Approved') {
       try {
         console.log('🚨 Sending INSTANT admin-created tournament webhook to main site...');
-        const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3001/api/webhooks/tournament-updated' : 'https://malaysiapickleball.my/api/webhooks/tournament-updated';
+        const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhooks/tournament-updated' : 'https://malaysiapickleball.my/api/webhooks/tournament-updated';
         
         const webhookPayload = {
           tournament: {
@@ -3127,7 +3467,7 @@ app.patch('/api/applications/:id/status', async (req, res) => {
     // INSTANT WEBHOOK - Notify main site of status change immediately
     try {
       console.log('🚨 Sending INSTANT status change webhook to main site...');
-      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3001/api/webhooks/tournament-updated' : 'https://malaysiapickleball.my/api/webhooks/tournament-updated';
+      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhooks/tournament-updated' : 'https://malaysiapickleball.my/api/webhooks/tournament-updated';
       
       const webhookPayload = {
         tournament: {
@@ -3283,7 +3623,7 @@ app.delete('/api/applications/:id', async (req, res) => {
     // INSTANT WEBHOOK - Notify main site immediately
     try {
       console.log('🚨 Sending INSTANT deletion webhook to main site...');
-      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3001/api/webhooks/tournament-updated' : 'https://malaysiapickleball.my/api/webhooks/tournament-updated';
+      const webhookUrl = IS_LOCAL_DEV ? 'http://localhost:3000/api/webhooks/tournament-updated' : 'https://malaysiapickleball.my/api/webhooks/tournament-updated';
       
       const webhookPayload = {
         tournament: {
