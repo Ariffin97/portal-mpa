@@ -530,6 +530,9 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
                 placeholder="Street number, street name"
                 required
               />
+              <small style={{ display: 'block', color: '#666', fontSize: '12px', marginTop: '4px' }}>
+                Please enter your organization/company address
+              </small>
             </div>
 
             <div className="form-group">
