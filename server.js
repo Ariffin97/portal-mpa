@@ -2961,16 +2961,30 @@ app.post('/api/organizations/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Find organization by email and password
-    const organization = await Organization.findOne({ 
-      email: email,
-      password: password
-    });
+    console.log('Login attempt for email:', email);
+
+    // Find organization by email first
+    const organization = await Organization.findOne({ email: email });
 
     if (!organization) {
-      return res.status(401).json({ 
+      console.log('Organization not found for email:', email);
+      return res.status(401).json({
         success: false,
-        error: 'Invalid credentials. Please check your email and password.' 
+        error: 'Invalid credentials. Please check your email and password.'
+      });
+    }
+
+    console.log('Organization found:', organization.organizationName);
+    console.log('Stored password:', organization.password);
+    console.log('Provided password:', password);
+    console.log('Passwords match:', organization.password === password);
+
+    // Check if password matches
+    if (organization.password !== password) {
+      console.log('Password mismatch');
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials. Please check your email and password.'
       });
     }
 
@@ -3087,6 +3101,56 @@ app.delete('/api/organizations/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('Delete organization error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a specific document from organization
+app.delete('/api/organizations/:id/documents/:documentIndex', async (req, res) => {
+  try {
+    const { id, documentIndex } = req.params;
+    const index = parseInt(documentIndex);
+
+    const organization = await Organization.findById(id);
+
+    if (!organization) {
+      return res.status(404).json({ error: 'Organization not found' });
+    }
+
+    if (!organization.documents || index < 0 || index >= organization.documents.length) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    // Get the document to delete (for file cleanup if needed)
+    const documentToDelete = organization.documents[index];
+
+    // Remove document from array
+    organization.documents.splice(index, 1);
+
+    // Save organization
+    await organization.save();
+
+    // Delete physical file if it exists
+    if (documentToDelete.filename) {
+      const fs = require('fs');
+      const path = require('path');
+      const filePath = path.join(__dirname, 'uploads', documentToDelete.filename);
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`Deleted file: ${filePath}`);
+      }
+    }
+
+    console.log(`Document deleted from organization ${organization.organizationId}`);
+
+    res.json({
+      success: true,
+      message: 'Document deleted successfully',
+      organization
+    });
+  } catch (error) {
+    console.error('Delete document error:', error);
     res.status(500).json({ error: error.message });
   }
 });

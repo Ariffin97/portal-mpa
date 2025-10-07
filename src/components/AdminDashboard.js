@@ -7961,6 +7961,51 @@ Settings
                                 >
                                   💾 Download
                                 </button>
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm(`Are you sure you want to delete "${doc.originalName || doc.originalname || 'this document'}"? This action cannot be undone.`)) {
+                                      try {
+                                        const response = await fetch(`/api/organizations/${selectedApplication._id}/documents/${index}`, {
+                                          method: 'DELETE',
+                                          headers: {
+                                            'Content-Type': 'application/json'
+                                          }
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (response.ok) {
+                                          alert('Document deleted successfully');
+                                          // Refresh the organization data
+                                          const updatedOrg = await fetch(`/api/organizations/${selectedApplication._id}`).then(r => r.json());
+                                          setSelectedApplication(updatedOrg);
+                                          // Also update the list
+                                          setRegisteredOrganizations(prev =>
+                                            prev.map(org => org._id === selectedApplication._id ? updatedOrg : org)
+                                          );
+                                        } else {
+                                          alert(`Failed to delete document: ${data.error || 'Unknown error'}`);
+                                        }
+                                      } catch (error) {
+                                        console.error('Error deleting document:', error);
+                                        alert('Error deleting document. Please try again.');
+                                      }
+                                    }
+                                  }}
+                                  style={{
+                                    backgroundColor: '#dc3545',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '6px 12px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                  }}
+                                  title="Delete document"
+                                >
+                                  🗑️ Delete
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -8073,7 +8118,10 @@ Settings
                             }}>
                               {doc.mimetype?.includes('image') && (
                                 <button
-                                  onClick={() => window.open(`/uploads/${doc.filename}`, '_blank')}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    window.open(`/uploads/${doc.filename}`, '_blank', 'noopener,noreferrer');
+                                  }}
                                   style={{
                                     padding: '8px 12px',
                                     backgroundColor: '#28a745',
@@ -8088,8 +8136,15 @@ Settings
                                 </button>
                               )}
                               <button
-                                onClick={() => {
-                                  window.open(`/uploads/${doc.filename}`, '_blank');
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  const link = document.createElement('a');
+                                  link.href = `/uploads/${doc.filename}`;
+                                  link.download = doc.originalName || doc.originalname || doc.filename;
+                                  link.target = '_blank';
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  document.body.removeChild(link);
                                 }}
                                 style={{
                                   padding: '8px 12px',

@@ -29,9 +29,25 @@ function App() {
   const [showImportantNotice, setShowImportantNotice] = useState(false);
   const [showApplyDropdown, setShowApplyDropdown] = useState(false);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [showSystemUpdateNotice, setShowSystemUpdateNotice] = useState(false);
 
   // Assessment submissions are now saved directly to database
   // AdminDashboard loads them from the database via API
+
+  // Show system update notice on homepage load
+  useEffect(() => {
+    if (currentPage === 'home') {
+      const hasSeenNotice = sessionStorage.getItem('hasSeenSystemUpdateNotice');
+      if (!hasSeenNotice) {
+        setShowSystemUpdateNotice(true);
+      }
+    }
+  }, [currentPage]);
+
+  const closeSystemUpdateNotice = () => {
+    setShowSystemUpdateNotice(false);
+    sessionStorage.setItem('hasSeenSystemUpdateNotice', 'true');
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -717,6 +733,127 @@ function App() {
         isOpen={showAssessmentModal}
         onClose={() => setShowAssessmentModal(false)}
       />
+
+      {/* System Update Notice Modal */}
+      {showSystemUpdateNotice && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            maxWidth: '480px',
+            width: '100%',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            border: '1px solid #e0e0e0',
+            position: 'relative'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '24px 24px 20px 24px',
+              borderBottom: '1px solid #e0e0e0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <h3 style={{
+                margin: 0,
+                color: '#2c3e50',
+                fontSize: '18px',
+                fontWeight: '600',
+                letterSpacing: '-0.3px'
+              }}>
+                System Notice
+              </h3>
+              <button
+                onClick={closeSystemUpdateNotice}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#95a5a6',
+                  lineHeight: '1',
+                  padding: '0',
+                  width: '28px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '4px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#f5f5f5';
+                  e.target.style.color = '#2c3e50';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = 'transparent';
+                  e.target.style.color = '#95a5a6';
+                }}
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{
+              padding: '24px',
+              backgroundColor: 'white'
+            }}>
+              <p style={{
+                margin: 0,
+                color: '#555',
+                lineHeight: '1.6',
+                fontSize: '15px'
+              }}>
+                Dear User,<br/><br/>
+                Kindly update your organization profile at your earliest convenience. Our system has recently been improved to provide better functionality, accuracy, and performance.<br/><br/>
+                Thank you for your cooperation.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #e0e0e0',
+              backgroundColor: '#fafafa',
+              display: 'flex',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={closeSystemUpdateNotice}
+                style={{
+                  backgroundColor: '#3498db',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 24px',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#2980b9'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#3498db'}
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
