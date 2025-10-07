@@ -37,8 +37,10 @@ function App() {
   // Show system update notice on homepage load
   useEffect(() => {
     if (currentPage === 'home') {
-      const hasSeenNotice = sessionStorage.getItem('hasSeenSystemUpdateNotice');
-      if (!hasSeenNotice) {
+      // Use version number to force showing notice after updates
+      const noticeVersion = '2025-01-07'; // Update this date when you want to show notice again
+      const hasSeenNotice = sessionStorage.getItem('systemNoticeVersion');
+      if (hasSeenNotice !== noticeVersion) {
         setShowSystemUpdateNotice(true);
       }
     }
@@ -46,7 +48,8 @@ function App() {
 
   const closeSystemUpdateNotice = () => {
     setShowSystemUpdateNotice(false);
-    sessionStorage.setItem('hasSeenSystemUpdateNotice', 'true');
+    const noticeVersion = '2025-01-07';
+    sessionStorage.setItem('systemNoticeVersion', noticeVersion);
   };
 
   // Close dropdown when clicking outside
