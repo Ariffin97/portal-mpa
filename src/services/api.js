@@ -69,12 +69,8 @@ class ApiService {
     if (organizationData instanceof FormData) {
       return this.makeRequest('/organizations/register', {
         method: 'POST',
-        body: organizationData,
+        body: organizationData
         // Don't set Content-Type header for FormData - browser will set it with boundary
-        headers: {
-          ...this.getHeaders(),
-          'Content-Type': undefined
-        }
       });
     } else {
       // Regular JSON data
