@@ -1087,58 +1087,156 @@ const TournamentApplication = ({ setCurrentPage }) => {
 
         {/* Applied Tournaments Section */}
         <div className="sidebar-section tournaments-section">
-          <h3>Applied Tournaments</h3>
+          <div style={{
+            marginBottom: '16px',
+            paddingBottom: '12px',
+            borderBottom: '2px solid rgba(255, 255, 255, 0.2)'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'white' }}>
+              Applied Tournaments
+            </h3>
+          </div>
+
           {isLoadingTournaments ? (
-            <div className="loading-tournaments">Loading...</div>
+            <div style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              color: '#7f8c8d'
+            }}>
+              <div>Loading tournaments...</div>
+            </div>
           ) : appliedTournaments.length === 0 ? (
-            <div className="no-tournaments">
-              <p>No tournaments applied yet.</p>
-              <p>Submit your first application below!</p>
+            <div style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px',
+              border: '2px dashed #dee2e6'
+            }}>
+              <p style={{ margin: '0 0 8px 0', color: '#6c757d', fontWeight: '500' }}>
+                No tournaments applied yet
+              </p>
+              <p style={{ margin: 0, color: '#adb5bd', fontSize: '13px' }}>
+                Submit your first application below!
+              </p>
             </div>
           ) : (
-            <div className="tournaments-list">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {appliedTournaments.map((tournament, index) => (
-                <div key={tournament.applicationId || index} className="tournament-item">
-                  <div className="tournament-title">
-                    {tournament.eventTitle || 'Untitled Tournament'}
-                  </div>
-                  <div className="tournament-meta">
-                    <span className="tournament-id">ID: {tournament.applicationId}</span>
-                    <span
-                      className="tournament-status"
-                      style={{
-                        backgroundColor: getStatusColor(tournament.status),
-                        color: 'white',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        fontSize: '11px'
-                      }}
-                    >
-                      {tournament.status}
-                    </span>
-                  </div>
-                  <div className="tournament-date">
-                    {tournament.submissionDate ?
-                      new Date(tournament.submissionDate).toLocaleDateString() :
-                      'Date N/A'
-                    }
-                  </div>
-                  <div className="tournament-actions">
+                <div
+                  key={tournament.applicationId || index}
+                  style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    color: 'white',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                  }}
+                >
+                  {/* Background decoration */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-20px',
+                    right: '-20px',
+                    width: '80px',
+                    height: '80px',
+                    background: 'rgba(255,255,255,0.1)',
+                    borderRadius: '50%'
+                  }} />
+
+                  <div style={{ position: 'relative', zIndex: 1 }}>
+                    <div style={{
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      marginBottom: '8px',
+                      lineHeight: '1.3',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
+                    }}>
+                      {tournament.eventTitle || 'Untitled Tournament'}
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '10px',
+                      fontSize: '12px'
+                    }}>
+                      <span style={{
+                        background: 'rgba(255,255,255,0.2)',
+                        padding: '3px 8px',
+                        borderRadius: '12px',
+                        fontWeight: '500'
+                      }}>
+                        {tournament.applicationId}
+                      </span>
+                      <span style={{
+                        background: getStatusColor(tournament.status),
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        {tournament.status}
+                      </span>
+                    </div>
+
+                    <div style={{
+                      fontSize: '11px',
+                      opacity: 0.9,
+                      marginBottom: '12px'
+                    }}>
+                      {tournament.submissionDate ?
+                        new Date(tournament.submissionDate).toLocaleDateString('en-MY', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        }) :
+                        'Date N/A'
+                      }
+                    </div>
+
                     <button
-                      className="edit-tournament-btn"
                       onClick={() => startEditTournament(tournament)}
                       style={{
-                        backgroundColor: '#3498db',
-                        color: 'white',
+                        width: '100%',
+                        backgroundColor: 'rgba(255,255,255,0.95)',
+                        color: '#667eea',
                         border: 'none',
-                        padding: '4px 8px',
-                        borderRadius: '3px',
-                        fontSize: '10px',
+                        padding: '8px 16px',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: '600',
                         cursor: 'pointer',
-                        marginTop: '5px'
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white';
+                        e.currentTarget.style.transform = 'scale(1.02)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.95)';
+                        e.currentTarget.style.transform = 'scale(1)';
                       }}
                     >
-                      Edit
+                      Edit Application
                     </button>
                   </div>
                 </div>
@@ -1957,16 +2055,110 @@ const TournamentApplication = ({ setCurrentPage }) => {
                   />
                 </div>
 
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-classification">Level of Event *</label>
+                    <select
+                      id="edit-classification"
+                      name="classification"
+                      value={editFormData.classification || ''}
+                      onChange={handleEditInputChange}
+                      required
+                    >
+                      <option value="">Select Level/Type</option>
+                      <option value="District">District</option>
+                      <option value="Divisional">Divisional</option>
+                      <option value="State">State</option>
+                      <option value="National">National</option>
+                      <option value="International">International</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="edit-eventType">Type of Event *</label>
+                    <select
+                      id="edit-eventType"
+                      name="eventType"
+                      value={editFormData.eventType || ''}
+                      onChange={handleEditInputChange}
+                      required
+                    >
+                      <option value="">Select Type</option>
+                      <option value="Open">Open</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="form-group">
-                  <label htmlFor="edit-eventSummary">Event Summary *</label>
+                  <label htmlFor="edit-category">Category *</label>
+                  <input
+                    type="text"
+                    id="edit-category"
+                    name="category"
+                    value={editFormData.category || ''}
+                    onChange={handleEditInputChange}
+                    placeholder="e.g., Men's Singles, Women's Doubles, Mixed Doubles"
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-malaysianEntryFee">Malaysian Entry Fee (RM) per player *</label>
+                    <input
+                      type="number"
+                      id="edit-malaysianEntryFee"
+                      name="malaysianEntryFee"
+                      value={editFormData.malaysianEntryFee || ''}
+                      onChange={handleEditInputChange}
+                      min="0"
+                      max="200"
+                      step="0.01"
+                    />
+                    <small className="form-note" style={{ color: '#dc3545' }}>
+                      Note: Not more than RM 200.00
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="edit-internationalEntryFee">International Entry Fee (RM) per player</label>
+                    <input
+                      type="number"
+                      id="edit-internationalEntryFee"
+                      name="internationalEntryFee"
+                      value={editFormData.internationalEntryFee || ''}
+                      onChange={handleEditInputChange}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-expectedParticipants">Expected No. of Participants *</label>
+                  <input
+                    type="number"
+                    id="edit-expectedParticipants"
+                    name="expectedParticipants"
+                    value={editFormData.expectedParticipants || ''}
+                    onChange={handleEditInputChange}
+                    min="1"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-eventSummary">Brief Summary/Purpose of Event *</label>
                   <textarea
                     id="edit-eventSummary"
                     name="eventSummary"
                     value={editFormData.eventSummary || ''}
                     onChange={handleEditInputChange}
-                    rows="4"
+                    rows="5"
+                    maxLength="300"
                     required
                   />
+                  <small className="form-note">Maximum 300 characters.</small>
                 </div>
               </div>
 

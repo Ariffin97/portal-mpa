@@ -1,16 +1,5 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const nodemailer = require('nodemailer');
-const path = require('path');
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+// Load environment variables FIRST before any other imports
 const fs = require('fs');
-const multer = require('multer');
-const { profileStorage, newsStorage, journeyStorage } = require('./cloudinaryConfig');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-
-// Load environment variables - check for .env.local first (for local development)
 if (fs.existsSync('.env.local')) {
   require('dotenv').config({ path: '.env.local' });
   console.log('📁 Using .env.local (local development mode)');
@@ -18,6 +7,24 @@ if (fs.existsSync('.env.local')) {
   require('dotenv').config();
   console.log('📁 Using .env (production mode)');
 }
+
+// Debug: Verify Cloudinary env vars are loaded
+console.log('🔍 Cloudinary env check:', {
+  CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME ? '✓ Set' : '✗ Missing',
+  API_KEY: process.env.CLOUDINARY_API_KEY ? '✓ Set' : '✗ Missing',
+  API_SECRET: process.env.CLOUDINARY_API_SECRET ? '✓ Set' : '✗ Missing'
+});
+
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const nodemailer = require('nodemailer');
+const path = require('path');
+const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const multer = require('multer');
+const { profileStorage, newsStorage, journeyStorage, applicationStorage } = require('./cloudinaryConfig');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -61,6 +68,14 @@ const uploadNews = multer({
 
 const uploadJourney = multer({
   storage: journeyStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
+// Store application documents in memory (MongoDB)
+const uploadApplication = multer({
+  storage: multer.memoryStorage(), // Store in memory, then save to MongoDB
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
   }
@@ -3253,7 +3268,7 @@ app.get('/api/applications/:id', async (req, res) => {
 });
 
 // Submit tournament application
-app.post('/api/applications', upload.array('supportDocuments', 10), async (req, res) => {
+app.post('/api/applications', uploadApplication.array('supportDocuments', 10), async (req, res) => {
   try {
     let applicationData = req.body;
 
@@ -3267,19 +3282,31 @@ app.post('/api/applications', upload.array('supportDocuments', 10), async (req, 
       }
     }
 
-    // Handle uploaded support documents
+    // Handle uploaded support documents - Store in MongoDB as Base64
     const supportDocuments = [];
     if (req.files && req.files.length > 0) {
-      req.files.forEach(file => {
+      console.log('📎 Processing uploaded files:', req.files.length);
+
+      req.files.forEach((file, index) => {
+        console.log(`File ${index}:`, {
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size
+        });
+
+        // Convert file buffer to Base64 and store in MongoDB
+        const fileBase64 = file.buffer.toString('base64');
+
         supportDocuments.push({
-          filename: file.filename,
           originalname: file.originalname,
           mimetype: file.mimetype,
           size: file.size,
-          path: file.path
+          data: fileBase64, // Base64 encoded file data
+          uploadDate: new Date()
         });
       });
       applicationData.supportDocuments = supportDocuments;
+      console.log('✅ Processed documents:', supportDocuments.length);
     }
     
     // Generate unique application ID
@@ -5361,12 +5388,130 @@ app.get('/api/docs', (req, res) => {
   res.json(apiDocs);
 });
 
+// Serve document from MongoDB
+app.get('/api/documents/:applicationId/:documentIndex', async (req, res) => {
+  try {
+    const { applicationId, documentIndex } = req.params;
+
+    const application = await TournamentApplication.findOne({ applicationId });
+
+    if (!application || !application.supportDocuments || !application.supportDocuments[documentIndex]) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    const doc = application.supportDocuments[documentIndex];
+
+    // Convert Base64 back to buffer
+    const fileBuffer = Buffer.from(doc.data, 'base64');
+
+    // Set headers
+    res.setHeader('Content-Type', doc.mimetype);
+    res.setHeader('Content-Disposition', `inline; filename="${doc.originalname}"`);
+    res.setHeader('Content-Length', fileBuffer.length);
+
+    // Send file
+    res.send(fileBuffer);
+  } catch (error) {
+    console.error('Error serving document:', error);
+    res.status(500).json({ error: 'Error serving document' });
+  }
+});
+
 // Catch-all handler: send back React's index.html file for any non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
+// Initialize default assessment form
+async function initializeDefaultAssessmentForm() {
+  try {
+    const generalForm = await AssessmentForm.findOne({ code: 'GNRAL' });
+
+    if (!generalForm) {
+      console.log('Creating default GNRAL assessment form...');
+      const newForm = new AssessmentForm({
+        code: 'GNRAL',
+        title: 'Tournament Readiness Assessment',
+        description: 'General pickleball knowledge assessment for tournament readiness',
+        questions: [
+          {
+            id: 1,
+            question: "What is the standard court size for pickleball?",
+            section: 'Court Specifications',
+            options: [
+              { text: "20' x 44'" },
+              { text: "20' x 40'" },
+              { text: "24' x 44'" },
+              { text: "20' x 48'" }
+            ],
+            correctAnswer: "20' x 44'"
+          },
+          {
+            id: 2,
+            question: "What is the height of the net at the center?",
+            section: 'Court Specifications',
+            options: [
+              { text: "34 inches" },
+              { text: "36 inches" },
+              { text: "32 inches" },
+              { text: "38 inches" }
+            ],
+            correctAnswer: "34 inches"
+          },
+          {
+            id: 3,
+            question: "What is the non-volley zone also called?",
+            section: 'Rules & Regulations',
+            options: [
+              { text: "The service area" },
+              { text: "The kitchen" },
+              { text: "The baseline" },
+              { text: "The sideline" }
+            ],
+            correctAnswer: "The kitchen"
+          },
+          {
+            id: 4,
+            question: "In doubles play, which player serves first?",
+            section: 'Rules & Regulations',
+            options: [
+              { text: "The player on the left" },
+              { text: "The player on the right" },
+              { text: "Either player can serve" },
+              { text: "The team captain decides" }
+            ],
+            correctAnswer: "The player on the right"
+          },
+          {
+            id: 5,
+            question: "What happens when the ball hits the net and goes over during a serve?",
+            section: 'Rules & Regulations',
+            options: [
+              { text: "It's a fault" },
+              { text: "It's a let, replay the serve" },
+              { text: "It's a valid serve" },
+              { text: "The receiving team gets a point" }
+            ],
+            correctAnswer: "It's a fault"
+          }
+        ],
+        timeLimit: 30,
+        isTemporary: false,
+        isDraft: false
+      });
+
+      await newForm.save();
+      console.log('✅ Default GNRAL assessment form created');
+    } else {
+      console.log('✅ Default GNRAL assessment form already exists');
+    }
+  } catch (error) {
+    console.error('Error initializing default assessment form:', error);
+  }
+}
+
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
+  await initializeDefaultAssessmentForm();
 });

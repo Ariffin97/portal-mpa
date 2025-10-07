@@ -4653,7 +4653,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
                   <tbody>
                     {assessmentSubmissions.map((submission, index) => (
                       <tr
-                        key={submission.id}
+                        key={submission.submissionId || submission._id || index}
                         onClick={() => openSubmissionDetails(submission)}
                         style={{
                           borderBottom: '1px solid #dee2e6',
@@ -7719,7 +7719,13 @@ Settings
                       gap: '15px',
                       marginTop: '15px'
                     }}>
-                      {selectedApplication.supportDocuments.map((doc, index) => (
+                      {selectedApplication.supportDocuments.map((doc, index) => {
+                        // Generate URL for MongoDB-stored documents
+                        const documentUrl = doc.data
+                          ? `/api/documents/${selectedApplication.applicationId}/${index}`
+                          : (doc.url || doc.path || `/uploads/${doc.filename}`);
+
+                        return (
                         <div
                           key={index}
                           style={{
@@ -7749,7 +7755,7 @@ Settings
                           </div>
                           <div style={{ marginTop: '10px' }}>
                             <a
-                              href={`/uploads/${doc.filename}`}
+                              href={documentUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{
@@ -7768,7 +7774,8 @@ Settings
                             </a>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
@@ -7872,7 +7879,12 @@ Settings
                     <h3>Registration Documents</h3>
                     <div className="detail-grid">
                       {selectedApplication.documents && selectedApplication.documents.length > 0 ? (
-                        selectedApplication.documents.map((doc, index) => (
+                        selectedApplication.documents.map((doc, index) => {
+                          const docUrl = doc.data
+                            ? `/api/documents/${selectedApplication.applicationId}/${index}`
+                            : (doc.url || doc.path || `/uploads/${doc.filename}`);
+
+                          return (
                           <div key={index} className="detail-item document-item" style={{
                             gridColumn: '1 / -1',
                             marginBottom: '16px',
@@ -7901,8 +7913,8 @@ Settings
                               <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
                                   onClick={() => {
-                                    if (doc.filename) {
-                                      window.open(`/uploads/${doc.filename}`, '_blank');
+                                    if (docUrl) {
+                                      window.open(docUrl, '_blank');
                                     } else {
                                       alert('File not available for viewing');
                                     }
@@ -7923,10 +7935,11 @@ Settings
                                 </button>
                                 <button
                                   onClick={() => {
-                                    if (doc.filename) {
+                                    if (docUrl) {
                                       const link = document.createElement('a');
-                                      link.href = `/uploads/${doc.filename}`;
-                                      link.download = doc.originalName || 'registration-document';
+                                      link.href = docUrl;
+                                      link.download = doc.originalname || doc.originalName || 'registration-document';
+                                      link.target = '_blank';
                                       document.body.appendChild(link);
                                       link.click();
                                       document.body.removeChild(link);
@@ -7951,8 +7964,10 @@ Settings
                               </div>
                             </div>
                           </div>
-                        ))
-                      ) : (
+                          );
+                        })
+                      ) : null}
+                      {(!selectedApplication.documents || selectedApplication.documents.length === 0) && (
                         <div className="detail-item" style={{
                           gridColumn: '1 / -1',
                           padding: '16px',

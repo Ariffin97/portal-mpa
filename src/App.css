@@ -3882,7 +3882,7 @@ button.utility-link {
   left: 0;
   height: 100vh;
   padding-top: 58px;
-  padding-bottom: 200px;
+  padding-bottom: 60px;
   overflow-y: auto;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -4060,7 +4060,6 @@ button.utility-link {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 300px);
   min-height: 300px;
 }
 

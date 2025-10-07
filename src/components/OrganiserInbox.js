@@ -175,89 +175,75 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
       }}>
       {/* Header */}
       <div className="inbox-header" style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        backgroundColor: '#2c3e50',
         color: 'white',
-        padding: '18px 24px',
+        padding: '20px 24px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        borderBottom: '1px solid #34495e'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>Admin Messages</h3>
-            {unreadCount > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                <span style={{
-                  backgroundColor: '#ff4757',
-                  color: 'white',
-                  borderRadius: '10px',
-                  padding: '2px 8px',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  minWidth: '18px',
-                  textAlign: 'center'
-                }}>
-                  {unreadCount}
-                </span>
-                <span style={{ fontSize: '12px', opacity: 0.9 }}>unread</span>
-              </div>
-            )}
-          </div>
+        <div>
+          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>Admin Messages</h3>
+          {unreadCount > 0 && (
+            <span style={{
+              display: 'inline-block',
+              marginTop: '4px',
+              color: '#bdc3c7',
+              fontSize: '13px'
+            }}>
+              {unreadCount} unread message{unreadCount > 1 ? 's' : ''}
+            </span>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
             onClick={handleRefresh}
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
+              backgroundColor: 'transparent',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
               color: 'white',
-              padding: '8px 14px',
-              borderRadius: '8px',
+              padding: '8px 16px',
+              borderRadius: '4px',
               cursor: 'pointer',
-              fontSize: '12px',
+              fontSize: '13px',
               fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-              e.target.style.transform = 'translateY(-1px)';
+              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-              e.target.style.transform = 'translateY(0)';
+              e.target.style.backgroundColor = 'transparent';
             }}
           >
-            <span>Refresh</span>
+            Refresh
           </button>
           <button
             onClick={onClose}
             style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              backgroundColor: 'transparent',
               border: 'none',
-              borderRadius: '8px',
-              width: '36px',
-              height: '36px',
+              color: 'white',
+              cursor: 'pointer',
+              fontSize: '24px',
+              padding: '0',
+              width: '32px',
+              height: '32px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: 'pointer',
-              color: 'white',
-              fontSize: '18px',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              opacity: 0.7
             }}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-              e.target.style.transform = 'scale(1.05)';
+              e.target.style.opacity = '1';
             }}
             onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-              e.target.style.transform = 'scale(1)';
+              e.target.style.opacity = '0.7';
             }}
           >
-            ✕
+            ×
           </button>
         </div>
       </div>
@@ -266,187 +252,134 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
         <div className="messages-list" style={{
           flex: 1,
           overflowY: 'auto',
-          backgroundColor: '#fafbfc',
+          backgroundColor: 'white',
           minHeight: '400px'
         }}>
         {loading ? (
           <div style={{
             padding: '48px 24px',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px'
+            textAlign: 'center'
           }}>
             <div style={{
               width: '32px',
               height: '32px',
               border: '3px solid #e1e5e9',
-              borderTop: '3px solid #667eea',
+              borderTop: '3px solid #3498db',
               borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 12px'
             }}></div>
-            <span style={{ color: '#6c757d', fontSize: '14px' }}>Loading messages...</span>
+            <span style={{ color: '#7f8c8d', fontSize: '14px' }}>Loading messages...</span>
           </div>
         ) : error ? (
           <div style={{
             padding: '48px 24px',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px'
+            textAlign: 'center'
           }}>
-            <div style={{
-              backgroundColor: '#fee2e2',
-              borderRadius: '50%',
-              padding: '12px',
-              display: 'inline-flex'
-            }}>
-              <span style={{ fontSize: '20px' }}>⚠️</span>
-            </div>
-            <span style={{ color: '#dc3545', fontSize: '14px', fontWeight: '500' }}>{error}</span>
+            <span style={{ color: '#e74c3c', fontSize: '14px' }}>⚠️ {error}</span>
           </div>
         ) : messages.length === 0 ? (
           <div style={{
-            padding: '48px 24px',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '16px'
+            padding: '60px 24px',
+            textAlign: 'center'
           }}>
-            <div style={{
-              backgroundColor: '#f0f4f8',
-              borderRadius: '50%',
-              padding: '16px',
-              display: 'inline-flex'
-            }}>
-              <span style={{ fontSize: '24px' }}>📬</span>
-            </div>
-            <div>
-              <h4 style={{ margin: '0 0 8px 0', color: '#2d3748', fontSize: '16px', fontWeight: '600' }}>
-                No messages yet
-              </h4>
-              <p style={{ margin: 0, color: '#718096', fontSize: '14px', lineHeight: '1.5' }}>
-                You'll receive important updates and notifications from the admin team here.
-              </p>
-            </div>
+            <p style={{ margin: 0, color: '#95a5a6', fontSize: '14px' }}>
+              No messages yet
+            </p>
           </div>
         ) : (
-          <div style={{ padding: '8px 0' }}>
-            {messages.map((message, index) => (
+          messages.map((message, index) => (
               <div
                 key={message.messageId}
                 onClick={() => handleMessageClick(message)}
                 style={{
-                  margin: '0 16px 8px 16px',
-                  padding: '16px 20px',
-                  backgroundColor: message.isRead ? 'white' : '#f7faff',
-                  border: message.isRead ? '1px solid #e1e5e9' : '1px solid #c3dafe',
-                  borderRadius: '12px',
+                  padding: '16px 24px',
+                  backgroundColor: message.isRead ? 'white' : '#f8f9fa',
+                  borderBottom: '1px solid #ecf0f1',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  position: 'relative',
-                  boxShadow: message.isRead ? '0 1px 3px rgba(0, 0, 0, 0.02)' : '0 2px 8px rgba(99, 126, 234, 0.08)'
+                  transition: 'background-color 0.2s ease',
+                  position: 'relative'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
+                  e.currentTarget.style.backgroundColor = '#f8f9fa';
                 }}
                 onMouseLeave={(e) => {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = message.isRead ? '0 1px 3px rgba(0, 0, 0, 0.02)' : '0 2px 8px rgba(99, 126, 234, 0.08)';
+                  e.currentTarget.style.backgroundColor = message.isRead ? 'white' : '#f8f9fa';
                 }}
               >
-                {/* Priority indicator stripe */}
                 {!message.isRead && (
                   <div style={{
                     position: 'absolute',
                     left: 0,
                     top: 0,
                     bottom: 0,
-                    width: '4px',
-                    backgroundColor: message.priority === 'urgent' ? '#ff4757' :
-                                   message.priority === 'high' ? '#ffa502' :
-                                   message.priority === 'normal' ? '#2ed573' : '#5352ed',
-                    borderRadius: '12px 0 0 12px'
+                    width: '3px',
+                    backgroundColor: '#3498db'
                   }}></div>
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Message header with icons and subject */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '14px' }}>{getPriorityIcon(message.priority)}</span>
-                      <span style={{ fontSize: '14px' }}>{getCategoryIcon(message.category)}</span>
-                      <h4 style={{
-                        margin: 0,
-                        fontWeight: message.isRead ? '500' : '600',
-                        fontSize: '15px',
-                        color: '#2d3748',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        flex: 1
-                      }}>
-                        {message.subject}
-                      </h4>
-                    </div>
+                    <h4 style={{
+                      margin: '0 0 4px 0',
+                      fontWeight: message.isRead ? '500' : '600',
+                      fontSize: '14px',
+                      color: '#2c3e50',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {message.subject}
+                    </h4>
 
-                    {/* From information */}
                     <div style={{
-                      color: '#718096',
-                      fontSize: '13px',
-                      marginBottom: '6px',
-                      fontWeight: '500'
+                      color: '#7f8c8d',
+                      fontSize: '12px',
+                      marginBottom: '4px'
                     }}>
                       From: {message.fromName}
                     </div>
 
-                    {/* Message preview */}
                     <div style={{
-                      color: '#a0aec0',
+                      color: '#95a5a6',
                       fontSize: '13px',
-                      lineHeight: '1.4',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      maxWidth: '100%'
+                      whiteSpace: 'nowrap'
                     }}>
                       {message.content}
                     </div>
                   </div>
 
-                  {/* Right side - date and unread indicator */}
                   <div style={{
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-end',
-                    gap: '4px',
+                    gap: '6px',
                     flexShrink: 0
                   }}>
                     <span style={{
                       fontSize: '12px',
-                      color: '#a0aec0',
-                      fontWeight: '500'
+                      color: '#95a5a6'
                     }}>
                       {formatDate(message.createdAt)}
                     </span>
                     {!message.isRead && (
-                      <div style={{
-                        backgroundColor: '#667eea',
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.2)'
-                      }}></div>
+                      <span style={{
+                        backgroundColor: '#3498db',
+                        color: 'white',
+                        fontSize: '10px',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        fontWeight: '600'
+                      }}>
+                        NEW
+                      </span>
                     )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            ))
           )}
         </div>
       </div>
@@ -459,59 +392,49 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
-          padding: '20px',
-          animation: 'fadeIn 0.2s ease-out'
+          padding: '20px'
         }}>
           <div style={{
             backgroundColor: 'white',
-            borderRadius: '16px',
+            borderRadius: '8px',
             maxWidth: '700px',
             width: '100%',
             maxHeight: '85vh',
             overflow: 'hidden',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
-            transform: 'scale(1)',
-            animation: 'slideUp 0.3s ease-out'
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            border: '1px solid #e1e5e9'
           }}>
             {/* Modal Header */}
             <div style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              backgroundColor: '#2c3e50',
               color: 'white',
-              padding: '24px 28px',
-              position: 'relative'
+              padding: '20px 24px',
+              borderBottom: '1px solid #34495e'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1, paddingRight: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                    <h3 style={{
-                      margin: 0,
-                      fontSize: '20px',
-                      fontWeight: '600',
-                      lineHeight: '1.3',
-                      wordBreak: 'break-word'
-                    }}>
-                      {selectedMessage.subject}
-                    </h3>
-                  </div>
+                  <h3 style={{
+                    margin: '0 0 12px 0',
+                    fontSize: '18px',
+                    fontWeight: '600'
+                  }}>
+                    {selectedMessage.subject}
+                  </h3>
 
                   <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '12px',
                     fontSize: '14px',
-                    opacity: 0.95
+                    color: '#bdc3c7'
                   }}>
-                    <div>
-                      <strong style={{ opacity: 0.8 }}>From:</strong> {selectedMessage.fromName}
+                    <div style={{ marginBottom: '4px' }}>
+                      <strong>From:</strong> {selectedMessage.fromName}
                     </div>
                     <div>
-                      <strong style={{ opacity: 0.8 }}>Date:</strong> {new Date(selectedMessage.createdAt).toLocaleString('en-GB', {
+                      <strong>Date:</strong> {new Date(selectedMessage.createdAt).toLocaleString('en-GB', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
@@ -520,18 +443,8 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
                       })}
                     </div>
                     {selectedMessage.relatedApplicationId && (
-                      <div style={{ gridColumn: '1 / -1' }}>
-                        <strong style={{ opacity: 0.8 }}>Related Application:</strong>
-                        <span style={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
-                          marginLeft: '8px',
-                          fontSize: '13px',
-                          fontWeight: '500'
-                        }}>
-                          {selectedMessage.relatedApplicationId}
-                        </span>
+                      <div style={{ marginTop: '4px' }}>
+                        <strong>Application:</strong> {selectedMessage.relatedApplicationId}
                       </div>
                     )}
                   </div>
@@ -540,26 +453,17 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
                 <button
                   onClick={closeMessageModal}
                   style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    width: '36px',
-                    height: '36px',
+                    backgroundColor: 'transparent',
+                    border: '1px solid #bdc3c7',
+                    borderRadius: '4px',
+                    width: '32px',
+                    height: '32px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
                     color: 'white',
-                    fontSize: '18px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                    e.target.style.transform = 'scale(1.05)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                    e.target.style.transform = 'scale(1)';
+                    fontSize: '16px'
                   }}
                 >
                   ✕
@@ -569,63 +473,42 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
 
             {/* Modal Body */}
             <div style={{
-              padding: '28px',
+              padding: '24px',
               maxHeight: '60vh',
               overflowY: 'auto',
-              backgroundColor: '#fafbfc'
+              backgroundColor: 'white'
             }}>
               <div style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                padding: '24px',
-                border: '1px solid #e1e5e9',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)'
+                fontSize: '15px',
+                lineHeight: '1.6',
+                color: '#2c3e50',
+                whiteSpace: 'pre-wrap'
               }}>
-                <div style={{
-                  fontSize: '15px',
-                  lineHeight: '1.7',
-                  color: '#2d3748',
-                  whiteSpace: 'pre-wrap',
-                  fontFamily: 'system-ui, -apple-system, sans-serif'
-                }}>
-                  {selectedMessage.content}
-                </div>
+                {selectedMessage.content}
               </div>
             </div>
 
             {/* Modal Footer */}
             <div style={{
-              padding: '20px 28px',
+              padding: '16px 24px',
               borderTop: '1px solid #e1e5e9',
-              backgroundColor: 'white',
+              backgroundColor: '#f8f9fa',
               display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '12px'
+              justifyContent: 'flex-end'
             }}>
               <button
                 onClick={closeMessageModal}
                 style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  backgroundColor: '#2c3e50',
                   color: 'white',
                   border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '8px',
+                  padding: '10px 20px',
+                  borderRadius: '4px',
                   cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 4px rgba(102, 126, 234, 0.2)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.2)';
+                  fontSize: '14px'
                 }}
               >
-                Close Message
+                Close
               </button>
             </div>
           </div>

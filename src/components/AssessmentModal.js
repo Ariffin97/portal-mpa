@@ -4,8 +4,7 @@ const AssessmentModal = ({ isOpen, onClose }) => {
   const [currentStep, setCurrentStep] = useState('registration'); // registration, assessment, results
   const [userInfo, setUserInfo] = useState({
     fullName: '',
-    icNumber: '',
-    email: ''
+    icNumber: ''
   });
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -96,7 +95,7 @@ const AssessmentModal = ({ isOpen, onClose }) => {
 
   const handleRegistration = (e) => {
     e.preventDefault();
-    if (userInfo.fullName && userInfo.icNumber && userInfo.email) {
+    if (userInfo.fullName && userInfo.icNumber) {
       setCurrentStep('assessment');
       setIsAssessmentActive(true);
     }
@@ -123,16 +122,22 @@ const AssessmentModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const finishAssessment = () => {
+  const finishAssessment = async () => {
     setIsAssessmentActive(false);
-    calculateResults();
+    const results = calculateResults();
     setCurrentStep('results');
+
+    // Save to database
+    await saveAssessmentToDatabase(results);
   };
 
-  const handleTimeUp = () => {
+  const handleTimeUp = async () => {
     setIsAssessmentActive(false);
-    calculateResults();
+    const results = calculateResults();
     setCurrentStep('results');
+
+    // Save to database
+    await saveAssessmentToDatabase(results);
   };
 
   const calculateResults = () => {
@@ -140,12 +145,51 @@ const AssessmentModal = ({ isOpen, onClose }) => {
       return total + (answers[index] === question.correct ? 1 : 0);
     }, 0);
 
-    setUserInfo(prev => ({
-      ...prev,
+    const results = {
       score,
       totalQuestions: questions.length,
       percentage: Math.round((score / questions.length) * 100)
+    };
+
+    setUserInfo(prev => ({
+      ...prev,
+      ...results
     }));
+
+    return results;
+  };
+
+  const saveAssessmentToDatabase = async (results) => {
+    try {
+      const response = await fetch('/api/assessment/submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          formCode: 'GNRAL',
+          participantName: userInfo.fullName,
+          participantIcNumber: userInfo.icNumber,
+          answers: answers,
+          score: results.score,
+          correctAnswers: results.score,
+          totalQuestions: results.totalQuestions,
+          timeSpent: 1800 - timeLeft,
+          batchId: `GNRAL-${new Date().toISOString().split('T')[0]}`,
+          batchDate: new Date().toISOString().split('T')[0]
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('Assessment saved successfully:', data.data.submissionId);
+      } else {
+        console.error('Failed to save assessment:', data.message);
+      }
+    } catch (error) {
+      console.error('Error saving assessment:', error);
+    }
   };
 
   const resetAssessment = () => {
@@ -156,8 +200,7 @@ const AssessmentModal = ({ isOpen, onClose }) => {
     setIsAssessmentActive(false);
     setUserInfo({
       fullName: '',
-      icNumber: '',
-      email: ''
+      icNumber: ''
     });
   };
 
@@ -192,15 +235,6 @@ const AssessmentModal = ({ isOpen, onClose }) => {
                     type="text"
                     value={userInfo.icNumber}
                     onChange={(e) => setUserInfo(prev => ({...prev, icNumber: e.target.value}))}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Email *</label>
-                  <input
-                    type="email"
-                    value={userInfo.email}
-                    onChange={(e) => setUserInfo(prev => ({...prev, email: e.target.value}))}
                     required
                   />
                 </div>
