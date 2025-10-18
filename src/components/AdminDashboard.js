@@ -60,6 +60,15 @@ const AdminDashboard = ({ setCurrentPage }) => {
     isExporting: false
   });
 
+  // Notification Settings States
+  const [notificationSettings, setNotificationSettings] = useState({
+    emailAddresses: [],
+    enabled: true
+  });
+  const [newNotificationEmail, setNewNotificationEmail] = useState('');
+  const [newNotificationName, setNewNotificationName] = useState('');
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+
   // Message to Organiser States
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [messageData, setMessageData] = useState({
@@ -808,6 +817,13 @@ const AdminDashboard = ({ setCurrentPage }) => {
       }
     }
   }, [currentUserAuthority, currentView]);
+
+  // Fetch notification settings when settings view is opened
+  useEffect(() => {
+    if (currentView === 'settings') {
+      fetchNotificationSettings();
+    }
+  }, [currentView]);
 
   // Notice Management Functions
   const handleCreateNotice = () => {
@@ -2302,6 +2318,121 @@ const AdminDashboard = ({ setCurrentPage }) => {
       alert('Export failed: ' + error.message);
     } finally {
       setExportSettings(prev => ({ ...prev, isExporting: false }));
+    }
+  };
+
+  // Notification Settings Functions
+  const fetchNotificationSettings = async () => {
+    try {
+      setIsLoadingNotifications(true);
+      console.log('Fetching notification settings from:', `${apiService.baseURL}/admin/notification-settings`);
+
+      const response = await fetch(`${apiService.baseURL}/admin/notification-settings`);
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Notification settings data:', data);
+
+      if (data.success) {
+        setNotificationSettings(data.settings);
+      } else {
+        console.error('Failed to fetch notification settings:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching notification settings:', error);
+      console.error('Error details:', error.message);
+      // Don't alert on initial load, just log the error
+    } finally {
+      setIsLoadingNotifications(false);
+    }
+  };
+
+  const handleAddNotificationEmail = async () => {
+    if (!newNotificationEmail.trim()) {
+      alert('Please enter an email address');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+    if (!emailRegex.test(newNotificationEmail)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiService.baseURL}/admin/notification-settings/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: newNotificationEmail.trim(),
+          name: newNotificationName.trim()
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setNotificationSettings(data.settings);
+        setNewNotificationEmail('');
+        setNewNotificationName('');
+        alert('Email added successfully!');
+      } else {
+        alert(data.error || 'Failed to add email');
+      }
+    } catch (error) {
+      console.error('Error adding notification email:', error);
+      alert('Failed to add email. Please try again.');
+    }
+  };
+
+  const handleRemoveNotificationEmail = async (emailId) => {
+    if (!window.confirm('Are you sure you want to remove this email from the notification list?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiService.baseURL}/admin/notification-settings/email/${emailId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setNotificationSettings(data.settings);
+        alert('Email removed successfully!');
+      } else {
+        alert(data.error || 'Failed to remove email');
+      }
+    } catch (error) {
+      console.error('Error removing notification email:', error);
+      alert('Failed to remove email. Please try again.');
+    }
+  };
+
+  const handleToggleNotifications = async () => {
+    try {
+      const response = await fetch(`${apiService.baseURL}/admin/notification-settings/toggle`, {
+        method: 'PATCH'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setNotificationSettings(data.settings);
+        alert(data.message);
+      } else {
+        alert(data.error || 'Failed to toggle notifications');
+      }
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+      alert('Failed to toggle notifications. Please try again.');
     }
   };
 
@@ -4208,6 +4339,137 @@ const AdminDashboard = ({ setCurrentPage }) => {
           </div>
           <button className="settings-btn">Save Settings</button>
         </div>
+
+        {currentUserAuthority === 'super_admin' && (
+          <div className="settings-card">
+            <h3>Email Notification Settings</h3>
+            <p className="settings-description">Configure email addresses to receive notifications when new tournament applications are submitted</p>
+
+            <div className="setting-item" style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span>Enable Email Notifications</span>
+                <button
+                  onClick={handleToggleNotifications}
+                  style={{
+                    padding: '5px 15px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: notificationSettings.enabled ? '#28a745' : '#dc3545',
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {notificationSettings.enabled ? 'ENABLED' : 'DISABLED'}
+                </button>
+              </label>
+              <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '5px' }}>
+                When enabled, emails will be sent to all addresses below when a new tournament application is submitted
+              </small>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>Add New Email Address</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', marginBottom: '10px' }}>
+                <input
+                  type="email"
+                  placeholder="Email address *"
+                  value={newNotificationEmail}
+                  onChange={(e) => setNewNotificationEmail(e.target.value)}
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+                <input
+                  type="text"
+                  placeholder="Name (optional)"
+                  value={newNotificationName}
+                  onChange={(e) => setNewNotificationName(e.target.value)}
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}
+                />
+                <button
+                  onClick={handleAddNotificationEmail}
+                  style={{
+                    padding: '8px 20px',
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: '500'
+                  }}
+                >
+                  Add Email
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>Configured Email Addresses ({notificationSettings.emailAddresses?.length || 0})</h4>
+              {isLoadingNotifications ? (
+                <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>Loading...</p>
+              ) : notificationSettings.emailAddresses && notificationSettings.emailAddresses.length > 0 ? (
+                <div style={{ border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8f9fa', borderBottom: '2px solid #dee2e6' }}>
+                        <th style={{ padding: '10px', textAlign: 'left', fontWeight: 'bold' }}>Email</th>
+                        <th style={{ padding: '10px', textAlign: 'left', fontWeight: 'bold' }}>Name</th>
+                        <th style={{ padding: '10px', textAlign: 'left', fontWeight: 'bold' }}>Added Date</th>
+                        <th style={{ padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {notificationSettings.emailAddresses.map((emailConfig, index) => (
+                        <tr key={emailConfig._id || index} style={{ borderBottom: '1px solid #dee2e6' }}>
+                          <td style={{ padding: '10px' }}>{emailConfig.email}</td>
+                          <td style={{ padding: '10px' }}>{emailConfig.name || '-'}</td>
+                          <td style={{ padding: '10px' }}>
+                            {emailConfig.addedAt ? new Date(emailConfig.addedAt).toLocaleDateString('en-MY') : '-'}
+                          </td>
+                          <td style={{ padding: '10px', textAlign: 'center' }}>
+                            <button
+                              onClick={() => handleRemoveNotificationEmail(emailConfig._id)}
+                              style={{
+                                padding: '5px 15px',
+                                backgroundColor: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{
+                  padding: '20px',
+                  textAlign: 'center',
+                  color: '#666',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '4px',
+                  border: '1px solid #dee2e6'
+                }}>
+                  No email addresses configured. Add email addresses above to receive notifications.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="settings-card">
           <h3>Export Settings</h3>
@@ -7591,6 +7853,10 @@ Settings
                   <div className="detail-item">
                     <label>Telephone Contact:</label>
                     <span>{selectedApplication.telContact || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Person in Charge:</label>
+                    <span>{selectedApplication.personInCharge || 'Not provided'}</span>
                   </div>
                   <div className="detail-item">
                     <label>Email:</label>

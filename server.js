@@ -328,6 +328,103 @@ const emailTemplates = {
         </div>
       </div>
     `
+  }),
+
+  adminNotification: (applicationData) => ({
+    subject: `New Tournament Application Submitted - ${applicationData.eventTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px; background-color: #2c5aa0; padding: 20px; border-radius: 8px;">
+          <h2 style="color: #fff; margin: 0;">Malaysia Pickleball Association</h2>
+          <h3 style="color: #e0e0e0; margin: 10px 0 0 0;">Admin Notification</h3>
+        </div>
+
+        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #856404; margin-top: 0;">📋 New Tournament Application Received</h4>
+          <p style="color: #856404; margin-bottom: 0;">A new tournament application has been submitted and requires your review.</p>
+        </div>
+
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #2c5aa0; margin-top: 0;">Application Details</h4>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold; width: 40%;">Application ID:</td>
+              <td style="padding: 8px 0;">${applicationData.applicationId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Event Title:</td>
+              <td style="padding: 8px 0;">${applicationData.eventTitle}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Organiser Name:</td>
+              <td style="padding: 8px 0;">${applicationData.organiserName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Person in Charge:</td>
+              <td style="padding: 8px 0;">${applicationData.personInCharge || 'Not provided'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Contact Email:</td>
+              <td style="padding: 8px 0;">${applicationData.email}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Contact Phone:</td>
+              <td style="padding: 8px 0;">${applicationData.telContact}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Event Date:</td>
+              <td style="padding: 8px 0;">${new Date(applicationData.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} - ${new Date(applicationData.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Location:</td>
+              <td style="padding: 8px 0;">${applicationData.city}, ${applicationData.state}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Venue:</td>
+              <td style="padding: 8px 0;">${applicationData.venue || 'Not provided'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Classification:</td>
+              <td style="padding: 8px 0;">${applicationData.classification || 'Not provided'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Expected Participants:</td>
+              <td style="padding: 8px 0;">${applicationData.expectedParticipants || 'Not provided'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Submission Date:</td>
+              <td style="padding: 8px 0;">${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background-color: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #0056b3; margin-top: 0;">Action Required</h4>
+          <p style="margin-bottom: 10px;">Please log in to the admin dashboard to:</p>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+            <li>Review the complete application details</li>
+            <li>Check all support documents</li>
+            <li>Verify tournament categories and fees</li>
+            <li>Update application status (Approve/Reject/Request More Info)</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.PORTAL_URL || 'https://portal.malaysiapickleball.my'}"
+             style="background-color: #2c5aa0; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+            Open Admin Dashboard
+          </a>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+          <p style="color: #666; font-size: 13px; margin: 0;">
+            This is an automated notification from the MPA Tournament Portal.<br>
+            Malaysia Pickleball Association<br>
+            Email: info@malaysiapickleball.my | Phone: +6011-16197471
+          </p>
+        </div>
+      </div>
+    `
   })
 };
 
@@ -1716,6 +1813,33 @@ const assessmentSubmissionSchema = new mongoose.Schema({
 });
 
 const AssessmentSubmission = mongoose.model('AssessmentSubmission', assessmentSubmissionSchema);
+
+// Admin Notification Settings Schema
+const notificationSettingsSchema = new mongoose.Schema({
+  emailAddresses: [{
+    email: {
+      type: String,
+      required: true,
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address']
+    },
+    name: {
+      type: String,
+      required: false
+    },
+    addedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  enabled: {
+    type: Boolean,
+    default: true
+  }
+}, {
+  timestamps: true
+});
+
+const NotificationSettings = mongoose.model('NotificationSettings', notificationSettingsSchema);
 
 // ID Generation Functions
 const generatePlayerId = async () => {
@@ -3509,7 +3633,37 @@ app.post('/api/applications', uploadApplication.array('supportDocuments', 10), a
         }
       }
     }
-    
+
+    // Send notification email to admin email addresses
+    try {
+      const notificationSettings = await NotificationSettings.findOne();
+
+      if (notificationSettings && notificationSettings.enabled && notificationSettings.emailAddresses.length > 0) {
+        console.log('📧 Sending admin notifications...');
+
+        const adminEmailTemplate = emailTemplates.adminNotification(savedApplication);
+
+        // Send to all configured admin emails
+        for (const emailConfig of notificationSettings.emailAddresses) {
+          try {
+            const adminEmailResult = await sendEmail(emailConfig.email, adminEmailTemplate);
+            if (adminEmailResult.success) {
+              console.log(`✅ Admin notification sent to: ${emailConfig.email}`);
+            } else {
+              console.error(`❌ Failed to send admin notification to ${emailConfig.email}:`, adminEmailResult.error);
+            }
+          } catch (adminEmailError) {
+            console.error(`❌ Error sending admin notification to ${emailConfig.email}:`, adminEmailError);
+          }
+        }
+      } else {
+        console.log('ℹ️ Admin notifications are disabled or no email addresses configured');
+      }
+    } catch (notificationError) {
+      console.error('❌ Error sending admin notifications:', notificationError);
+      // Don't fail the application submission if admin notifications fail
+    }
+
     res.status(201).json({
       message: 'Application submitted successfully',
       application: savedApplication
@@ -4138,6 +4292,162 @@ app.delete('/api/admin/users/:id', async (req, res) => {
       success: false,
       error: 'Internal server error',
       message: 'Failed to delete admin user'
+    });
+  }
+});
+
+// ===============================
+// NOTIFICATION SETTINGS APIs
+// ===============================
+
+// Get notification settings
+app.get('/api/admin/notification-settings', async (req, res) => {
+  try {
+    let settings = await NotificationSettings.findOne();
+
+    // If no settings exist, create default one
+    if (!settings) {
+      settings = new NotificationSettings({
+        emailAddresses: [],
+        enabled: true
+      });
+      await settings.save();
+    }
+
+    res.json({
+      success: true,
+      settings: settings
+    });
+  } catch (error) {
+    console.error('Error fetching notification settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch notification settings'
+    });
+  }
+});
+
+// Add email to notification list
+app.post('/api/admin/notification-settings/email', async (req, res) => {
+  try {
+    const { email, name } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email address is required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid email address format'
+      });
+    }
+
+    let settings = await NotificationSettings.findOne();
+
+    if (!settings) {
+      settings = new NotificationSettings({
+        emailAddresses: [],
+        enabled: true
+      });
+    }
+
+    // Check if email already exists
+    const emailExists = settings.emailAddresses.some(item => item.email === email);
+    if (emailExists) {
+      return res.status(400).json({
+        success: false,
+        error: 'This email address is already in the notification list'
+      });
+    }
+
+    // Add new email
+    settings.emailAddresses.push({
+      email: email,
+      name: name || '',
+      addedAt: new Date()
+    });
+
+    await settings.save();
+
+    res.json({
+      success: true,
+      message: 'Email added successfully',
+      settings: settings
+    });
+  } catch (error) {
+    console.error('Error adding email to notification settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add email'
+    });
+  }
+});
+
+// Remove email from notification list
+app.delete('/api/admin/notification-settings/email/:emailId', async (req, res) => {
+  try {
+    const { emailId } = req.params;
+
+    const settings = await NotificationSettings.findOne();
+
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        error: 'Notification settings not found'
+      });
+    }
+
+    settings.emailAddresses = settings.emailAddresses.filter(
+      item => item._id.toString() !== emailId
+    );
+
+    await settings.save();
+
+    res.json({
+      success: true,
+      message: 'Email removed successfully',
+      settings: settings
+    });
+  } catch (error) {
+    console.error('Error removing email from notification settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to remove email'
+    });
+  }
+});
+
+// Toggle notification enabled/disabled
+app.patch('/api/admin/notification-settings/toggle', async (req, res) => {
+  try {
+    const settings = await NotificationSettings.findOne();
+
+    if (!settings) {
+      return res.status(404).json({
+        success: false,
+        error: 'Notification settings not found'
+      });
+    }
+
+    settings.enabled = !settings.enabled;
+    await settings.save();
+
+    res.json({
+      success: true,
+      message: `Notifications ${settings.enabled ? 'enabled' : 'disabled'} successfully`,
+      settings: settings
+    });
+  } catch (error) {
+    console.error('Error toggling notification settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle notification settings'
     });
   }
 });
