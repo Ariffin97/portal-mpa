@@ -7986,10 +7986,59 @@ Settings
                       marginTop: '15px'
                     }}>
                       {selectedApplication.supportDocuments.map((doc, index) => {
-                        // Generate URL for MongoDB-stored documents
-                        const documentUrl = doc.data
-                          ? `/api/documents/${selectedApplication.applicationId}/${index}`
-                          : (doc.url || doc.path || `/uploads/${doc.filename}`);
+                        // Debug: Log the entire document object
+                        console.log('=== Document Debug ===');
+                        console.log('Document index:', index);
+                        console.log('Document object:', doc);
+                        console.log('Document keys:', Object.keys(doc));
+                        console.log('Has data property:', !!doc.data);
+                        console.log('Has url property:', !!doc.url);
+                        console.log('Has secure_url property:', !!doc.secure_url);
+                        console.log('Has path property:', !!doc.path);
+                        console.log('===================');
+
+                        const handleViewDocument = (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+
+                          console.log('Clicked document:', doc);
+
+                          try {
+                            if (doc.data) {
+                              // Document is stored as Base64 in MongoDB
+                              console.log('Opening Base64 document:', doc.originalname);
+
+                              // Convert base64 to blob
+                              const byteCharacters = atob(doc.data);
+                              const byteNumbers = new Array(byteCharacters.length);
+                              for (let i = 0; i < byteCharacters.length; i++) {
+                                byteNumbers[i] = byteCharacters.charCodeAt(i);
+                              }
+                              const byteArray = new Uint8Array(byteNumbers);
+                              const blob = new Blob([byteArray], { type: doc.mimetype || 'application/octet-stream' });
+
+                              // Create temporary URL and open in new tab
+                              const url = URL.createObjectURL(blob);
+                              const newWindow = window.open(url, '_blank');
+
+                              // Clean up the URL after a delay
+                              setTimeout(() => URL.revokeObjectURL(url), 60000); // 1 minute
+
+                            } else if (doc.secure_url || doc.url || doc.path) {
+                              // Document has a URL (Cloudinary or local)
+                              const documentUrl = doc.secure_url || doc.url || doc.path;
+                              console.log('Opening URL document:', documentUrl);
+                              window.open(documentUrl, '_blank', 'noopener,noreferrer');
+
+                            } else {
+                              console.error('Document has no data or URL:', doc);
+                              alert('Unable to open document. No valid data or URL found.');
+                            }
+                          } catch (error) {
+                            console.error('Error opening document:', error);
+                            alert('Error opening document: ' + error.message);
+                          }
+                        };
 
                         return (
                         <div
@@ -8020,10 +8069,8 @@ Settings
                             {doc.uploadDate && `Uploaded: ${new Date(doc.uploadDate).toLocaleDateString('en-MY')}`}
                           </div>
                           <div style={{ marginTop: '10px' }}>
-                            <a
-                              href={documentUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={handleViewDocument}
                               style={{
                                 backgroundColor: '#007bff',
                                 color: 'white',
@@ -8031,13 +8078,14 @@ Settings
                                 borderRadius: '4px',
                                 padding: '6px 12px',
                                 fontSize: '12px',
-                                textDecoration: 'none',
                                 cursor: 'pointer',
                                 display: 'inline-block'
                               }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = '#0056b3'}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = '#007bff'}
                             >
                               View/Download
-                            </a>
+                            </button>
                           </div>
                         </div>
                         );

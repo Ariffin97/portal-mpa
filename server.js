@@ -1061,6 +1061,7 @@ const tournamentApplicationSchema = new mongoose.Schema({
     mimetype: String,
     size: Number,
     path: String,
+    data: String, // Base64 encoded file data
     uploadDate: {
       type: Date,
       default: Date.now
