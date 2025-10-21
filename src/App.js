@@ -12,6 +12,9 @@ import TournamentApplication from './components/TournamentApplication';
 import ApplicationStatus from './components/ApplicationStatus';
 import TermsAndConditions from './components/TermsAndConditions';
 import AssessmentSystem from './components/AssessmentSystem';
+import TournamentSoftwareRegistration from './components/TournamentSoftwareRegistration';
+import TournamentSoftwareLogin from './components/TournamentSoftwareLogin';
+import TournamentSoftwareDashboard from './components/TournamentSoftwareDashboard';
 import mpaLogo from './assets/images/mpa.png';
 import ref1Image from './assets/images/ref1.png';
 import safeSportCodePDF from './assets/documents/safesportcode.pdf';
@@ -29,6 +32,7 @@ function App() {
   const [showImportantNotice, setShowImportantNotice] = useState(false);
   const [showApplyDropdown, setShowApplyDropdown] = useState(false);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [tournamentSoftwareUserData, setTournamentSoftwareUserData] = useState(null);
 
   // Assessment submissions are now saved directly to database
   // AdminDashboard loads them from the database via API
@@ -412,6 +416,12 @@ function App() {
         return <ApplicationStatus setCurrentPage={setCurrentPage} />;
       case 'terms':
         return <TermsAndConditions setCurrentPage={setCurrentPage} />;
+      case 'software-login':
+        return <TournamentSoftwareLogin setCurrentPage={setCurrentPage} setUserData={setTournamentSoftwareUserData} />;
+      case 'software-registration':
+        return <TournamentSoftwareRegistration setCurrentPage={setCurrentPage} setUserData={setTournamentSoftwareUserData} />;
+      case 'software-dashboard':
+        return <TournamentSoftwareDashboard setCurrentPage={setCurrentPage} userData={tournamentSoftwareUserData} />;
       case 'about':
         return (
           <div className="page-content">
@@ -483,12 +493,20 @@ function App() {
 
                 <div className="hero-actions">
                   <div className="hero-actions-column">
-                    <button
-                      className="cta-assessment"
-                      onClick={() => setShowAssessmentModal(true)}
-                    >
-                      Assessment
-                    </button>
+                    <div className="hero-actions-row">
+                      <button
+                        className="cta-assessment"
+                        onClick={() => setShowAssessmentModal(true)}
+                      >
+                        Assessment
+                      </button>
+                      <button
+                        className="cta-tournament-software"
+                        onClick={() => setCurrentPage('software-login')}
+                      >
+                        Register Tournament Software
+                      </button>
+                    </div>
                     <div className="hero-actions-row">
                       <div className="apply-dropdown-container">
                         <button

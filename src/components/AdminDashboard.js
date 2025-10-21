@@ -17,6 +17,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
   const [applications, setApplications] = useState([]);
   const [approvedTournaments, setApprovedTournaments] = useState([]);
   const [registeredOrganizations, setRegisteredOrganizations] = useState([]);
+  const [tournamentSoftware, setTournamentSoftware] = useState([]);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showRejectionModal, setShowRejectionModal] = useState(false);
@@ -804,6 +805,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
     loadApplications();
     loadApprovedTournaments();
     loadRegisteredOrganizations();
+    loadTournamentSoftware();
     loadAdminUsers();
     loadTournamentUpdates();
   }, []);
@@ -935,6 +937,18 @@ const AdminDashboard = ({ setCurrentPage }) => {
     }
   };
 
+  const loadTournamentSoftware = async () => {
+    try {
+      const response = await fetch('/api/tournament-software/all');
+      if (response.ok) {
+        const data = await response.json();
+        setTournamentSoftware(data);
+      }
+    } catch (error) {
+      console.error('Failed to load tournament software:', error);
+    }
+  };
+
   const loadAdminUsers = async () => {
     try {
       const data = await apiService.getAllAdminUsers();
@@ -1050,9 +1064,9 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
   const handleDeleteOrganization = async (orgId, orgName, organizationId) => {
     const confirmMessage = `⚠️ DANGER: This will permanently delete "${orgName}" (${organizationId}) from the system.\n\nThis action CANNOT be undone and will:\n- Remove all organization data\n- Delete all associated records\n- Make the organization ID unavailable\n\nType "DELETE" to confirm:`;
-    
+
     const userInput = prompt(confirmMessage);
-    
+
     if (userInput !== 'DELETE') {
       alert('Deletion cancelled. You must type "DELETE" exactly to confirm.');
       return;
@@ -1061,13 +1075,42 @@ const AdminDashboard = ({ setCurrentPage }) => {
     try {
       await apiService.deleteOrganization(orgId);
       // Remove from local state
-      setRegisteredOrganizations(prevOrgs => 
+      setRegisteredOrganizations(prevOrgs =>
         prevOrgs.filter(org => org._id !== orgId)
       );
       alert(`Organization "${orgName}" (${organizationId}) has been permanently deleted.`);
     } catch (error) {
       console.error('Failed to delete organization:', error);
       alert(`Failed to delete organization: ${error.message}. Please try again.`);
+    }
+  };
+
+  const handleDeleteTournamentSoftware = async (softwareId, softwareName, companyName) => {
+    const confirmMessage = `Are you sure you want to delete "${softwareName}" by ${companyName}?\n\nThis action cannot be undone.`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/tournament-software/${softwareId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete tournament software');
+      }
+
+      // Remove from local state
+      setTournamentSoftware(prevSoftware =>
+        prevSoftware.filter(software => software._id !== softwareId)
+      );
+
+      alert(`Tournament software "${softwareName}" has been successfully deleted.`);
+    } catch (error) {
+      console.error('Failed to delete tournament software:', error);
+      alert(`Failed to delete tournament software: ${error.message}. Please try again.`);
     }
   };
 
@@ -4113,6 +4156,278 @@ const AdminDashboard = ({ setCurrentPage }) => {
     </div>
   );
 
+  const renderTournamentSoftware = () => (
+    <div className="tournament-software-view">
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1.5rem',
+        padding: '0 0.5rem'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            color: '#374151',
+            margin: '0'
+          }}>
+            Tournament Software Registrations: {tournamentSoftware.length}
+          </h3>
+        </div>
+      </div>
+
+      {tournamentSoftware.length === 0 ? (
+        <div style={{
+          backgroundColor: '#f9fafb',
+          border: '2px dashed #d1d5db',
+          borderRadius: '12px',
+          padding: '3rem 2rem',
+          textAlign: 'center',
+          margin: '2rem 0'
+        }}>
+          <h3 style={{
+            fontSize: '1.25rem',
+            fontWeight: '600',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            No Tournament Software Registered
+          </h3>
+          <p style={{
+            fontSize: '1rem',
+            color: '#6b7280',
+            margin: '0'
+          }}>
+            Tournament software registrations will appear here once submitted.
+          </p>
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid',
+          gap: '1.5rem',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))'
+        }}>
+          {tournamentSoftware.map((software) => (
+            <div key={software._id} style={{
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              transition: 'all 0.2s ease'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '1rem'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{
+                    fontSize: '1.125rem',
+                    fontWeight: '600',
+                    color: '#111827',
+                    margin: '0 0 0.5rem 0'
+                  }}>
+                    {software.softwareName}
+                  </h4>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    margin: '0 0 0.25rem 0'
+                  }}>
+                    {software.companyName}
+                  </p>
+                </div>
+                <span style={{
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '999px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  backgroundColor: software.status === 'approved' ? '#d1fae5' :
+                                 software.status === 'rejected' ? '#fee2e2' : '#fef3c7',
+                  color: software.status === 'approved' ? '#065f46' :
+                         software.status === 'rejected' ? '#991b1b' : '#92400e'
+                }}>
+                  {software.status.toUpperCase()}
+                </span>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gap: '0.75rem',
+                marginBottom: '1rem'
+              }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '140px 1fr',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>Platform:</span>
+                  <span style={{ fontSize: '0.875rem', color: '#111827' }}>
+                    {[software.platform?.web && 'Web', software.platform?.mobile && 'Mobile'].filter(Boolean).join(', ') || 'N/A'}
+                  </span>
+                </div>
+
+                {software.systemUrl && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '140px 1fr',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>System URL:</span>
+                    <a href={software.systemUrl} target="_blank" rel="noopener noreferrer" style={{
+                      fontSize: '0.875rem',
+                      color: '#2563eb',
+                      textDecoration: 'none',
+                      wordBreak: 'break-all'
+                    }}>
+                      {software.systemUrl}
+                    </a>
+                  </div>
+                )}
+
+                {software.appLink && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '140px 1fr',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>App Link:</span>
+                    <a href={software.appLink} target="_blank" rel="noopener noreferrer" style={{
+                      fontSize: '0.875rem',
+                      color: '#2563eb',
+                      textDecoration: 'none',
+                      wordBreak: 'break-all'
+                    }}>
+                      {software.appLink}
+                    </a>
+                  </div>
+                )}
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '140px 1fr',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>Contact Person:</span>
+                  <span style={{ fontSize: '0.875rem', color: '#111827' }}>{software.contactPersonName}</span>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '140px 1fr',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>Email:</span>
+                  <a href={`mailto:${software.contactEmail}`} style={{
+                    fontSize: '0.875rem',
+                    color: '#2563eb',
+                    textDecoration: 'none'
+                  }}>
+                    {software.contactEmail}
+                  </a>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '140px 1fr',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>Phone:</span>
+                  <span style={{ fontSize: '0.875rem', color: '#111827' }}>{software.contactPhone}</span>
+                </div>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '140px 1fr',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>Username:</span>
+                  <span style={{ fontSize: '0.875rem', color: '#111827' }}>{software.username}</span>
+                </div>
+
+                {software.description && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '140px 1fr',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>Description:</span>
+                    <span style={{ fontSize: '0.875rem', color: '#111827' }}>{software.description}</span>
+                  </div>
+                )}
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '140px 1fr',
+                  gap: '0.5rem'
+                }}>
+                  <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>Registered:</span>
+                  <span style={{ fontSize: '0.875rem', color: '#111827' }}>
+                    {new Date(software.createdAt).toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+
+                {software.approvedAt && (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '140px 1fr',
+                    gap: '0.5rem'
+                  }}>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>Approved:</span>
+                    <span style={{ fontSize: '0.875rem', color: '#111827' }}>
+                      {new Date(software.approvedAt).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Delete Button */}
+              <button
+                onClick={() => handleDeleteTournamentSoftware(software._id, software.softwareName, software.companyName)}
+                style={{
+                  marginTop: '1rem',
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const renderSettings = () => (
     <div className="settings-view">
       <div className="dashboard-header">
@@ -5645,6 +5960,24 @@ const AdminDashboard = ({ setCurrentPage }) => {
               Registered Organizations
             </button>
           )}
+
+          <button
+            className={`sidebar-nav-item ${currentView === 'tournament-software' ? 'active' : ''}`}
+            onClick={() => setCurrentView('tournament-software')}
+            style={{
+              fontSize: '16px',
+              fontWeight: '500',
+              padding: '12px 20px',
+              color: '#fff',
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              cursor: 'pointer'
+            }}
+          >
+            Tournament Software
+          </button>
 
           {hasAccessTo('analytics') && (
             <button
@@ -7814,6 +8147,7 @@ Settings
         
         {currentView === 'analytics' && renderAnalytics()}
         {currentView === 'registered-organizations' && renderRegisteredOrganizations()}
+        {currentView === 'tournament-software' && renderTournamentSoftware()}
         {currentView === 'notice-management' && renderNoticeManagement()}
         {currentView === 'assessment-management' && renderAssessmentManagement()}
         {currentView === 'assessment-list' && renderAssessmentList()}

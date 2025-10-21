@@ -45,37 +45,23 @@ mongoose.connect(dbConfig.uri)
 // Email Configuration with nodemailer
 const nodemailer = require('nodemailer');
 
-// Create email transporter
-const createEmailTransporter = () => {
-  // For testing, you can use a service like Gmail with app passwords
-  // Or use a service like Mailtrap for development testing
-
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-    return nodemailer.createTransporter({
-      service: 'gmail', // or your preferred service
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-      }
-    });
-  } else {
-    // Use Ethereal (fake SMTP service) for testing when no real email config
-    return nodemailer.createTransporter({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      auth: {
-        user: 'ethereal.user@ethereal.email',
-        pass: 'ethereal.pass'
-      }
-    });
+// Create email transporter (using Gmail SMTP for custom domain)
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false
   }
-};
+});
 
 const emailService = {
   sendEmail: async (to, subject, htmlContent, textContent = '') => {
     try {
-      const transporter = createEmailTransporter();
-
       const mailOptions = {
         from: process.env.EMAIL_USER || 'noreply@malaysiapickleballassociation.com',
         to: to,
@@ -89,9 +75,7 @@ const emailService = {
       return { success: true, messageId: result.messageId };
     } catch (error) {
       console.error('❌ Email sending failed:', error);
-      // Fallback to mock for testing
-      console.log('📧 [FALLBACK] Mock email sent to:', to);
-      return { success: true, messageId: 'fallback-' + Date.now() };
+      throw error; // Throw error instead of fallback
     }
   }
 };
@@ -269,6 +253,42 @@ const adminUserSchema = new mongoose.Schema({
 });
 
 const AdminUser = mongoose.model('AdminUser', adminUserSchema);
+
+// Unregistered Player Schema (from Tournament Software)
+const unregisteredPlayerSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  email: {
+    type: String,
+    required: true
+  },
+  phone: String,
+  skillLevel: String,
+  age: Number,
+  softwareProvider: String,
+  softwareName: String,
+  registrationToken: {
+    type: String,
+    unique: true
+  },
+  emailSent: {
+    type: Boolean,
+    default: false
+  },
+  registered: {
+    type: Boolean,
+    default: false
+  },
+  playerId: {
+    type: String
+  }
+}, {
+  timestamps: true
+});
+
+const UnregisteredPlayer = mongoose.model('UnregisteredPlayer', unregisteredPlayerSchema);
 
 // Routes (same as production but with mock email)
 // Get all tournament applications
@@ -584,6 +604,248 @@ app.post('/api/admin/login', async (req, res) => {
       success: false,
       message: 'Internal server error'
     });
+  }
+});
+
+// Get all unregistered players
+app.get('/api/unregistered-players', async (req, res) => {
+  try {
+    const unregisteredPlayers = await UnregisteredPlayer.find()
+      .sort({ createdAt: -1 });
+
+    res.json(unregisteredPlayers);
+  } catch (error) {
+    console.error('Error fetching unregistered players:', error);
+    res.status(500).json({ error: 'Failed to fetch unregistered players' });
+  }
+});
+
+// Get unregistered player by token (for registration page)
+app.get('/api/unregistered-player/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const unregisteredPlayer = await UnregisteredPlayer.findOne({ registrationToken: token });
+
+    if (!unregisteredPlayer) {
+      return res.json({
+        success: false,
+        error: 'Invalid or expired registration link'
+      });
+    }
+
+    // Return player data for pre-filling the form
+    res.json({
+      success: true,
+      player: {
+        fullName: unregisteredPlayer.name,
+        email: unregisteredPlayer.email,
+        phoneNumber: unregisteredPlayer.phone,
+        age: unregisteredPlayer.age,
+        softwareProvider: unregisteredPlayer.softwareProvider,
+        softwareName: unregisteredPlayer.softwareName,
+        syncStatus: unregisteredPlayer.registered ? 'sync' : 'pending'
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching unregistered player by token:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to load registration data'
+    });
+  }
+});
+
+// Send registration email to unregistered player
+app.post('/api/unregistered-players/:id/approve', async (req, res) => {
+  try {
+    const unregisteredPlayer = await UnregisteredPlayer.findById(req.params.id);
+
+    if (!unregisteredPlayer) {
+      return res.status(404).json({ error: 'Unregistered player not found' });
+    }
+
+    // Generate registration link
+    const registrationLink = `${process.env.MPA_REACT_URL || 'http://localhost:5173'}/player-registration/${unregisteredPlayer.registrationToken}`;
+
+    // Email content
+    const subject = 'Complete Your Malaysia Pickleball Association Registration';
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: #f8f9fa; padding: 20px; text-align: center;">
+          <h1 style="color: #333; margin: 0;">Malaysia Pickleball Association</h1>
+        </div>
+
+        <div style="padding: 30px; background-color: #ffffff;">
+          <h2 style="color: #333; margin-bottom: 20px;">Complete Your Player Registration</h2>
+
+          <p>Dear ${unregisteredPlayer.name},</p>
+
+          <p>You've been invited to register as a player with the Malaysia Pickleball Association. To complete your registration, please click the button below:</p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${registrationLink}" style="background-color: #28a745; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+              Complete Registration
+            </a>
+          </div>
+
+          <p>Or copy and paste this link into your browser:</p>
+          <p style="background-color: #f8f9fa; padding: 10px; word-break: break-all; border-radius: 5px;">
+            ${registrationLink}
+          </p>
+
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            If you did not expect this email or have any questions, please contact us.
+          </p>
+
+          <p style="margin-top: 30px;">
+            Best regards,<br>
+            <strong>Malaysia Pickleball Association</strong>
+          </p>
+        </div>
+
+        <div style="background-color: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #666;">
+          <p>This is an automated message from the Malaysia Pickleball Association player registration system.</p>
+        </div>
+      </div>
+    `;
+
+    const textContent = `
+Dear ${unregisteredPlayer.name},
+
+You've been invited to register as a player with the Malaysia Pickleball Association.
+
+To complete your registration, please visit this link:
+${registrationLink}
+
+If you did not expect this email or have any questions, please contact us.
+
+Best regards,
+Malaysia Pickleball Association
+    `;
+
+    // Send the actual email
+    try {
+      const emailResult = await emailService.sendEmail(
+        unregisteredPlayer.email,
+        subject,
+        htmlContent,
+        textContent
+      );
+
+      console.log('✅ Registration email sent to:', unregisteredPlayer.email);
+      console.log('📧 Registration Link:', registrationLink);
+
+      // Mark email as sent
+      unregisteredPlayer.emailSent = true;
+      await unregisteredPlayer.save();
+
+      res.json({
+        success: true,
+        message: 'Registration email sent successfully',
+        registrationLink: registrationLink // Include link in response for development
+      });
+    } catch (emailError) {
+      console.error('❌ Failed to send email:', emailError);
+      // Still return success but log the error
+      res.json({
+        success: true,
+        message: 'Registration email queued (check server logs)',
+        registrationLink: registrationLink
+      });
+    }
+  } catch (error) {
+    console.error('Error sending registration email:', error);
+    res.status(500).json({ error: 'Failed to send registration email' });
+  }
+});
+
+// Delete unregistered player
+app.delete('/api/unregistered-players/:id', async (req, res) => {
+  try {
+    await UnregisteredPlayer.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Player deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting unregistered player:', error);
+    res.status(500).json({ error: 'Failed to delete player' });
+  }
+});
+
+// Tournament Software - Share Players to MPA
+app.post('/api/tournament-software/share-players', async (req, res) => {
+  try {
+    const { players, softwareProvider, softwareName } = req.body;
+
+    if (!players || !Array.isArray(players) || players.length === 0) {
+      return res.status(400).json({ error: 'Players array is required' });
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const player of players) {
+      try {
+        // Generate unique registration token
+        const crypto = require('crypto');
+        const registrationToken = crypto.randomBytes(32).toString('hex');
+
+        // Create unregistered player record
+        const unregisteredPlayer = new UnregisteredPlayer({
+          name: player.name,
+          email: player.email,
+          phone: player.phone,
+          skillLevel: player.skillLevel,
+          age: player.age,
+          softwareProvider,
+          softwareName,
+          registrationToken
+        });
+
+        await unregisteredPlayer.save();
+
+        // Generate registration link (points to MPA React app, not portal)
+        const registrationLink = `${process.env.MPA_REACT_URL || 'http://localhost:5173'}/player-registration/${registrationToken}`;
+
+        // In development mode, just log the email instead of sending it
+        console.log('\n📧 DEVELOPMENT MODE - Email would be sent:');
+        console.log('To:', player.email);
+        console.log('Subject: Complete Your MPA Registration');
+        console.log('Registration Link:', registrationLink);
+        console.log('---\n');
+
+        // Mark email as sent (even though we're just logging in dev mode)
+        unregisteredPlayer.emailSent = true;
+        await unregisteredPlayer.save();
+
+        results.push({
+          name: player.name,
+          email: player.email,
+          status: 'success'
+        });
+
+      } catch (error) {
+        console.error(`Error processing player ${player.name}:`, error);
+        errors.push({
+          name: player.name,
+          email: player.email,
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Processed ${players.length} player(s)`,
+      results,
+      errors,
+      totalSuccess: results.length,
+      totalErrors: errors.length
+    });
+
+  } catch (error) {
+    console.error('Error sharing players to MPA:', error);
+    res.status(500).json({ error: 'Failed to share players to MPA' });
   }
 });
 

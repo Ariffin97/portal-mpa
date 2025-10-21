@@ -63,8 +63,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
     malaysianEntryFee: '',
     internationalEntryFee: '',
     expectedParticipants: '',
+    tournamentSoftware: '',
+    tournamentSoftwareOther: '',
     eventSummary: '',
-    
+
     // Tournament Settings
     scoringFormat: 'traditional',
     
@@ -102,6 +104,9 @@ const TournamentApplication = ({ setCurrentPage }) => {
 
   // Support Documents States
   const [supportDocuments, setSupportDocuments] = useState([]);
+
+  // Tournament Software States
+  const [approvedSoftware, setApprovedSoftware] = useState([]);
 
   // Inbox States
   const [showInboxModal, setShowInboxModal] = useState(false);
@@ -149,6 +154,33 @@ const TournamentApplication = ({ setCurrentPage }) => {
       setCurrentPage('home');
     }
   }, [setCurrentPage]);
+
+  // Load approved tournament software on component mount
+  useEffect(() => {
+    const fetchApprovedSoftware = async () => {
+      try {
+        const response = await fetch('/api/tournament-software/approved');
+
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('Server returned non-JSON response when fetching tournament software');
+          return;
+        }
+
+        if (response.ok) {
+          const data = await response.json();
+          setApprovedSoftware(data);
+        } else {
+          console.error('Failed to fetch approved tournament software');
+        }
+      } catch (error) {
+        console.error('Error fetching approved tournament software:', error);
+      }
+    };
+
+    fetchApprovedSoftware();
+  }, []);
 
   // Populate profile update form when modal opens
   useEffect(() => {
@@ -607,8 +639,14 @@ const TournamentApplication = ({ setCurrentPage }) => {
       }
       
       yPosition = addInfoRow('Expected Participants', dataToUse.expectedParticipants, yPosition, true);
+
+      // Tournament Software
+      const softwareName = dataToUse.tournamentSoftware === 'Other'
+        ? dataToUse.tournamentSoftwareOther
+        : dataToUse.tournamentSoftware;
+      yPosition = addInfoRow('Tournament Software', softwareName || 'Not specified', yPosition, true);
       yPosition += 10;
-      
+
       // EVENT SUMMARY Section
       if (dataToUse.eventSummary && dataToUse.eventSummary.trim()) {
         yPosition = addSectionHeader('EVENT SUMMARY', yPosition);
@@ -731,6 +769,13 @@ const TournamentApplication = ({ setCurrentPage }) => {
       setIsSubmitting(false);
       return;
     }
+
+    // Validate tournament software "Other" field
+    if (formData.tournamentSoftware === 'Other' && !formData.tournamentSoftwareOther.trim()) {
+      alert('Please specify the tournament software name.');
+      setIsSubmitting(false);
+      return;
+    }
     
     try {
       // Create FormData for file upload
@@ -755,6 +800,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
       submissionFormData.append('eventType', formData.eventType);
       submissionFormData.append('categories', JSON.stringify(savedCategories));
       submissionFormData.append('expectedParticipants', parseInt(formData.expectedParticipants));
+      submissionFormData.append('tournamentSoftware', formData.tournamentSoftware);
+      submissionFormData.append('tournamentSoftwareOther', formData.tournamentSoftwareOther || '');
       submissionFormData.append('eventSummary', formData.eventSummary);
       submissionFormData.append('scoringFormat', formData.scoringFormat);
       submissionFormData.append('dataConsent', formData.dataConsent);
@@ -805,6 +852,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
         malaysianEntryFee: '',
         internationalEntryFee: '',
         expectedParticipants: '',
+        tournamentSoftware: '',
+        tournamentSoftwareOther: '',
         eventSummary: '',
         scoringFormat: 'traditional',
         dataConsent: false,
@@ -1687,7 +1736,41 @@ const TournamentApplication = ({ setCurrentPage }) => {
               required
             />
           </div>
-          
+
+          <div className="form-group">
+            <label htmlFor="tournamentSoftware">Tournament Software Being Used *</label>
+            <select
+              id="tournamentSoftware"
+              name="tournamentSoftware"
+              value={formData.tournamentSoftware}
+              onChange={handleInputChange}
+              required
+            >
+              <option value="">Select tournament software</option>
+              {approvedSoftware.map((software) => (
+                <option key={software._id} value={software.softwareName}>
+                  {software.softwareName}
+                </option>
+              ))}
+              <option value="Other">Other (Please specify)</option>
+            </select>
+          </div>
+
+          {formData.tournamentSoftware === 'Other' && (
+            <div className="form-group">
+              <label htmlFor="tournamentSoftwareOther">Please specify the software name *</label>
+              <input
+                type="text"
+                id="tournamentSoftwareOther"
+                name="tournamentSoftwareOther"
+                value={formData.tournamentSoftwareOther}
+                onChange={handleInputChange}
+                placeholder="Enter software name"
+                required
+              />
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="eventSummary">Brief Summary/Purpose of Event *</label>
             <textarea
@@ -2146,6 +2229,40 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     required
                   />
                 </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-tournamentSoftware">Tournament Software Being Used *</label>
+                  <select
+                    id="edit-tournamentSoftware"
+                    name="tournamentSoftware"
+                    value={editFormData.tournamentSoftware || ''}
+                    onChange={handleEditInputChange}
+                    required
+                  >
+                    <option value="">Select tournament software</option>
+                    {approvedSoftware.map((software) => (
+                      <option key={software._id} value={software.softwareName}>
+                        {software.softwareName}
+                      </option>
+                    ))}
+                    <option value="Other">Other (Please specify)</option>
+                  </select>
+                </div>
+
+                {editFormData.tournamentSoftware === 'Other' && (
+                  <div className="form-group">
+                    <label htmlFor="edit-tournamentSoftwareOther">Please specify the software name *</label>
+                    <input
+                      type="text"
+                      id="edit-tournamentSoftwareOther"
+                      name="tournamentSoftwareOther"
+                      value={editFormData.tournamentSoftwareOther || ''}
+                      onChange={handleEditInputChange}
+                      placeholder="Enter software name"
+                      required
+                    />
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label htmlFor="edit-eventSummary">Brief Summary/Purpose of Event *</label>

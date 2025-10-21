@@ -392,6 +392,10 @@ const emailTemplates = {
               <td style="padding: 8px 0;">${applicationData.expectedParticipants || 'Not provided'}</td>
             </tr>
             <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Tournament Software:</td>
+              <td style="padding: 8px 0;">${applicationData.tournamentSoftware === 'Other' ? (applicationData.tournamentSoftwareOther || 'Not provided') : (applicationData.tournamentSoftware || 'Not provided')}</td>
+            </tr>
+            <tr>
               <td style="padding: 8px 0; color: #666; font-weight: bold;">Submission Date:</td>
               <td style="padding: 8px 0;">${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
             </tr>
@@ -724,6 +728,7 @@ const generateApplicationPDF = async (applicationData) => {
       { label: 'Level of Event', value: applicationData.classification },
       { label: 'Type of Event', value: applicationData.eventType },
       { label: 'Expected Participants', value: applicationData.expectedParticipants?.toString() },
+      { label: 'Tournament Software', value: applicationData.tournamentSoftware === 'Other' ? applicationData.tournamentSoftwareOther : applicationData.tournamentSoftware },
       { label: 'Event Summary', value: applicationData.eventSummary }
     ]);
 
@@ -1018,6 +1023,15 @@ const tournamentApplicationSchema = new mongoose.Schema({
   expectedParticipants: {
     type: Number,
     required: true
+  },
+  tournamentSoftware: {
+    type: String,
+    required: true
+  },
+  tournamentSoftwareOther: {
+    type: String,
+    required: false,
+    default: ''
   },
   eventSummary: {
     type: String,
@@ -1842,6 +1856,157 @@ const notificationSettingsSchema = new mongoose.Schema({
 
 const NotificationSettings = mongoose.model('NotificationSettings', notificationSettingsSchema);
 
+// Tournament Software Schema
+const tournamentSoftwareSchema = new mongoose.Schema({
+  companyName: {
+    type: String,
+    required: true
+  },
+  softwareName: {
+    type: String,
+    required: true
+  },
+  platform: {
+    web: {
+      type: Boolean,
+      default: false
+    },
+    mobile: {
+      type: Boolean,
+      default: false
+    }
+  },
+  systemUrl: String,
+  appLink: String,
+  contactPersonName: {
+    type: String,
+    required: true
+  },
+  contactEmail: {
+    type: String,
+    required: true
+  },
+  contactPhone: {
+    type: String,
+    required: true
+  },
+  username: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  description: String,
+  consent: {
+    dataSharing: {
+      type: Boolean,
+      required: true
+    },
+    systemIntegration: {
+      type: Boolean,
+      required: true
+    }
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  approvedBy: String,
+  approvedAt: Date,
+  rejectionReason: String
+}, {
+  timestamps: true
+});
+
+const TournamentSoftware = mongoose.model('TournamentSoftware', tournamentSoftwareSchema);
+
+// Software Managed Tournament Schema
+const softwareManagedTournamentSchema = new mongoose.Schema({
+  tournamentSoftwareId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'TournamentSoftware',
+    required: true
+  },
+  applicationId: {
+    type: String,
+    required: true
+  },
+  tournamentName: {
+    type: String,
+    required: true
+  },
+  location: String,
+  startDate: Date,
+  endDate: Date,
+  categories: [{
+    categoryName: {
+      type: String,
+      required: true
+    },
+    players: [{
+      name: {
+        type: String,
+        required: true
+      },
+      email: String,
+      phone: String,
+      skillLevel: String,
+      age: Number,
+      registeredAt: {
+        type: Date,
+        default: Date.now
+      }
+    }]
+  }]
+}, {
+  timestamps: true
+});
+
+const SoftwareManagedTournament = mongoose.model('SoftwareManagedTournament', softwareManagedTournamentSchema);
+
+// Unregistered Player Schema (from Tournament Software)
+const unregisteredPlayerSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  email: {
+    type: String,
+    required: true
+  },
+  phone: String,
+  skillLevel: String,
+  age: Number,
+  softwareProvider: String,
+  softwareName: String,
+  registrationToken: {
+    type: String,
+    unique: true
+  },
+  emailSent: {
+    type: Boolean,
+    default: false
+  },
+  registered: {
+    type: Boolean,
+    default: false
+  },
+  mpaId: String,
+  syncStatus: {
+    type: String,
+    enum: ['pending', 'sync', 'already_registered'],
+    default: 'pending'
+  }
+}, {
+  timestamps: true
+});
+
+const UnregisteredPlayer = mongoose.model('UnregisteredPlayer', unregisteredPlayerSchema);
+
 // ID Generation Functions
 const generatePlayerId = async () => {
   let playerId;
@@ -2036,6 +2201,38 @@ app.get('/api/players/check-ic/:icNumber', async (req, res) => {
   }
 });
 
+// Check if email or phone already exists
+app.post('/api/players/check-email-phone', async (req, res) => {
+  try {
+    const { email, phoneNumber } = req.body;
+
+    const existingPlayerByEmail = await Player.findOne({ 'personalInfo.email': email });
+    if (existingPlayerByEmail) {
+      return res.json({
+        exists: true,
+        field: 'email',
+        message: 'Email already registered'
+      });
+    }
+
+    const existingPlayerByPhone = await Player.findOne({ 'personalInfo.phone': phoneNumber });
+    if (existingPlayerByPhone) {
+      return res.json({
+        exists: true,
+        field: 'phone',
+        message: 'Phone number already registered'
+      });
+    }
+
+    res.json({
+      exists: false,
+      message: 'Email and phone number available'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/players/register', uploadProfile.single('profilePicture'), async (req, res) => {
   try {
     const formData = req.body;
@@ -2100,6 +2297,24 @@ app.post('/api/players/register', uploadProfile.single('profilePicture'), async 
 
     const newPlayer = new Player(playerData);
     await newPlayer.save();
+
+    // If registration token provided, sync status back to portal
+    if (formData.registrationToken) {
+      try {
+        await UnregisteredPlayer.findOneAndUpdate(
+          { registrationToken: formData.registrationToken },
+          {
+            syncStatus: 'sync',
+            registered: true,
+            mpaId: playerId
+          }
+        );
+        console.log(`✅ Synced registration status for token: ${formData.registrationToken}`);
+      } catch (syncError) {
+        console.error('Error syncing registration status:', syncError);
+        // Don't fail the registration if sync fails
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -3665,6 +3880,65 @@ app.post('/api/applications', uploadApplication.array('supportDocuments', 10), a
       // Don't fail the application submission if admin notifications fail
     }
 
+    // Create tournament record for the selected tournament software
+    if (savedApplication.tournamentSoftware && savedApplication.tournamentSoftware !== 'Other') {
+      try {
+        // Find the tournament software by name
+        const software = await TournamentSoftware.findOne({
+          softwareName: savedApplication.tournamentSoftware,
+          status: 'approved'
+        });
+
+        if (software) {
+          // Extract categories and players from the application
+          const categories = [];
+
+          if (savedApplication.categories && Array.isArray(savedApplication.categories)) {
+            savedApplication.categories.forEach(category => {
+              const categoryData = {
+                categoryName: category.categoryName || category.name || 'Unnamed Category',
+                players: []
+              };
+
+              // Add players if they exist in the category
+              if (category.players && Array.isArray(category.players)) {
+                category.players.forEach(player => {
+                  categoryData.players.push({
+                    name: player.name || player.playerName || 'Unnamed Player',
+                    email: player.email || '',
+                    phone: player.phone || player.phoneNumber || '',
+                    skillLevel: player.skillLevel || player.level || '',
+                    age: player.age || null
+                  });
+                });
+              }
+
+              categories.push(categoryData);
+            });
+          }
+
+          // Create the tournament record
+          const tournament = new SoftwareManagedTournament({
+            tournamentSoftwareId: software._id,
+            applicationId: savedApplication.applicationId,
+            tournamentName: savedApplication.eventTitle || 'Unnamed Tournament',
+            location: savedApplication.venue || savedApplication.location || '',
+            startDate: savedApplication.eventStartDate || savedApplication.startDate || null,
+            endDate: savedApplication.eventEndDate || savedApplication.endDate || null,
+            categories: categories
+          });
+
+          await tournament.save();
+          console.log('✅ Tournament created for software:', software.softwareName);
+        } else {
+          console.log('ℹ️ Tournament software not found or not approved:', savedApplication.tournamentSoftware);
+        }
+      } catch (tournamentError) {
+        console.error('❌ Error creating tournament for software:', tournamentError);
+        // Don't fail the application submission if tournament creation fails
+      }
+    }
+
     res.status(201).json({
       message: 'Application submitted successfully',
       application: savedApplication
@@ -3832,8 +4106,114 @@ app.patch('/api/applications/:id', async (req, res) => {
     if (!application) {
       return res.status(404).json({ error: 'Application not found' });
     }
-    
-    
+
+    // Update tournament record for the selected tournament software
+    if (application.tournamentSoftware && application.tournamentSoftware !== 'Other') {
+      try {
+        // Find the tournament software by name
+        const software = await TournamentSoftware.findOne({
+          softwareName: application.tournamentSoftware,
+          status: 'approved'
+        });
+
+        if (software) {
+          // Extract categories and players from the updated application
+          const categories = [];
+
+          if (application.categories && Array.isArray(application.categories)) {
+            application.categories.forEach(category => {
+              const categoryData = {
+                categoryName: category.categoryName || category.name || 'Unnamed Category',
+                players: []
+              };
+
+              // Add players if they exist in the category
+              if (category.players && Array.isArray(category.players)) {
+                category.players.forEach(player => {
+                  categoryData.players.push({
+                    name: player.name || player.playerName || 'Unnamed Player',
+                    email: player.email || '',
+                    phone: player.phone || player.phoneNumber || '',
+                    skillLevel: player.skillLevel || player.level || '',
+                    age: player.age || null
+                  });
+                });
+              }
+
+              categories.push(categoryData);
+            });
+          }
+
+          // Find the existing tournament record
+          const existingTournament = await SoftwareManagedTournament.findOne({
+            applicationId: application.applicationId
+          });
+
+          if (existingTournament) {
+            // Check if the software has changed
+            if (existingTournament.tournamentSoftwareId.toString() !== software._id.toString()) {
+              // Software changed - delete old tournament and create new one
+              await SoftwareManagedTournament.findByIdAndDelete(existingTournament._id);
+              console.log('✅ Tournament removed from old software');
+
+              // Create tournament for new software
+              const tournament = new SoftwareManagedTournament({
+                tournamentSoftwareId: software._id,
+                applicationId: application.applicationId,
+                tournamentName: application.eventTitle || 'Unnamed Tournament',
+                location: application.venue || application.location || '',
+                startDate: application.eventStartDate || application.startDate || null,
+                endDate: application.eventEndDate || application.endDate || null,
+                categories: categories
+              });
+
+              await tournament.save();
+              console.log('✅ Tournament created for new software:', software.softwareName);
+            } else {
+              // Same software - just update the details
+              existingTournament.tournamentName = application.eventTitle || 'Unnamed Tournament';
+              existingTournament.location = application.venue || application.location || '';
+              existingTournament.startDate = application.eventStartDate || application.startDate || null;
+              existingTournament.endDate = application.eventEndDate || application.endDate || null;
+              existingTournament.categories = categories;
+
+              await existingTournament.save();
+              console.log('✅ Tournament updated for software:', software.softwareName);
+            }
+          } else {
+            // Create new tournament if it doesn't exist (in case it was created before this feature)
+            const tournament = new SoftwareManagedTournament({
+              tournamentSoftwareId: software._id,
+              applicationId: application.applicationId,
+              tournamentName: application.eventTitle || 'Unnamed Tournament',
+              location: application.venue || application.location || '',
+              startDate: application.eventStartDate || application.startDate || null,
+              endDate: application.eventEndDate || application.endDate || null,
+              categories: categories
+            });
+
+            await tournament.save();
+            console.log('✅ Tournament created for software (on update):', software.softwareName);
+          }
+        } else {
+          console.log('ℹ️ Tournament software not found or not approved:', application.tournamentSoftware);
+        }
+      } catch (tournamentError) {
+        console.error('❌ Error updating tournament for software:', tournamentError);
+        // Don't fail the application update if tournament update fails
+      }
+    } else {
+      // If software changed to "Other", delete the tournament record
+      try {
+        await SoftwareManagedTournament.findOneAndDelete({
+          applicationId: application.applicationId
+        });
+        console.log('✅ Tournament deleted (software changed to Other)');
+      } catch (deleteError) {
+        console.error('❌ Error deleting tournament:', deleteError);
+      }
+    }
+
     // INSTANT WEBHOOK - Notify main site if tournament is approved
     if (application.status === 'Approved') {
       try {
@@ -3904,7 +4284,21 @@ app.delete('/api/applications/:id', async (req, res) => {
     }
     
     console.log('Application deleted successfully:', application.applicationId);
-    
+
+    // Delete associated tournament record if it exists
+    try {
+      const deletedTournament = await SoftwareManagedTournament.findOneAndDelete({
+        applicationId: application.applicationId
+      });
+
+      if (deletedTournament) {
+        console.log('✅ Associated tournament deleted:', deletedTournament.tournamentName);
+      }
+    } catch (tournamentDeleteError) {
+      console.error('❌ Error deleting associated tournament:', tournamentDeleteError);
+      // Don't fail the application deletion if tournament deletion fails
+    }
+
     // INSTANT WEBHOOK - Notify main site immediately
     try {
       console.log('🚨 Sending INSTANT deletion webhook to main site...');
@@ -5761,6 +6155,667 @@ app.get('/api/docs', (req, res) => {
   };
 
   res.json(apiDocs);
+});
+
+// Tournament Software: Login
+app.post('/api/tournament-software/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Please provide username and password' });
+    }
+
+    // Find tournament software by username
+    const software = await TournamentSoftware.findOne({ username });
+
+    if (!software) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    // Check if software is approved
+    if (software.status !== 'approved') {
+      return res.status(403).json({ error: 'Your registration is pending approval. Please wait for admin approval.' });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, software.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    // Return software data without password
+    res.json({
+      success: true,
+      software: {
+        _id: software._id,
+        companyName: software.companyName,
+        softwareName: software.softwareName,
+        platform: software.platform,
+        systemUrl: software.systemUrl,
+        appLink: software.appLink,
+        contactPersonName: software.contactPersonName,
+        contactEmail: software.contactEmail,
+        contactPhone: software.contactPhone,
+        username: software.username,
+        description: software.description,
+        status: software.status,
+        approvedAt: software.approvedAt,
+        createdAt: software.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error logging in tournament software:', error);
+    res.status(500).json({ error: 'Login failed. Please try again.' });
+  }
+});
+
+// Tournament Software: Register new tournament software
+app.post('/api/tournament-software/register', async (req, res) => {
+  try {
+    const {
+      companyName,
+      softwareName,
+      platform,
+      systemUrl,
+      appLink,
+      contactPersonName,
+      contactEmail,
+      contactPhone,
+      username,
+      password,
+      description,
+      consent
+    } = req.body;
+
+    // Validation
+    if (!companyName || !softwareName || !contactPersonName || !contactEmail || !contactPhone || !username || !password) {
+      return res.status(400).json({ error: 'Please fill in all required fields' });
+    }
+
+    if (!platform || (!platform.web && !platform.mobile)) {
+      return res.status(400).json({ error: 'Please select at least one platform' });
+    }
+
+    if (!consent || !consent.dataSharing || !consent.systemIntegration) {
+      return res.status(400).json({ error: 'Please accept all consent agreements' });
+    }
+
+    // Check if username already exists
+    const existingSoftware = await TournamentSoftware.findOne({ username });
+    if (existingSoftware) {
+      return res.status(400).json({ error: 'Username already exists. Please choose a different username.' });
+    }
+
+    // Hash password before saving
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new tournament software registration
+    const tournamentSoftware = new TournamentSoftware({
+      companyName,
+      softwareName,
+      platform,
+      systemUrl,
+      appLink,
+      contactPersonName,
+      contactEmail,
+      contactPhone,
+      username,
+      password: hashedPassword,
+      description,
+      consent,
+      status: 'approved',
+      approvedAt: new Date()
+    });
+
+    await tournamentSoftware.save();
+
+    // Send notification email to admin
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'noreply@mpa.com',
+      to: process.env.ADMIN_EMAIL || 'admin@mpa.com',
+      subject: 'New Tournament Software Registration (Auto-Approved)',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c5aa0;">New Tournament Software Registration</h2>
+          <p>A new tournament software has been registered and <strong>automatically approved</strong>:</p>
+          <table style="width: 100%; margin: 20px 0;">
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Company Name:</td>
+              <td style="padding: 8px 0;">${companyName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Software Name:</td>
+              <td style="padding: 8px 0;">${softwareName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Contact Person:</td>
+              <td style="padding: 8px 0;">${contactPersonName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Contact Email:</td>
+              <td style="padding: 8px 0;">${contactEmail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Contact Phone:</td>
+              <td style="padding: 8px 0;">${contactPhone}</td>
+            </tr>
+          </table>
+          <p>The software is now available in the tournament application form dropdown.</p>
+        </div>
+      `
+    };
+
+    try {
+      await transporter.sendMail(mailOptions);
+    } catch (emailError) {
+      console.error('Error sending admin notification email:', emailError);
+      // Continue even if email fails
+    }
+
+    // Send confirmation email to user
+    const userMailOptions = {
+      from: process.env.EMAIL_FROM || 'noreply@mpa.com',
+      to: contactEmail,
+      subject: 'Tournament Software Registration Successful - Malaysia Pickleball Association',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c5aa0;">Registration Successful!</h2>
+          <p>Dear ${contactPersonName},</p>
+          <p>Thank you for registering your tournament software with Malaysia Pickleball Association (MPA).</p>
+          <p>Your registration has been <strong>successfully approved</strong> and your software is now active in our system.</p>
+
+          <div style="background-color: #f0f4ff; border-left: 4px solid #2c5aa0; padding: 15px; margin: 20px 0;">
+            <h3 style="margin: 0 0 10px 0; color: #2c5aa0;">Registration Details</h3>
+            <table style="width: 100%;">
+              <tr>
+                <td style="padding: 5px 0; color: #666; font-weight: bold;">Company Name:</td>
+                <td style="padding: 5px 0;">${companyName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; color: #666; font-weight: bold;">Software Name:</td>
+                <td style="padding: 5px 0;">${softwareName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; color: #666; font-weight: bold;">Username:</td>
+                <td style="padding: 5px 0;">${username}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; color: #666; font-weight: bold;">Platform:</td>
+                <td style="padding: 5px 0;">${[platform?.web && 'Web', platform?.mobile && 'Mobile'].filter(Boolean).join(', ') || 'N/A'}</td>
+              </tr>
+            </table>
+          </div>
+
+          <h3 style="color: #2c5aa0;">What's Next?</h3>
+          <ul style="line-height: 1.8;">
+            <li>You can now log in to your dashboard using your username and password</li>
+            <li>Your software is available in the tournament application form dropdown</li>
+            <li>You can upload and sync player lists with MPA</li>
+          </ul>
+
+          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+            <strong>Important:</strong> Please keep your login credentials secure and do not share them with unauthorized persons.
+          </div>
+
+          <p>If you have any questions or need assistance, please contact us at ${process.env.ADMIN_EMAIL || 'admin@mpa.com'}.</p>
+
+          <p style="margin-top: 30px;">Best regards,<br>
+          <strong>Malaysia Pickleball Association</strong></p>
+        </div>
+      `
+    };
+
+    try {
+      await transporter.sendMail(userMailOptions);
+    } catch (emailError) {
+      console.error('Error sending user confirmation email:', emailError);
+      // Continue even if email fails
+    }
+
+    res.status(201).json({
+      message: 'Tournament software registered and approved successfully. Your software is now available in the tournament application form.',
+      softwareId: tournamentSoftware._id
+    });
+
+  } catch (error) {
+    console.error('Error registering tournament software:', error);
+    res.status(500).json({ error: 'Failed to register tournament software. Please try again.' });
+  }
+});
+
+// Tournament Software: Get approved tournament software list
+app.get('/api/tournament-software/approved', async (req, res) => {
+  try {
+    const approvedSoftware = await TournamentSoftware.find(
+      { status: 'approved' },
+      { softwareName: 1, companyName: 1, _id: 1 }
+    ).sort({ softwareName: 1 });
+
+    res.json(approvedSoftware);
+  } catch (error) {
+    console.error('Error fetching approved tournament software:', error);
+    res.status(500).json({ error: 'Failed to fetch tournament software list' });
+  }
+});
+
+// Tournament Software: Get all registrations for admin dashboard
+app.get('/api/tournament-software/all', async (req, res) => {
+  try {
+    const allSoftware = await TournamentSoftware.find({}, { password: 0 }) // Exclude password field
+      .sort({ createdAt: -1 }); // Most recent first
+
+    res.json(allSoftware);
+  } catch (error) {
+    console.error('Error fetching all tournament software:', error);
+    res.status(500).json({ error: 'Failed to fetch tournament software registrations' });
+  }
+});
+
+// Tournament Software: Update status (for admin approval/rejection)
+app.patch('/api/tournament-software/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, rejectionReason, approvedBy } = req.body;
+
+    if (!['approved', 'rejected', 'pending'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const updateData = {
+      status,
+      ...(status === 'approved' && { approvedAt: new Date(), approvedBy }),
+      ...(status === 'rejected' && { rejectionReason })
+    };
+
+    const updatedSoftware = await TournamentSoftware.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, select: '-password' }
+    );
+
+    if (!updatedSoftware) {
+      return res.status(404).json({ error: 'Tournament software not found' });
+    }
+
+    res.json(updatedSoftware);
+  } catch (error) {
+    console.error('Error updating tournament software status:', error);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// Tournament Software: Delete registration
+app.delete('/api/tournament-software/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedSoftware = await TournamentSoftware.findByIdAndDelete(id);
+
+    if (!deletedSoftware) {
+      return res.status(404).json({ error: 'Tournament software not found' });
+    }
+
+    res.json({
+      message: 'Tournament software deleted successfully',
+      deletedSoftware: {
+        softwareName: deletedSoftware.softwareName,
+        companyName: deletedSoftware.companyName
+      }
+    });
+  } catch (error) {
+    console.error('Error deleting tournament software:', error);
+    res.status(500).json({ error: 'Failed to delete tournament software' });
+  }
+});
+
+// Tournament Software: Create/Add Tournament
+app.post('/api/tournament-software/:softwareId/tournaments', async (req, res) => {
+  try {
+    const { softwareId } = req.params;
+    const { tournamentName, location, startDate, endDate, categories } = req.body;
+
+    if (!tournamentName) {
+      return res.status(400).json({ error: 'Tournament name is required' });
+    }
+
+    // Verify software exists
+    const software = await TournamentSoftware.findById(softwareId);
+    if (!software) {
+      return res.status(404).json({ error: 'Tournament software not found' });
+    }
+
+    const tournament = new SoftwareManagedTournament({
+      tournamentSoftwareId: softwareId,
+      tournamentName,
+      location,
+      startDate,
+      endDate,
+      categories: categories || []
+    });
+
+    await tournament.save();
+
+    res.status(201).json({
+      message: 'Tournament created successfully',
+      tournament
+    });
+  } catch (error) {
+    console.error('Error creating tournament:', error);
+    res.status(500).json({ error: 'Failed to create tournament' });
+  }
+});
+
+// Tournament Software: Get all tournaments for a software
+app.get('/api/tournament-software/:softwareId/tournaments', async (req, res) => {
+  try {
+    const { softwareId } = req.params;
+
+    const tournaments = await SoftwareManagedTournament.find({
+      tournamentSoftwareId: softwareId
+    }).sort({ createdAt: -1 });
+
+    // Calculate totals for each tournament
+    const tournamentsWithStats = tournaments.map(tournament => {
+      const tournamentObj = tournament.toObject();
+      let totalPlayers = 0;
+
+      tournamentObj.categories.forEach(category => {
+        totalPlayers += category.players.length;
+      });
+
+      return {
+        ...tournamentObj,
+        totalPlayers
+      };
+    });
+
+    res.json(tournamentsWithStats);
+  } catch (error) {
+    console.error('Error fetching tournaments:', error);
+    res.status(500).json({ error: 'Failed to fetch tournaments' });
+  }
+});
+
+// Tournament Software: Add players to tournament category
+app.post('/api/tournament-software/tournaments/:tournamentId/categories/:categoryName/players', async (req, res) => {
+  try {
+    const { tournamentId, categoryName } = req.params;
+    const { players } = req.body;
+
+    if (!players || !Array.isArray(players)) {
+      return res.status(400).json({ error: 'Players array is required' });
+    }
+
+    const tournament = await SoftwareManagedTournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ error: 'Tournament not found' });
+    }
+
+    // Find or create category
+    let category = tournament.categories.find(cat => cat.categoryName === categoryName);
+
+    if (!category) {
+      tournament.categories.push({
+        categoryName,
+        players: players
+      });
+    } else {
+      // Add players to existing category
+      category.players.push(...players);
+    }
+
+    await tournament.save();
+
+    res.json({
+      message: 'Players added successfully',
+      tournament
+    });
+  } catch (error) {
+    console.error('Error adding players to tournament:', error);
+    res.status(500).json({ error: 'Failed to add players' });
+  }
+});
+
+// Tournament Software: Share Players to MPA
+app.post('/api/tournament-software/share-players', async (req, res) => {
+  try {
+    const { players, softwareProvider, softwareName } = req.body;
+
+    if (!players || !Array.isArray(players) || players.length === 0) {
+      return res.status(400).json({ error: 'Players array is required' });
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (const player of players) {
+      try {
+        // Generate unique registration token
+        const crypto = require('crypto');
+        const registrationToken = crypto.randomBytes(32).toString('hex');
+
+        // Create unregistered player record
+        const unregisteredPlayer = new UnregisteredPlayer({
+          name: player.name,
+          email: player.email,
+          phone: player.phone,
+          skillLevel: player.skillLevel,
+          age: player.age,
+          softwareProvider,
+          softwareName,
+          registrationToken
+        });
+
+        await unregisteredPlayer.save();
+
+        // Generate registration link (points to MPA React app, not portal)
+        const registrationLink = `${process.env.MPA_REACT_URL || 'http://localhost:5173'}/player-registration/${registrationToken}`;
+
+        // Send email to player
+        const mailOptions = {
+          from: process.env.EMAIL_FROM || 'noreply@mpa.com',
+          to: player.email,
+          subject: 'Complete Your MPA Registration',
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2c5aa0;">Welcome to Malaysia Pickleball Association</h2>
+              <p>Dear ${player.name},</p>
+              <p>You have been registered by <strong>${softwareProvider}</strong> (${softwareName}) for tournament participation.</p>
+              <p>To complete your MPA registration and receive your MPA ID, please click the link below:</p>
+              <div style="margin: 30px 0; text-align: center;">
+                <a href="${registrationLink}"
+                   style="background: linear-gradient(135deg, #2c5aa0, #1e40af);
+                          color: white;
+                          padding: 15px 30px;
+                          text-decoration: none;
+                          border-radius: 6px;
+                          display: inline-block;
+                          font-weight: 600;">
+                  Complete Registration
+                </a>
+              </div>
+              <p>This link will allow you to:</p>
+              <ul>
+                <li>Verify your information</li>
+                <li>Link your IC number to your account</li>
+                <li>Receive your unique MPA ID</li>
+                <li>Access tournament features</li>
+              </ul>
+              <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                If you did not expect this email, please ignore it.
+              </p>
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+              <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+                © ${new Date().getFullYear()} Malaysia Pickleball Association. All rights reserved.
+              </p>
+            </div>
+          `
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        // Mark email as sent
+        unregisteredPlayer.emailSent = true;
+        await unregisteredPlayer.save();
+
+        results.push({
+          name: player.name,
+          email: player.email,
+          status: 'success'
+        });
+
+      } catch (error) {
+        console.error(`Error processing player ${player.name}:`, error);
+        errors.push({
+          name: player.name,
+          email: player.email,
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Processed ${players.length} player(s)`,
+      results,
+      errors,
+      totalSuccess: results.length,
+      totalErrors: errors.length
+    });
+
+  } catch (error) {
+    console.error('Error sharing players to MPA:', error);
+    res.status(500).json({ error: 'Failed to share players to MPA' });
+  }
+});
+
+// Get all unregistered players for admin dashboard
+app.get('/api/admin/unregistered-players', async (req, res) => {
+  try {
+    const unregisteredPlayers = await UnregisteredPlayer.find()
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      players: unregisteredPlayers
+    });
+
+  } catch (error) {
+    console.error('Error fetching unregistered players:', error);
+    res.status(500).json({ error: 'Failed to fetch unregistered players' });
+  }
+});
+
+// Delete an unregistered player
+app.delete('/api/admin/unregistered-players/:playerId', async (req, res) => {
+  try {
+    const { playerId } = req.params;
+
+    const deletedPlayer = await UnregisteredPlayer.findByIdAndDelete(playerId);
+
+    if (!deletedPlayer) {
+      return res.status(404).json({
+        success: false,
+        error: 'Player not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Player deleted successfully',
+      player: deletedPlayer
+    });
+
+  } catch (error) {
+    console.error('Error deleting unregistered player:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete player'
+    });
+  }
+});
+
+// Get pre-filled registration data by token
+app.get('/api/unregistered-player/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const unregisteredPlayer = await UnregisteredPlayer.findOne({
+      registrationToken: token
+    });
+
+    if (!unregisteredPlayer) {
+      return res.status(404).json({
+        success: false,
+        error: 'Invalid or expired registration link'
+      });
+    }
+
+    // Return pre-filled data
+    res.json({
+      success: true,
+      player: {
+        fullName: unregisteredPlayer.name,
+        email: unregisteredPlayer.email,
+        phoneNumber: unregisteredPlayer.phone || '',
+        age: unregisteredPlayer.age || '',
+        skillLevel: unregisteredPlayer.skillLevel || '',
+        softwareProvider: unregisteredPlayer.softwareProvider,
+        softwareName: unregisteredPlayer.softwareName,
+        syncStatus: unregisteredPlayer.syncStatus
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching unregistered player data:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch registration data'
+    });
+  }
+});
+
+// Update unregistered player sync status
+app.patch('/api/unregistered-player/:token/sync', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { syncStatus, mpaId } = req.body;
+
+    const unregisteredPlayer = await UnregisteredPlayer.findOne({
+      registrationToken: token
+    });
+
+    if (!unregisteredPlayer) {
+      return res.status(404).json({
+        success: false,
+        error: 'Invalid registration token'
+      });
+    }
+
+    // Update sync status
+    unregisteredPlayer.syncStatus = syncStatus;
+    if (syncStatus === 'sync') {
+      unregisteredPlayer.registered = true;
+      unregisteredPlayer.mpaId = mpaId;
+    }
+
+    await unregisteredPlayer.save();
+
+    res.json({
+      success: true,
+      message: 'Sync status updated successfully',
+      player: unregisteredPlayer
+    });
+
+  } catch (error) {
+    console.error('Error updating sync status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update sync status'
+    });
+  }
 });
 
 // Serve document from MongoDB

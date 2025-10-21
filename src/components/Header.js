@@ -23,9 +23,9 @@ const Header = ({ currentPage, setCurrentPage, isLoggedIn, setIsLoggedIn }) => {
               <span className="org-name">Malaysia Pickleball Association</span>
             </div>
             <div className="utility-links">
-              {(currentPage === 'apply' || currentPage === 'status' || currentPage === 'admin' || currentPage === 'terms' || currentPage === 'register-organization' || currentPage === 'tournament-application' || currentPage === 'organization-terms' || currentPage === 'organization-privacy') && (
-                <button 
-                  className="utility-link" 
+              {(currentPage === 'apply' || currentPage === 'status' || currentPage === 'admin' || currentPage === 'terms' || currentPage === 'register-organization' || currentPage === 'tournament-application' || currentPage === 'organization-terms' || currentPage === 'organization-privacy' || currentPage === 'software-login' || currentPage === 'software-registration' || currentPage === 'software-dashboard') && (
+                <button
+                  className="utility-link"
                   onClick={() => setCurrentPage('home')}
                   title="Back to Home"
                 >
