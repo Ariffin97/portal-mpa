@@ -487,7 +487,7 @@ function App() {
                 <h1 className="hero-title">Malaysia Pickleball Association</h1>
                 <p className="hero-subtitle">Official Tournament Management Portal</p>
                 <p className="hero-description">
-                  Your gateway to competitive pickleball in Malaysia. Apply for tournaments,
+                  Your gateway to competitive pickleball in Malaysia. Organizer login and guide,
                   take assessments to test your knowledge, track your applications, and join our growing community of players.
                 </p>
 
@@ -513,7 +513,7 @@ function App() {
                           className="cta-primary dropdown-toggle"
                           onClick={handleDropdownToggle}
                         >
-                          Apply for Tournament
+                          Organizer Login and Guide
                           <span className={`dropdown-arrow ${showApplyDropdown ? 'open' : ''}`}>▼</span>
                         </button>
 

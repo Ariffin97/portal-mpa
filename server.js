@@ -3243,7 +3243,7 @@ app.post('/api/organizations/register', upload.single('registrationDocument'), a
               <p>You can now log in to access the tournament application form using your registered credentials:</p>
               <p><strong>Email:</strong> ${email}</p>
               <p><strong>Password:</strong> Your registered password</p>
-              <p>Visit our portal and click "Apply for Tournament" to get started!</p>
+              <p>Visit our portal and click "Organizer Login and Guide" to get started!</p>
             </div>
             
             <h3>🎯 What's Next?</h3>
