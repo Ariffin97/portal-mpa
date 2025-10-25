@@ -221,18 +221,20 @@ const AssessmentModal = ({ isOpen, onClose }) => {
               <p>Please provide your details to begin the assessment</p>
               <form onSubmit={handleRegistration}>
                 <div className="form-group">
-                  <label>Full Name *</label>
+                  <label htmlFor="assessment-fullName">Full Name *</label>
                   <input
                     type="text"
+                    id="assessment-fullName"
                     value={userInfo.fullName}
                     onChange={(e) => setUserInfo(prev => ({...prev, fullName: e.target.value}))}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label>IC Number *</label>
+                  <label htmlFor="assessment-icNumber">IC Number *</label>
                   <input
                     type="text"
+                    id="assessment-icNumber"
                     value={userInfo.icNumber}
                     onChange={(e) => setUserInfo(prev => ({...prev, icNumber: e.target.value}))}
                     required
@@ -273,11 +275,13 @@ const AssessmentModal = ({ isOpen, onClose }) => {
                   {questions[currentQuestion].options.map((option, index) => {
                     const optionText = typeof option === 'string' ? option : option.text;
                     const optionMalay = typeof option === 'object' ? option.malay : null;
+                    const radioId = `question-${currentQuestion}-option-${index}`;
 
                     return (
-                      <label key={index} className="option">
+                      <label key={index} className="option" htmlFor={radioId}>
                         <input
                           type="radio"
+                          id={radioId}
                           name={`question-${currentQuestion}`}
                           checked={answers[currentQuestion] === index}
                           onChange={() => handleAnswer(index)}

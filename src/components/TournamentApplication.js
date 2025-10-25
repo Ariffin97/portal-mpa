@@ -2642,11 +2642,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
                   </h3>
 
                   <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                    <label htmlFor="edit-upload-documents" style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
                       Upload Documents (PDF, DOC, DOCX, JPG, PNG - Max 10MB each)
                     </label>
                     <input
                       type="file"
+                      id="edit-upload-documents"
                       multiple
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                       onChange={handleFileUpload}

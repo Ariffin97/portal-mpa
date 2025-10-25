@@ -146,6 +146,17 @@ body {
   gap: 1.5rem;
 }
 
+/* Desktop view - show all buttons */
+.utility-links-desktop {
+  display: flex;
+  gap: 1.5rem;
+}
+
+/* Mobile view - hide by default */
+.utility-links-mobile {
+  display: none;
+}
+
 .utility-link {
   color: var(--white);
   text-decoration: none;
@@ -166,6 +177,66 @@ button.utility-link {
   font-size: inherit;
   font-weight: inherit;
   cursor: pointer;
+}
+
+/* Mobile menu styles */
+.mobile-menu-container {
+  position: relative;
+}
+
+.mobile-menu-button {
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  display: flex;
+  align-items: center;
+  opacity: 0.9;
+  transition: opacity var(--transition-fast);
+}
+
+.mobile-menu-button:hover {
+  opacity: 1;
+}
+
+.mobile-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: linear-gradient(135deg, #1a1f3a, #0a0e27);
+  border: 1px solid #00ffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 255, 255, 0.3);
+  min-width: 200px;
+  z-index: 1001;
+  overflow: hidden;
+}
+
+.mobile-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  color: var(--white);
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.1);
+}
+
+.mobile-menu-item:last-child {
+  border-bottom: none;
+}
+
+.mobile-menu-item:hover {
+  background-color: rgba(0, 255, 255, 0.1);
 }
 
 
@@ -1914,6 +1985,15 @@ button.utility-link {
   font-weight: 500;
 }
 
+/* Show full name on desktop, hide short form */
+.footer-org-name-full {
+  display: inline;
+}
+
+.footer-org-name-short {
+  display: none;
+}
+
 .footer-partner {
   display: flex;
   align-items: center;
@@ -2209,15 +2289,57 @@ button.utility-link {
 
 /* Responsive Footer Styles */
 @media (max-width: 768px) {
-  .footer-container {
-    padding: 1rem 1.5rem;
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
   }
-  
+
+  body {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .main-footer {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .footer-container {
+    padding: 0.75rem 1.5rem 0.75rem 1.5rem;
+    margin-bottom: 0 !important;
+    padding-bottom: 0.75rem !important;
+  }
+
   .footer-content {
     flex-direction: column;
     justify-content: center;
-    gap: 1rem;
+    gap: 0.5rem;
     text-align: center;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .footer-branding {
+    align-self: flex-start;
+  }
+
+  /* Hide full name, show short "MPA" */
+  .footer-org-name-full {
+    display: none;
+  }
+
+  .footer-org-name-short {
+    display: inline;
+  }
+
+  /* Hide Fenix Digital partner section on mobile */
+  .footer-partner {
+    display: none;
   }
   
   .newsletter-form {
@@ -2241,17 +2363,66 @@ button.utility-link {
 }
 
 @media (max-width: 480px) {
-  .footer-container {
-    padding: 1rem;
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
   }
-  
+
+  body {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .main-footer {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .footer-container {
+    padding: 0.5rem 1rem 0.5rem 1rem;
+    margin-bottom: 0 !important;
+    padding-bottom: 0.5rem !important;
+  }
+
   .footer-content {
     flex-direction: column;
     justify-content: center;
-    gap: 1rem;
+    gap: 0.5rem;
     text-align: center;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
   }
-  
+
+  .footer-branding {
+    align-self: flex-start;
+    gap: 0.75rem;
+  }
+
+  .footer-logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Hide full name, show short "MPA" */
+  .footer-org-name-full {
+    display: none;
+  }
+
+  .footer-org-name-short {
+    display: inline;
+    font-size: 0.85rem;
+  }
+
+  /* Hide Fenix Digital partner section on mobile */
+  .footer-partner {
+    display: none;
+  }
+
   .footer-title {
     font-size: 1.1rem;
   }
@@ -6133,21 +6304,61 @@ button.utility-link {
 @media (max-width: 768px) {
   /* Header Responsive */
   .top-bar-content {
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: center;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
   }
-  
+
+  .gov-info {
+    flex-shrink: 1;
+    min-width: 0;
+    gap: 0.5rem;
+  }
+
+  .org-name {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .separator {
+    display: none;
+  }
+
   .utility-links {
-    gap: 1rem;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  /* Mobile menu - hide desktop view, show mobile view */
+  .utility-links-desktop {
+    display: none;
+  }
+
+  .utility-links-mobile {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .utility-link {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .mobile-menu-button {
+    font-size: 1.2rem;
+    padding: 0.25rem;
   }
   
   
   /* Hero Responsive */
   .hero-banner {
     min-height: 100vh; /* Full viewport height */
-    padding: 2rem 0;
-    margin-top: -48px; /* Pull up to fill the gap from App-main margin */
+    padding: 4rem 0 2rem 0;
+    margin-top: 0; /* Don't overlap with navbar */
     margin-bottom: -150px; /* Pull up to fill the gap from App-main bottom margin */
   }
 
@@ -6274,25 +6485,57 @@ button.utility-link {
 
 @media (max-width: 480px) {
   .container {
-    padding: 0 1rem;
+    padding: 0 0.75rem;
   }
-  
+
   .top-bar {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
   }
-  
+
   .nav-logo {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
-  
+
+  .gov-info {
+    gap: 0.4rem;
+  }
+
+  .org-name {
+    font-size: 0.7rem;
+    max-width: 150px;
+  }
+
   .gov-badge {
     font-size: 0.7rem;
     padding: 0.2rem 0.5rem;
   }
-  
+
   .utility-links {
-    gap: 0.75rem;
+    gap: 0.4rem;
+  }
+
+  .utility-links-mobile {
+    gap: 0.4rem;
+  }
+
+  .utility-link {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .mobile-menu-button {
+    font-size: 1.1rem;
+    padding: 0.2rem;
+  }
+
+  .mobile-menu-dropdown {
+    min-width: 160px;
+  }
+
+  .mobile-menu-item {
+    font-size: 0.75rem;
+    padding: 0.6rem 0.75rem;
   }
   
   
@@ -7022,7 +7265,7 @@ button.utility-link {
   /* Adjust margins for mobile */
   .App-main {
     margin-top: 48px; /* Smaller header on mobile (adjusted for actual mobile navbar height) */
-    margin-bottom: 150px; /* Smaller footer on mobile */
+    margin-bottom: 80px; /* Smaller footer on mobile */
   }
   
   .dashboard-sidebar {
@@ -7048,7 +7291,37 @@ button.utility-link {
   
   .App-main {
     margin-top: 42px;
-    margin-bottom: 120px;
+    margin-bottom: 70px;
+  }
+
+  /* Notice portal adjustments for small screens */
+  .notice-item {
+    padding: 12px;
+  }
+
+  .notice-badge {
+    font-size: 0.65rem;
+    padding: 3px 10px;
+  }
+
+  .notice-item h3 {
+    font-size: 0.8rem;
+  }
+
+  .notice-item p {
+    font-size: 0.7rem;
+    margin-bottom: 15px;
+  }
+
+  .notice-actions {
+    margin-top: 15px;
+    gap: 10px;
+  }
+
+  .notice-btn-primary,
+  .notice-btn-secondary {
+    padding: 10px;
+    font-size: 0.7rem;
   }
 }
 
@@ -7553,22 +7826,34 @@ button.utility-link {
     padding: 15px;
     animation: none;
   }
-  
+
+  .notice-item h3 {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+
+  .notice-item p {
+    font-size: 0.75rem;
+    margin-bottom: 15px;
+    line-height: 1.5;
+  }
+
   .notice-item:hover {
     transform: translateY(-2px);
   }
-  
+
   .notice-actions {
     flex-direction: column;
     gap: 8px;
+    margin-top: 12px;
   }
-  
+
   .notice-btn-primary,
   .notice-btn-secondary {
     width: 100%;
     text-align: center;
-    padding: 8px 12px;
-    font-size: 0.8rem;
+    padding: 10px 12px;
+    font-size: 0.75rem;
   }
 }
 

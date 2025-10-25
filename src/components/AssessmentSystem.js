@@ -431,7 +431,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) =>
 
       <form onSubmit={handleSubmit} style={{ textAlign: 'left' }}>
         <div style={{ marginBottom: '20px' }}>
-          <label style={{
+          <label htmlFor="assessment-code" style={{
             display: 'block',
             marginBottom: '8px',
             fontWeight: 'bold',
@@ -442,6 +442,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) =>
           </label>
           <input
             type="text"
+            id="assessment-code"
             value={formCode}
             onChange={(e) => setFormCode(e.target.value.toUpperCase())}
             placeholder="Enter 5-character code"
@@ -463,7 +464,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) =>
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{
+          <label htmlFor="assessment-fullname" style={{
             display: 'block',
             marginBottom: '8px',
             fontWeight: 'bold',
@@ -474,6 +475,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) =>
           </label>
           <input
             type="text"
+            id="assessment-fullname"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Enter your full name"
@@ -494,7 +496,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) =>
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={{
+          <label htmlFor="assessment-icnumber" style={{
             display: 'block',
             marginBottom: '8px',
             fontWeight: 'bold',
@@ -505,6 +507,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) =>
           </label>
           <input
             type="text"
+            id="assessment-icnumber"
             value={icNumber}
             onChange={(e) => setIcNumber(formatIcNumber(e.target.value))}
             placeholder="XXXXXX-XX-XXXX"
@@ -787,10 +790,10 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, getAnswerStatu
           {currentQ.options.map((option, index) => {
             const optionText = typeof option === 'string' ? option : option.text;
             const optionMalay = typeof option === 'object' ? option.malay : null;
-
+            const radioId = `question-${currentQ.id}-option-${index}`;
 
             return (
-              <label key={index} style={{
+              <label key={index} htmlFor={radioId} style={{
                 display: 'block',
                 marginBottom: '12px',
                 cursor: 'pointer'
@@ -808,6 +811,7 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, getAnswerStatu
                 }}>
                   <input
                     type="radio"
+                    id={radioId}
                     name={`question-${currentQ.id}`}
                     value={optionText}
                     checked={answers[currentQ.id] === optionText}

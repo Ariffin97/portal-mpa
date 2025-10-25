@@ -25,6 +25,7 @@ const multer = require('multer');
 const { profileStorage, newsStorage, journeyStorage, applicationStorage } = require('./cloudinaryConfig');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const fetch = require('node-fetch');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -1108,6 +1109,22 @@ const tournamentApplicationSchema = new mongoose.Schema({
   createdByAdmin: {
     type: Boolean,
     default: false
+  },
+  // Approval Details
+  approvalRef: {
+    type: String,
+    default: ''
+  },
+  approvalDocUrl: {
+    type: String,
+    default: ''
+  },
+  approvedDate: {
+    type: Date
+  },
+  approvedBy: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true
@@ -4087,7 +4104,116 @@ app.patch('/api/applications/:id/status', async (req, res) => {
   }
 });
 
-// Update tournament application details (admin only)  
+// Approve tournament with Google Docs automation
+app.post('/api/applications/:id/approve', async (req, res) => {
+  try {
+    const t = await TournamentApplication.findOne({ applicationId: req.params.id });
+
+    if (!t) {
+      return res.status(404).json({ ok: false, error: 'Tournament not found' });
+    }
+
+    // Prepare payload for Google Apps Script
+    const payload = {
+      secret: process.env.APPS_SCRIPT_SHARED_SECRET,
+      applicantName: t.organiserName,
+      applicantEmail: t.email,
+      tournamentName: t.eventTitle,
+      dateApproved: new Date().toISOString().slice(0, 10),
+      referenceNo: `MPA/${new Date().getFullYear()}/${t.applicationId.slice(-4)}`,
+      startDate: t.eventStartDate ? t.eventStartDate.toISOString().slice(0, 10) : '',
+      endDate: t.eventEndDate ? t.eventEndDate.toISOString().slice(0, 10) : '',
+      venue: t.venue,
+      organizerName: t.organiserName,
+      organizerEmail: t.email,
+      organizerPhone: t.telContact,
+      state: t.state,
+      city: t.city
+    };
+
+    console.log('📤 Sending approval request to Google Apps Script...');
+
+    // Call Google Apps Script
+    const scriptResponse = await fetch(process.env.GOOGLE_APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await scriptResponse.json();
+    console.log('📥 Google Apps Script response:', result);
+
+    if (!result.ok) {
+      throw new Error(result.error || 'Apps Script failed');
+    }
+
+    // Update tournament with approval details
+    t.status = 'Approved';
+    t.approvalRef = payload.referenceNo;
+    t.approvalDocUrl = result.generatedDocUrl;
+    t.approvedDate = new Date();
+    t.lastUpdated = new Date();
+
+    await t.save();
+
+    console.log('✅ Tournament approved successfully:', t.applicationId);
+
+    // Send approval email
+    if (t.email) {
+      const emailTemplate = emailTemplates.applicationApproved(t);
+      await sendEmail(t.email, emailTemplate);
+    }
+
+    // Trigger webhook notification
+    try {
+      const webhookUrl = IS_LOCAL_DEV
+        ? 'http://localhost:3000/api/webhooks/tournament-updated'
+        : 'https://malaysiapickleball-fbab5112dbaf.herokuapp.com/api/webhooks/tournament-updated';
+
+      const webhookPayload = {
+        tournament: {
+          applicationId: t.applicationId,
+          eventTitle: t.eventTitle,
+          eventStartDate: t.eventStartDate,
+          eventEndDate: t.eventEndDate,
+          venue: t.venue,
+          city: t.city,
+          state: t.state,
+          status: 'Approved',
+          approvalRef: t.approvalRef,
+          approvalDocUrl: t.approvalDocUrl
+        },
+        action: 'approved'
+      };
+
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      console.log('🚀 Webhook notification sent');
+    } catch (webhookError) {
+      console.error('❌ Webhook failed:', webhookError.message);
+    }
+
+    return res.json({
+      ok: true,
+      message: 'Approved & emailed',
+      url: result.generatedDocUrl,
+      tournament: t
+    });
+
+  } catch (error) {
+    console.error('❌ Approval error:', error);
+    return res.status(500).json({
+      ok: false,
+      error: error.message || 'Failed to approve tournament'
+    });
+  }
+});
+
+// Update tournament application details (admin only)
 app.patch('/api/applications/:id', async (req, res) => {
   try {
     const { applicationId } = req.params;

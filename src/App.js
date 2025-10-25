@@ -498,13 +498,13 @@ function App() {
                         className="cta-assessment"
                         onClick={() => setShowAssessmentModal(true)}
                       >
-                        Assessment
+                        Assessment Login
                       </button>
                       <button
                         className="cta-tournament-software"
                         onClick={() => setCurrentPage('software-login')}
                       >
-                        Register Tournament Software
+                        Login Tournament Software
                       </button>
                     </div>
                     <div className="hero-actions-row">

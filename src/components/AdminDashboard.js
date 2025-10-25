@@ -1288,6 +1288,63 @@ const AdminDashboard = ({ setCurrentPage }) => {
     }
   };
 
+  const handleApproveWithGoogleDocs = async (applicationId) => {
+    if (!window.confirm('Are you sure you want to approve this tournament? An approval letter will be generated and emailed to the organizer.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/applications/${applicationId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+
+      if (result.ok) {
+        // Find the application to get details for the update
+        const app = applications.find(app => app.applicationId === applicationId || app.id === applicationId);
+
+        // Update local state
+        const updatedApplications = applications.map(app =>
+          (app.applicationId === applicationId || app.id === applicationId)
+            ? { ...app, status: 'Approved', approvalDocUrl: result.url }
+            : app
+        );
+        setApplications(updatedApplications);
+
+        // Add tournament update
+        if (app) {
+          addTournamentUpdate(
+            app.applicationId || applicationId,
+            app.eventTitle || 'Unknown Tournament',
+            app.organiserName || 'Unknown Organizer',
+            'Tournament approved with official letter generated and emailed',
+            {
+              previousStatus: app.status,
+              newStatus: 'Approved',
+              approvalDocUrl: result.url,
+              venue: app.venue,
+              eventDate: app.eventStartDate
+            }
+          );
+        }
+
+        // Reload approved tournaments
+        loadApprovedTournaments();
+
+        alert('✅ Approval letter generated and emailed successfully!\n\nThe organizer will receive the official approval letter via email.');
+      } else {
+        throw new Error(result.error || 'Failed to approve tournament');
+      }
+    } catch (error) {
+      console.error('Failed to approve tournament:', error);
+      alert('❌ Failed to approve tournament: ' + error.message + '\n\nPlease check the Google Apps Script configuration and try again.');
+    }
+  };
+
   const handleRejectionSubmit = async () => {
     if (!rejectionReason.trim()) {
       alert('Please provide a reason for rejection.');
@@ -2664,9 +2721,9 @@ const AdminDashboard = ({ setCurrentPage }) => {
             </h3>
             
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px', 
+              <label htmlFor="notice-type" style={{
+                display: 'block',
+                marginBottom: '8px',
                 fontWeight: '500',
                 color: '#333',
                 fontSize: '14px'
@@ -2674,6 +2731,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
                 Notice Type *
               </label>
               <select
+                id="notice-type"
                 value={noticeFormData.type}
                 onChange={(e) => setNoticeFormData(prev => ({ ...prev, type: e.target.value }))}
                 style={{
@@ -2693,9 +2751,9 @@ const AdminDashboard = ({ setCurrentPage }) => {
             </div>
 
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px', 
+              <label htmlFor="notice-title" style={{
+                display: 'block',
+                marginBottom: '8px',
                 fontWeight: '500',
                 color: '#333',
                 fontSize: '14px'
@@ -2704,6 +2762,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
               </label>
               <input
                 type="text"
+                id="notice-title"
                 value={noticeFormData.title}
                 onChange={(e) => setNoticeFormData(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="Enter notice title"
@@ -2718,9 +2777,9 @@ const AdminDashboard = ({ setCurrentPage }) => {
             </div>
 
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px', 
+              <label htmlFor="notice-content" style={{
+                display: 'block',
+                marginBottom: '8px',
                 fontWeight: '500',
                 color: '#333',
                 fontSize: '14px'
@@ -2728,6 +2787,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
                 Content *
               </label>
               <textarea
+                id="notice-content"
                 value={noticeFormData.content}
                 onChange={(e) => setNoticeFormData(prev => ({ ...prev, content: e.target.value }))}
                 placeholder="Enter notice content"
@@ -2744,9 +2804,9 @@ const AdminDashboard = ({ setCurrentPage }) => {
             </div>
 
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ 
-                display: 'block', 
-                marginBottom: '8px', 
+              <label htmlFor="notice-date" style={{
+                display: 'block',
+                marginBottom: '8px',
                 fontWeight: '500',
                 color: '#333',
                 fontSize: '14px'
@@ -2755,6 +2815,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
               </label>
               <input
                 type="date"
+                id="notice-date"
                 value={noticeFormData.date}
                 onChange={(e) => setNoticeFormData(prev => ({ ...prev, date: e.target.value }))}
                 style={{
@@ -7023,8 +7084,8 @@ Settings
                                     </>
                                   ) : (
                                     <>
-                                      <select 
-                                        value={app.status} 
+                                      <select
+                                        value={app.status}
                                         onChange={(e) => updateApplicationStatus(appId, e.target.value)}
                                         className="status-select-table"
                                         disabled={app.status === 'Rejected'}
@@ -7035,15 +7096,29 @@ Settings
                                         <option value="Rejected">Rejected</option>
                                         <option value="More Info Required">More Info Required</option>
                                       </select>
-                                      <button 
+                                      <button
                                         onClick={() => showApplicationDetails(app)}
                                         className="view-btn-table"
                                         title="View Details"
                                       >
                                         View
                                       </button>
+                                      {app.status !== 'Approved' && app.status !== 'Rejected' && (
+                                        <button
+                                          onClick={() => handleApproveWithGoogleDocs(app.applicationId || app.id)}
+                                          className="view-btn-table"
+                                          style={{
+                                            backgroundColor: '#28a745',
+                                            color: 'white',
+                                            border: '1px solid #28a745'
+                                          }}
+                                          title="Approve and send official letter via email"
+                                        >
+                                          📄 Approve with Letter
+                                        </button>
+                                      )}
                                       {selectedStatusFilter === 'All' && (
-                                        <button 
+                                        <button
                                           onClick={() => deleteApplication(appId)}
                                           className="delete-btn-table"
                                           title="Delete Application"
@@ -9523,11 +9598,12 @@ Settings
             }}>
               {/* Form Title */}
               <div className="form-group" style={{ marginBottom: '25px' }}>
-                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                <label htmlFor="assessment-title-edit" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
                   Assessment Title *
                 </label>
                 <input
                   type="text"
+                  id="assessment-title-edit"
                   value={editFormTitle}
                   onChange={(e) => setEditFormTitle(e.target.value)}
                   placeholder="Enter assessment title"
@@ -9543,11 +9619,12 @@ Settings
 
               {/* Assessment Title (Malay) */}
               <div className="form-group" style={{ marginBottom: '25px' }}>
-                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontStyle: 'italic' }}>
+                <label htmlFor="assessment-title-malay-edit" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontStyle: 'italic' }}>
                   Assessment Title (Bahasa Melayu)
                 </label>
                 <input
                   type="text"
+                  id="assessment-title-malay-edit"
                   value={editFormTitleMalay}
                   onChange={(e) => setEditFormTitleMalay(e.target.value)}
                   placeholder="Masukkan tajuk penilaian dalam Bahasa Melayu"
@@ -9564,11 +9641,12 @@ Settings
 
               {/* Sub-Title */}
               <div className="form-group" style={{ marginBottom: '25px' }}>
-                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                <label htmlFor="assessment-subtitle-edit" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
                   Sub-Title (Optional)
                 </label>
                 <input
                   type="text"
+                  id="assessment-subtitle-edit"
                   value={editFormSubtitle}
                   onChange={(e) => setEditFormSubtitle(e.target.value)}
                   placeholder="e.g., Level 1 Certification, Beginner Course"
@@ -9584,11 +9662,12 @@ Settings
 
               {/* Sub-Title (Malay) */}
               <div className="form-group" style={{ marginBottom: '25px' }}>
-                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontStyle: 'italic' }}>
+                <label htmlFor="assessment-subtitle-malay-edit" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontStyle: 'italic' }}>
                   Sub-Title (Bahasa Melayu)
                 </label>
                 <input
                   type="text"
+                  id="assessment-subtitle-malay-edit"
                   value={editFormSubtitleMalay}
                   onChange={(e) => setEditFormSubtitleMalay(e.target.value)}
                   placeholder="Cth: Pensijilan Tahap 1, Kursus Pemula"
@@ -9605,10 +9684,11 @@ Settings
 
               {/* Time Limit */}
               <div className="form-group" style={{ marginBottom: '25px' }}>
-                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
+                <label htmlFor="assessment-time-limit-edit" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block' }}>
                   Time Limit (minutes) *
                 </label>
                 <input
+                  id="assessment-time-limit-edit"
                   type="number"
                   value={editFormTimeLimit}
                   onChange={(e) => setEditFormTimeLimit(parseInt(e.target.value) || 30)}
