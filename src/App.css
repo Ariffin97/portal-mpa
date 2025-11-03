@@ -4587,6 +4587,7 @@ button.utility-link {
   padding: 20px;
   overflow-y: auto;
   margin-left: 250px; /* Account for fixed sidebar width */
+  padding-top: 78px; /* Push content below fixed navbar (matches sidebar padding) */
 }
 
 .dashboard-header {
