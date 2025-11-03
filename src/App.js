@@ -38,19 +38,38 @@ function App() {
   // Assessment submissions are now saved directly to database
   // AdminDashboard loads them from the database via API
 
-  // Auto-zoom for Windows Chrome users
+  // Auto-zoom for Windows Chrome users - scales page to fit without white space
   useEffect(() => {
     const isWindows = navigator.platform.toLowerCase().includes('win');
     const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
 
+    console.log('Platform:', navigator.platform);
+    console.log('Is Windows:', isWindows);
+    console.log('Is Chrome:', isChrome);
+
     if (isWindows && isChrome) {
-      document.body.style.zoom = '70%';
+      const scale = 0.7; // 70% scale
+
+      // Apply transform scale with proper adjustments to prevent white space
+      document.body.style.transform = `scale(${scale})`;
+      document.body.style.transformOrigin = 'top left';
+      document.body.style.width = `${100 / scale}%`;
+      document.body.style.height = `${100 / scale}%`;
+      document.body.style.overflow = 'auto';
+
+      console.log('Auto-zoom applied: 70% (transform scale)');
+    } else {
+      console.log('Auto-zoom not applied - not Windows Chrome');
     }
 
     // Cleanup function to reset zoom if needed
     return () => {
       if (isWindows && isChrome) {
-        document.body.style.zoom = '100%';
+        document.body.style.transform = '';
+        document.body.style.transformOrigin = '';
+        document.body.style.width = '';
+        document.body.style.height = '';
+        document.body.style.overflow = '';
       }
     };
   }, []);
