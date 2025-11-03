@@ -649,6 +649,7 @@ function App() {
                     <div style={{
                       textAlign: 'center',
                       marginTop: '20px',
+                      marginBottom: '0',
                       fontSize: '0.85em',
                       color: 'red'
                     }}>
