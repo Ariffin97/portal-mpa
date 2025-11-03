@@ -1667,7 +1667,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 ) : (
                   <>
                     <div className="conflict-warning">
-                      ⚠ Notice: {conflictingTournaments.length} approved tournament{conflictingTournaments.length > 1 ? 's' : ''} found on the same dates. You may still proceed, but consider planning accordingly.
+                      ⚠ Notice: {conflictingTournaments.length} approved tournament{conflictingTournaments.length > 1 ? 's' : ''} found on the same dates. You may still proceed with the application, but the MPA may consider the schedule conflict during the review process.
                     </div>
                     <div className="tournaments-list">
                       {conflictingTournaments.map((tournament, index) => {
@@ -2437,7 +2437,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       ) : (
                         <>
                           <div className="conflict-warning">
-                            ⚠ Notice: {conflictingTournaments.length} approved tournament{conflictingTournaments.length > 1 ? 's' : ''} found on the same dates. You may still proceed, but consider planning accordingly.
+                            ⚠ Notice: {conflictingTournaments.length} approved tournament{conflictingTournaments.length > 1 ? 's' : ''} found on the same dates. You may still proceed with the application, but the MPA may consider the schedule conflict during the review process.
                           </div>
                           <div className="tournaments-list">
                             {conflictingTournaments.map((tournament, index) => {
