@@ -51,6 +51,13 @@ html {
   overflow-x: hidden;
   /* Remove scrollbar on homepage */
   overflow-y: hidden;
+  /* Normalize text sizing across platforms */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Set base font size for consistent rem units */
+  font-size: 16px;
 }
 
 body {
@@ -69,6 +76,45 @@ body {
   height: 100vh;
   margin: 0;
   padding: 0;
+  /* Normalize text sizing across platforms */
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Platform-specific zoom normalization for high-DPI Windows displays */
+@media screen and (-webkit-min-device-pixel-ratio: 1.25) {
+  body {
+    zoom: 0.8;
+  }
+}
+
+@media screen and (-webkit-min-device-pixel-ratio: 1.5) {
+  body {
+    zoom: 0.67;
+  }
+}
+
+/* For Firefox which doesn't support zoom, use transform as fallback */
+@supports not (zoom: 1) {
+  @media screen and (min-resolution: 120dpi) {
+    body {
+      transform: scale(0.8);
+      transform-origin: top left;
+      width: 125%;
+      height: 125%;
+    }
+  }
+
+  @media screen and (min-resolution: 144dpi) {
+    body {
+      transform: scale(0.67);
+      transform-origin: top left;
+      width: 150%;
+      height: 150%;
+    }
+  }
 }
 
 .container {
