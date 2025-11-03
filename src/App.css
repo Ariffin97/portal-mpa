@@ -2555,6 +2555,133 @@ button.utility-link {
   box-shadow: 0 0 0 3px rgba(0, 63, 127, 0.1);
 }
 
+/* Approved Tournaments Section */
+.approved-tournaments-section {
+  margin: 1.5rem 0;
+  padding: 1.5rem;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.approved-tournaments-section .section-header h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.approved-tournaments-section .section-note {
+  margin: 0 0 1rem 0;
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.approved-tournaments-section .loading-message,
+.approved-tournaments-section .no-tournaments-message {
+  padding: 1rem;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.conflict-warning {
+  padding: 1rem;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  color: #856404;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.no-conflict-message {
+  padding: 1rem;
+  background-color: #d4edda;
+  border: 1px solid #28a745;
+  border-radius: 6px;
+  color: #155724;
+  font-weight: 600;
+  text-align: center;
+}
+
+.tournaments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tournament-item {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+}
+
+.tournament-item.conflict {
+  border-left: 4px solid #dc3545;
+  background-color: #fff5f5;
+}
+
+.tournament-item:hover {
+  border-color: var(--primary-blue);
+  box-shadow: 0 2px 4px rgba(0, 63, 127, 0.1);
+}
+
+.tournament-item.conflict:hover {
+  border-color: #dc3545;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+}
+
+.tournament-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #212529;
+  margin-bottom: 0.5rem;
+}
+
+.tournament-details {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #6c757d;
+}
+
+.tournament-date {
+  font-weight: 500;
+}
+
+.tournament-location {
+  color: #868e96;
+}
+
+@media (max-width: 768px) {
+  .approved-tournaments-section {
+    padding: 1rem;
+  }
+
+  .tournaments-list {
+    max-height: 250px;
+  }
+
+  .tournament-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .tournament-location::before {
+    content: '';
+    margin: 0;
+  }
+}
+
 .location-row {
   display: flex;
   gap: 1rem;

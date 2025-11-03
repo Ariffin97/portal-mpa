@@ -22,7 +22,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const multer = require('multer');
-const { profileStorage, newsStorage, journeyStorage, applicationStorage } = require('./cloudinaryConfig');
+const { cloudinary, profileStorage, newsStorage, journeyStorage, applicationStorage, posterStorage } = require('./cloudinaryConfig');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const fetch = require('node-fetch');
@@ -81,6 +81,15 @@ const uploadApplication = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   }
 });
+
+// Upload tournament posters to Cloudinary
+const uploadPoster = multer({
+  storage: posterStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
+
 
 // Legacy upload (keep for backward compatibility if needed)
 const upload = uploadProfile;
@@ -146,6 +155,7 @@ const emailTemplates = {
           <ul style="margin-top: 8px; margin-bottom: 0; padding-left: 20px;">
             <li>Organiser information and contact details</li>
             <li>Complete event details and venue information</li>
+            ${applicationData.tournamentPoster ? '<li>Tournament poster/flyer</li>' : ''}
             <li>All tournament categories with entry fees</li>
             <li>Scoring format and tournament settings</li>
             <li>Consent statements and agreements</li>
@@ -1068,6 +1078,19 @@ const tournamentApplicationSchema = new mongoose.Schema({
   termsConsent: {
     type: Boolean,
     required: true
+  },
+  // Tournament Poster
+  tournamentPoster: {
+    filename: String,
+    originalname: String,
+    mimetype: String,
+    size: Number,
+    cloudinaryUrl: String, // Cloudinary URL
+    cloudinaryId: String, // Cloudinary public ID for deletion
+    uploadDate: {
+      type: Date,
+      default: Date.now
+    }
   },
   // Support Documents
   supportDocuments: [{
@@ -3689,7 +3712,7 @@ app.get('/api/applications/:id', async (req, res) => {
 });
 
 // Submit tournament application
-app.post('/api/applications', uploadApplication.array('supportDocuments', 10), async (req, res) => {
+app.post('/api/applications', uploadApplication.any(), async (req, res) => {
   try {
     let applicationData = req.body;
 
@@ -3703,31 +3726,72 @@ app.post('/api/applications', uploadApplication.array('supportDocuments', 10), a
       }
     }
 
-    // Handle uploaded support documents - Store in MongoDB as Base64
+    // Handle uploaded files - req.files is an array when using .any()
     const supportDocuments = [];
     if (req.files && req.files.length > 0) {
       console.log('📎 Processing uploaded files:', req.files.length);
 
-      req.files.forEach((file, index) => {
-        console.log(`File ${index}:`, {
-          originalname: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size
-        });
+      for (const file of req.files) {
+        // Handle tournament poster - Upload to Cloudinary
+        if (file.fieldname === 'tournamentPoster') {
+          console.log('🎨 Processing tournament poster:', file.originalname);
 
-        // Convert file buffer to Base64 and store in MongoDB
-        const fileBase64 = file.buffer.toString('base64');
+          try {
+            // Upload to Cloudinary using buffer
+            const uploadResult = await new Promise((resolve, reject) => {
+              const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                  folder: 'tournament-posters',
+                  transformation: [{ width: 2000, height: 2000, crop: 'limit' }],
+                  resource_type: 'image'
+                },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              );
+              uploadStream.end(file.buffer);
+            });
 
-        supportDocuments.push({
-          originalname: file.originalname,
-          mimetype: file.mimetype,
-          size: file.size,
-          data: fileBase64, // Base64 encoded file data
-          uploadDate: new Date()
-        });
-      });
-      applicationData.supportDocuments = supportDocuments;
-      console.log('✅ Processed documents:', supportDocuments.length);
+            applicationData.tournamentPoster = {
+              originalname: file.originalname,
+              mimetype: file.mimetype,
+              size: file.size,
+              cloudinaryUrl: uploadResult.secure_url,
+              cloudinaryId: uploadResult.public_id,
+              uploadDate: new Date()
+            };
+            console.log('✅ Poster uploaded to Cloudinary:', uploadResult.secure_url);
+          } catch (uploadError) {
+            console.error('❌ Error uploading poster to Cloudinary:', uploadError);
+            // Continue without poster if upload fails
+          }
+        }
+        // Handle support documents - Store in MongoDB as Base64
+        else if (file.fieldname === 'supportDocuments') {
+          console.log(`📄 File ${supportDocuments.length}:`, {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size
+          });
+
+          // Convert file buffer to Base64 and store in MongoDB
+          const fileBase64 = file.buffer.toString('base64');
+
+          supportDocuments.push({
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            data: fileBase64, // Base64 encoded file data
+            uploadDate: new Date()
+          });
+        }
+      }
+
+      if (supportDocuments.length > 0) {
+        applicationData.supportDocuments = supportDocuments;
+        console.log('✅ Processed documents:', supportDocuments.length);
+      }
     }
     
     // Generate unique application ID
@@ -4214,14 +4278,66 @@ app.post('/api/applications/:id/approve', async (req, res) => {
 });
 
 // Update tournament application details (admin only)
-app.patch('/api/applications/:id', async (req, res) => {
+app.patch('/api/applications/:id', uploadApplication.any(), async (req, res) => {
   try {
     const { applicationId } = req.params;
     const updateData = req.body;
-    
+
+    // Handle uploaded files - req.files is an array when using .any()
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        // Handle tournament poster upload - Upload to Cloudinary
+        if (file.fieldname === 'tournamentPoster') {
+          console.log('🎨 Updating tournament poster:', file.originalname);
+
+          try {
+            // Get existing application to delete old poster from Cloudinary if it exists
+            const existingApp = await TournamentApplication.findOne({ applicationId: req.params.id });
+            if (existingApp && existingApp.tournamentPoster && existingApp.tournamentPoster.cloudinaryId) {
+              try {
+                await cloudinary.uploader.destroy(existingApp.tournamentPoster.cloudinaryId);
+                console.log('🗑️ Old poster deleted from Cloudinary');
+              } catch (deleteError) {
+                console.error('⚠️ Could not delete old poster:', deleteError);
+              }
+            }
+
+            // Upload new poster to Cloudinary
+            const uploadResult = await new Promise((resolve, reject) => {
+              const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                  folder: 'tournament-posters',
+                  transformation: [{ width: 2000, height: 2000, crop: 'limit' }],
+                  resource_type: 'image'
+                },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              );
+              uploadStream.end(file.buffer);
+            });
+
+            updateData.tournamentPoster = {
+              originalname: file.originalname,
+              mimetype: file.mimetype,
+              size: file.size,
+              cloudinaryUrl: uploadResult.secure_url,
+              cloudinaryId: uploadResult.public_id,
+              uploadDate: new Date()
+            };
+            console.log('✅ Poster updated and uploaded to Cloudinary:', uploadResult.secure_url);
+          } catch (uploadError) {
+            console.error('❌ Error uploading poster to Cloudinary:', uploadError);
+            // Continue without updating poster if upload fails
+          }
+        }
+      }
+    }
+
     // Add lastUpdated timestamp
     updateData.lastUpdated = new Date();
-    
+
     // Find and update the application
     const application = await TournamentApplication.findOneAndUpdate(
       { applicationId: req.params.id },

@@ -130,7 +130,7 @@ class ApiService {
   async updateTournamentApplication(applicationId, tournamentData) {
     return this.makeRequest(`/applications/${applicationId}`, {
       method: 'PATCH',
-      body: JSON.stringify(tournamentData),
+      body: tournamentData instanceof FormData ? tournamentData : JSON.stringify(tournamentData),
     });
   }
 

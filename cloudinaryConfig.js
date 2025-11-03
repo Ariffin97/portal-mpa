@@ -57,10 +57,22 @@ const applicationStorage = new CloudinaryStorage({
   }
 });
 
+// Tournament poster storage configuration
+const posterStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'tournament-posters',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 2000, height: 2000, crop: 'limit' }],
+    resource_type: 'image'
+  }
+});
+
 module.exports = {
   cloudinary,
   profileStorage,
   newsStorage,
   journeyStorage,
-  applicationStorage
+  applicationStorage,
+  posterStorage
 };

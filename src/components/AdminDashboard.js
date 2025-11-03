@@ -1288,63 +1288,6 @@ const AdminDashboard = ({ setCurrentPage }) => {
     }
   };
 
-  const handleApproveWithGoogleDocs = async (applicationId) => {
-    if (!window.confirm('Are you sure you want to approve this tournament? An approval letter will be generated and emailed to the organizer.')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/applications/${applicationId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const result = await response.json();
-
-      if (result.ok) {
-        // Find the application to get details for the update
-        const app = applications.find(app => app.applicationId === applicationId || app.id === applicationId);
-
-        // Update local state
-        const updatedApplications = applications.map(app =>
-          (app.applicationId === applicationId || app.id === applicationId)
-            ? { ...app, status: 'Approved', approvalDocUrl: result.url }
-            : app
-        );
-        setApplications(updatedApplications);
-
-        // Add tournament update
-        if (app) {
-          addTournamentUpdate(
-            app.applicationId || applicationId,
-            app.eventTitle || 'Unknown Tournament',
-            app.organiserName || 'Unknown Organizer',
-            'Tournament approved with official letter generated and emailed',
-            {
-              previousStatus: app.status,
-              newStatus: 'Approved',
-              approvalDocUrl: result.url,
-              venue: app.venue,
-              eventDate: app.eventStartDate
-            }
-          );
-        }
-
-        // Reload approved tournaments
-        loadApprovedTournaments();
-
-        alert('✅ Approval letter generated and emailed successfully!\n\nThe organizer will receive the official approval letter via email.');
-      } else {
-        throw new Error(result.error || 'Failed to approve tournament');
-      }
-    } catch (error) {
-      console.error('Failed to approve tournament:', error);
-      alert('❌ Failed to approve tournament: ' + error.message + '\n\nPlease check the Google Apps Script configuration and try again.');
-    }
-  };
-
   const handleRejectionSubmit = async () => {
     if (!rejectionReason.trim()) {
       alert('Please provide a reason for rejection.');
@@ -7103,20 +7046,6 @@ Settings
                                       >
                                         View
                                       </button>
-                                      {app.status !== 'Approved' && app.status !== 'Rejected' && (
-                                        <button
-                                          onClick={() => handleApproveWithGoogleDocs(app.applicationId || app.id)}
-                                          className="view-btn-table"
-                                          style={{
-                                            backgroundColor: '#28a745',
-                                            color: 'white',
-                                            border: '1px solid #28a745'
-                                          }}
-                                          title="Approve and send official letter via email"
-                                        >
-                                          📄 Approve with Letter
-                                        </button>
-                                      )}
                                       {selectedStatusFilter === 'All' && (
                                         <button
                                           onClick={() => deleteApplication(appId)}
@@ -8285,6 +8214,33 @@ Settings
                     <label>Event Title:</label>
                     <span>{selectedApplication.eventTitle || 'Not provided'}</span>
                   </div>
+
+                  {/* Tournament Poster */}
+                  {selectedApplication.tournamentPoster && selectedApplication.tournamentPoster.cloudinaryUrl && (
+                    <div className="detail-item full-width" style={{ marginTop: '15px', marginBottom: '15px' }}>
+                      <label>Tournament Poster:</label>
+                      <div style={{ marginTop: '10px', border: '1px solid #ddd', borderRadius: '8px', padding: '10px', backgroundColor: '#f8f9fa' }}>
+                        <img
+                          src={selectedApplication.tournamentPoster.cloudinaryUrl}
+                          alt="Tournament Poster"
+                          style={{
+                            maxWidth: '100%',
+                            height: 'auto',
+                            borderRadius: '4px',
+                            display: 'block',
+                            margin: '0 auto'
+                          }}
+                        />
+                        <div style={{ marginTop: '10px', fontSize: '12px', color: '#6c757d', textAlign: 'center' }}>
+                          <strong>File:</strong> {selectedApplication.tournamentPoster.originalname || 'Tournament Poster'}
+                          {selectedApplication.tournamentPoster.size && (
+                            <span> ({(selectedApplication.tournamentPoster.size / 1024).toFixed(2)} KB)</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="detail-item">
                     <label>Event Dates:</label>
                     <span>
