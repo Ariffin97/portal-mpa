@@ -38,6 +38,23 @@ function App() {
   // Assessment submissions are now saved directly to database
   // AdminDashboard loads them from the database via API
 
+  // Auto-zoom for Windows Chrome users
+  useEffect(() => {
+    const isWindows = navigator.platform.toLowerCase().includes('win');
+    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+
+    if (isWindows && isChrome) {
+      document.body.style.zoom = '70%';
+    }
+
+    // Cleanup function to reset zoom if needed
+    return () => {
+      if (isWindows && isChrome) {
+        document.body.style.zoom = '100%';
+      }
+    };
+  }, []);
+
   // Show system update notice on homepage load (once per session)
   useEffect(() => {
     const hasSeenSystemUpdate = sessionStorage.getItem('hasSeenSystemUpdate');
