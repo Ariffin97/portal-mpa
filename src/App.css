@@ -4147,34 +4147,9 @@ button.utility-link {
   background: #2c3e50;
   padding: 0;
   border-right: 1px solid #34495e;
-  position: fixed;
-  top: 0; /* Start from very top */
-  left: 0;
-  height: 100vh; /* Full viewport height */
-  overflow-y: auto;
-  z-index: 997; /* Below navbar */
-  padding-top: 78px; /* Push content below navbar (58px navbar + 20px original padding) */
+  padding-top: 20px;
   padding-bottom: 20px;
-}
-
-/* Force sidebar positioning fix with higher specificity - Updated 2025-09-08 */
-.admin-dashboard .dashboard-sidebar {
-  top: 0 !important;
-  height: 100vh !important;
-  padding-top: 78px !important;
-  z-index: 997 !important;
-}
-
-/* Add shadow to fill any potential gap */
-.dashboard-sidebar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 78px;
-  background: #2c3e50;
-  z-index: -1;
+  min-height: 100vh; /* Ensure it's at least full height */
 }
 
 .sidebar-nav {
@@ -4631,9 +4606,7 @@ button.utility-link {
 .dashboard-content {
   flex: 1;
   padding: 20px;
-  overflow-y: auto;
-  margin-left: 250px; /* Account for fixed sidebar width */
-  padding-top: 78px; /* Push content below fixed navbar (matches sidebar padding) */
+  padding-top: 20px;
 }
 
 .dashboard-header {
@@ -7440,30 +7413,21 @@ button.utility-link {
   }
 }
 
-/* ===== RESPONSIVE FIXES FOR FIXED ELEMENTS ===== */
+/* ===== RESPONSIVE FIXES FOR ADMIN DASHBOARD ===== */
 @media (max-width: 768px) {
   /* Hide sidebar on mobile or make it collapsible */
   .dashboard-sidebar {
     width: 60px; /* Collapsed width */
     padding-left: 5px;
     padding-right: 5px;
-    padding-top: 68px; /* Push content below navbar (48px navbar + 20px original padding) */
+    padding-top: 20px;
     padding-bottom: 10px;
   }
-  
-  .dashboard-content {
-    margin-left: 60px; /* Account for collapsed sidebar */
-  }
-  
+
   /* Adjust margins for mobile */
   .App-main {
     margin-top: 48px; /* Smaller header on mobile (adjusted for actual mobile navbar height) */
     margin-bottom: 80px; /* Smaller footer on mobile */
-  }
-  
-  .dashboard-sidebar {
-    top: 0; /* Start from very top */
-    height: 100vh; /* Full height */
   }
 }
 
@@ -7473,15 +7437,11 @@ button.utility-link {
     transform: translateX(-100%); /* Hide completely on very small screens */
     transition: transform 0.3s ease;
   }
-  
+
   .dashboard-sidebar.open {
     transform: translateX(0); /* Show when opened */
   }
-  
-  .dashboard-content {
-    margin-left: 0; /* No margin when sidebar is hidden */
-  }
-  
+
   .App-main {
     margin-top: 42px;
     margin-bottom: 70px;
