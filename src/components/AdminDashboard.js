@@ -10020,6 +10020,36 @@ Settings
                           />
                         </div>
 
+                        {/* Image Display */}
+                        {question.imageUrl && (
+                          <div className="form-group" style={{ marginBottom: '15px' }}>
+                            <label style={{ fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Question Image</label>
+                            <div style={{ border: '2px solid #ddd', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                              <img
+                                src={question.imageUrl}
+                                alt="Question diagram"
+                                style={{
+                                  maxWidth: '100%',
+                                  maxHeight: '300px',
+                                  objectFit: 'contain',
+                                  borderRadius: '4px'
+                                }}
+                              />
+                              <div style={{ marginTop: '10px' }}>
+                                <span style={{
+                                  backgroundColor: '#007bff',
+                                  color: 'white',
+                                  padding: '4px 12px',
+                                  borderRadius: '4px',
+                                  fontSize: '12px'
+                                }}>
+                                  📷 Image Attached
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Options */}
                         <div className="form-group" style={{ marginBottom: '15px' }}>
                           <label style={{ fontWeight: 'bold', marginBottom: '5px', display: 'block' }}>Answer Options</label>

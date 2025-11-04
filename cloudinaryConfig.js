@@ -68,11 +68,23 @@ const posterStorage = new CloudinaryStorage({
   }
 });
 
+// Assessment images storage configuration
+const assessmentImageStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'assessment-images',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+    transformation: [{ width: 1200, height: 1200, crop: 'limit' }],
+    resource_type: 'image'
+  }
+});
+
 module.exports = {
   cloudinary,
   profileStorage,
   newsStorage,
   journeyStorage,
   applicationStorage,
-  posterStorage
+  posterStorage,
+  assessmentImageStorage
 };

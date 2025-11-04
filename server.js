@@ -22,7 +22,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const multer = require('multer');
-const { cloudinary, profileStorage, newsStorage, journeyStorage, applicationStorage, posterStorage } = require('./cloudinaryConfig');
+const { cloudinary, profileStorage, newsStorage, journeyStorage, applicationStorage, posterStorage, assessmentImageStorage } = require('./cloudinaryConfig');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const fetch = require('node-fetch');
@@ -90,6 +90,13 @@ const uploadPoster = multer({
   }
 });
 
+// Upload assessment images to Cloudinary
+const uploadAssessmentImage = multer({
+  storage: assessmentImageStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
 
 // Legacy upload (keep for backward compatibility if needed)
 const upload = uploadProfile;
@@ -1735,6 +1742,14 @@ const assessmentFormSchema = new mongoose.Schema({
     correctAnswer: {
       type: String,
       required: true
+    },
+    hasImage: {
+      type: Boolean,
+      default: false
+    },
+    imageUrl: {
+      type: String,
+      default: ''
     }
   }],
   timeLimit: {
@@ -5194,6 +5209,32 @@ app.post('/api/assessment/forms/:formId/generate-temp-code', async (req, res) =>
       success: false,
       error: 'Internal server error',
       message: 'Failed to generate temporary assessment code'
+    });
+  }
+});
+
+// Upload assessment image to Cloudinary
+app.post('/api/assessment/upload-image', uploadAssessmentImage.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
+
+    // Return the Cloudinary URL
+    res.json({
+      success: true,
+      imageUrl: req.file.path, // Cloudinary URL
+      message: 'Image uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Error uploading assessment image:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload image',
+      error: error.message
     });
   }
 });

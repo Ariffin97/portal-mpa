@@ -6,7 +6,9 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
     questionMalay: '',
     section: '',
     options: [],
-    correctAnswer: ''
+    correctAnswer: '',
+    hasImage: false,
+    imageUrl: ''
   });
   const [sections, setSections] = useState([]);
   const [newSection, setNewSection] = useState('');
@@ -125,6 +127,16 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
       return false;
     }
 
+    // Validate image is uploaded if hasImage is checked
+    if (newQuestion.hasImage && (!newQuestion.imageUrl || !newQuestion.imageUrl.trim() || newQuestion.imageUrl === 'uploading')) {
+      if (newQuestion.imageUrl === 'uploading') {
+        alert('Please wait for the image to finish uploading');
+      } else {
+        alert('Please upload an image/diagram for this question');
+      }
+      return false;
+    }
+
     return true;
   };
 
@@ -152,7 +164,9 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
         return { text: opt.text?.trim() || '', malay: opt.malay?.trim() || '' };
       }),
       correctAnswer: newQuestion.correctAnswer.trim(),
-      hasCorrectAnswer: true
+      hasCorrectAnswer: true,
+      hasImage: newQuestion.hasImage || false,
+      imageUrl: newQuestion.imageUrl || ''
     };
 
     // Add section to sections list if it's new
@@ -173,7 +187,9 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
       questionMalay: '',
       section: newQuestion.section, // Maintain the current section
       options: [],
-      correctAnswer: ''
+      correctAnswer: '',
+      hasImage: false,
+      imageUrl: ''
     });
   };
 
@@ -183,7 +199,9 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
       questionMalay: question.questionMalay || '',
       section: question.section || '',
       options: [...question.options],
-      correctAnswer: question.correctAnswer
+      correctAnswer: question.correctAnswer,
+      hasImage: question.hasImage || false,
+      imageUrl: question.imageUrl || ''
     });
     setEditingId(question.id);
   };
@@ -200,13 +218,46 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
       questionMalay: '',
       section: '',
       options: [],
-      correctAnswer: ''
+      correctAnswer: '',
+      hasImage: false,
+      imageUrl: ''
     });
     setEditingId(null);
   };
 
   const cancelEdit = () => {
     handleCancel();
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Show loading state
+    setNewQuestion(prev => ({ ...prev, imageUrl: 'uploading' }));
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/assessment/upload-image', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setNewQuestion(prev => ({ ...prev, imageUrl: data.imageUrl }));
+      } else {
+        alert('Failed to upload image: ' + (data.message || 'Unknown error'));
+        setNewQuestion(prev => ({ ...prev, imageUrl: '' }));
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image. Please try again.');
+      setNewQuestion(prev => ({ ...prev, imageUrl: '' }));
+    }
   };
 
 
@@ -486,6 +537,92 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
             </div>
           </div>
 
+          {/* Image/Diagram Upload Option */}
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              <input
+                type="checkbox"
+                checked={newQuestion.hasImage}
+                onChange={(e) => setNewQuestion(prev => ({ ...prev, hasImage: e.target.checked, imageUrl: '' }))}
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  cursor: 'pointer'
+                }}
+              />
+              <span>This question includes a diagram/image</span>
+            </label>
+            <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block', marginLeft: '26px' }}>
+              Check this box if you plan to upload a diagram or image for this question
+            </small>
+
+            {/* Image Upload Field - Shows when checkbox is checked */}
+            {newQuestion.hasImage && (
+              <div style={{ marginTop: '15px', marginLeft: '26px' }}>
+                <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
+                  Upload Image/Diagram *
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{
+                    padding: '8px',
+                    border: '2px solid #000',
+                    borderRadius: '4px',
+                    fontSize: '14px',
+                    width: '100%',
+                    maxWidth: '400px'
+                  }}
+                />
+                {newQuestion.imageUrl === 'uploading' && (
+                  <div style={{ marginTop: '15px', padding: '20px', textAlign: 'center', color: '#007bff' }}>
+                    <p style={{ fontSize: '14px', fontWeight: 'bold' }}>Uploading image to Cloudinary...</p>
+                  </div>
+                )}
+                {newQuestion.imageUrl && newQuestion.imageUrl !== 'uploading' && (
+                  <div style={{ marginTop: '15px' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>Preview:</p>
+                    <img
+                      src={newQuestion.imageUrl}
+                      alt="Question diagram"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '300px',
+                        border: '2px solid #000',
+                        borderRadius: '8px',
+                        objectFit: 'contain'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNewQuestion(prev => ({ ...prev, imageUrl: '' }))}
+                      style={{
+                        marginTop: '10px',
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '12px'
+                      }}
+                    >
+                      Remove Image
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Question Text */}
           <div className="form-group" style={{ marginBottom: '20px' }}>
             <label style={{ fontWeight: 'bold', marginBottom: '8px', display: 'block', fontSize: '14px' }}>
@@ -752,6 +889,19 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
                         <div style={{ flex: 1 }}>
                           <h4 style={{ color: '#000', margin: '0 0 8px 0', fontSize: '16px' }}>
                             Q{index + 1}: {question.question}
+                            {question.imageUrl && (
+                              <span style={{
+                                marginLeft: '8px',
+                                padding: '2px 8px',
+                                backgroundColor: '#007bff',
+                                color: 'white',
+                                fontSize: '10px',
+                                borderRadius: '4px',
+                                fontWeight: 'normal'
+                              }}>
+                                📷 Has Image
+                              </span>
+                            )}
                             {question.questionMalay && (
                               <div style={{
                                 fontStyle: 'italic',
@@ -764,6 +914,21 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
                               </div>
                             )}
                           </h4>
+                          {question.imageUrl && (
+                            <div style={{ marginBottom: '10px' }}>
+                              <img
+                                src={question.imageUrl}
+                                alt="Question diagram"
+                                style={{
+                                  maxWidth: '200px',
+                                  maxHeight: '150px',
+                                  border: '1px solid #ddd',
+                                  borderRadius: '4px',
+                                  objectFit: 'contain'
+                                }}
+                              />
+                            </div>
+                          )}
                           <div style={{ display: 'grid', gap: '3px' }}>
                             {question.options.map((option, optIndex) => {
                               const optionText = typeof option === 'string' ? option : option.text;
@@ -837,6 +1002,19 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
                               <div style={{ flex: 1 }}>
                                 <h5 style={{ color: '#000', margin: '0 0 10px 0' }}>
                                   Q{questions.indexOf(question) + 1}: {question.question}
+                                  {question.imageUrl && (
+                                    <span style={{
+                                      marginLeft: '8px',
+                                      padding: '2px 8px',
+                                      backgroundColor: '#007bff',
+                                      color: 'white',
+                                      fontSize: '10px',
+                                      borderRadius: '4px',
+                                      fontWeight: 'normal'
+                                    }}>
+                                      📷 Has Image
+                                    </span>
+                                  )}
                                   {question.questionMalay && (
                                     <div style={{
                                       fontStyle: 'italic',
@@ -849,6 +1027,21 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
                                     </div>
                                   )}
                                 </h5>
+                                {question.imageUrl && (
+                                  <div style={{ marginBottom: '10px' }}>
+                                    <img
+                                      src={question.imageUrl}
+                                      alt="Question diagram"
+                                      style={{
+                                        maxWidth: '200px',
+                                        maxHeight: '150px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '4px',
+                                        objectFit: 'contain'
+                                      }}
+                                    />
+                                  </div>
+                                )}
                                 <div style={{ display: 'grid', gap: '5px' }}>
                                   {question.options.map((option, optIndex) => {
                                     const optionText = typeof option === 'string' ? option : option.text;

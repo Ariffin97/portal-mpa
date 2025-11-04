@@ -786,6 +786,23 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, getAnswerStatu
           </h3>
         </div>
 
+        {/* Display question image if available */}
+        {currentQ.imageUrl && (
+          <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+            <img
+              src={currentQ.imageUrl}
+              alt="Question diagram"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '400px',
+                border: '2px solid #ddd',
+                borderRadius: '8px',
+                objectFit: 'contain'
+              }}
+            />
+          </div>
+        )}
+
         <div style={{ marginBottom: '30px' }}>
           {currentQ.options.map((option, index) => {
             const optionText = typeof option === 'string' ? option : option.text;
