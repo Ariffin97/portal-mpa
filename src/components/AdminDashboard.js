@@ -137,6 +137,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
   const [isCreatingTournament, setIsCreatingTournament] = useState(false);
   const [createTournamentError, setCreateTournamentError] = useState('');
   const [tournamentCreated, setTournamentCreated] = useState(false);
+  const [tournamentPoster, setTournamentPoster] = useState(null);
 
   // Tournament Updates Tracking
   const [tournamentUpdates, setTournamentUpdates] = useState([]);
@@ -1769,12 +1770,62 @@ const AdminDashboard = ({ setCurrentPage }) => {
     }
   };
 
+  const handleTournamentPosterUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type (only image files)
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    const isValidType = allowedTypes.includes(file.type);
+    const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+
+    if (!isValidType) {
+      alert('Please upload an image file (JPG, PNG, or WEBP) for the tournament poster.');
+      e.target.value = ''; // Reset input
+      return;
+    }
+
+    if (!isValidSize) {
+      alert('Poster file is too large. Please upload an image smaller than 10MB.');
+      e.target.value = ''; // Reset input
+      return;
+    }
+
+    setTournamentPoster(file);
+  };
+
+  const removeTournamentPoster = () => {
+    setTournamentPoster(null);
+    // Reset file input
+    const fileInput = document.getElementById('tournamentPoster');
+    if (fileInput) fileInput.value = '';
+  };
+
   const formatDateForDisplay = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return ''; // Invalid date
     const options = { day: '2-digit', month: 'long', year: 'numeric' };
     return date.toLocaleDateString('en-GB', options);
+  };
+
+  // Check if two date ranges overlap
+  const checkDateOverlap = (start1, end1, start2, end2) => {
+    if (!start1 || !end1 || !start2 || !end2) return false;
+
+    const date1Start = new Date(start1);
+    const date1End = new Date(end1);
+    const date2Start = new Date(start2);
+    const date2End = new Date(end2);
+
+    // Check if any date is invalid
+    if (isNaN(date1Start.getTime()) || isNaN(date1End.getTime()) ||
+        isNaN(date2Start.getTime()) || isNaN(date2End.getTime())) {
+      return false;
+    }
+
+    // Two date ranges overlap if: start1 <= end2 AND start2 <= end1
+    return date1Start <= date2End && date2Start <= date1End;
   };
 
   const formatDateForInput = (dateStr) => {
@@ -2206,32 +2257,41 @@ const AdminDashboard = ({ setCurrentPage }) => {
     }
     
     try {
-      const submissionData = {
-        organiserName: tournamentFormData.organiserName,
-        registrationNo: tournamentFormData.registrationNo,
-        telContact: tournamentFormData.telContact,
-        personInCharge: tournamentFormData.personInCharge,
-        email: tournamentFormData.email,
-        organisingPartner: tournamentFormData.organisingPartner,
-        eventTitle: tournamentFormData.eventTitle,
-        eventStartDate: tournamentFormData.eventStartDate,
-        eventEndDate: tournamentFormData.eventEndDate,
-        state: tournamentFormData.state,
-        city: tournamentFormData.city,
-        venue: tournamentFormData.venue,
-        classification: tournamentFormData.classification,
-        eventType: tournamentFormData.eventType,
-        categories: savedTournamentCategories,
-        expectedParticipants: parseInt(tournamentFormData.expectedParticipants),
-        eventSummary: tournamentFormData.eventSummary,
-        scoringFormat: tournamentFormData.scoringFormat,
-        dataConsent: tournamentFormData.dataConsent,
-        termsConsent: tournamentFormData.termsConsent,
-        status: 'Approved',
-        createdByAdmin: true
-      };
+      // Create FormData for file upload
+      const submissionFormData = new FormData();
 
-      const response = await apiService.submitTournamentApplication(submissionData);
+      // Add form data
+      submissionFormData.append('organiserName', tournamentFormData.organiserName);
+      submissionFormData.append('registrationNo', tournamentFormData.registrationNo);
+      submissionFormData.append('telContact', tournamentFormData.telContact);
+      submissionFormData.append('personInCharge', tournamentFormData.personInCharge);
+      submissionFormData.append('email', tournamentFormData.email);
+      submissionFormData.append('organisingPartner', tournamentFormData.organisingPartner);
+      submissionFormData.append('eventTitle', tournamentFormData.eventTitle);
+      submissionFormData.append('eventStartDate', tournamentFormData.eventStartDate);
+      submissionFormData.append('eventEndDate', tournamentFormData.eventEndDate);
+      submissionFormData.append('eventStartDateFormatted', tournamentFormData.eventStartDateFormatted);
+      submissionFormData.append('eventEndDateFormatted', tournamentFormData.eventEndDateFormatted);
+      submissionFormData.append('state', tournamentFormData.state);
+      submissionFormData.append('city', tournamentFormData.city);
+      submissionFormData.append('venue', tournamentFormData.venue);
+      submissionFormData.append('classification', tournamentFormData.classification);
+      submissionFormData.append('eventType', tournamentFormData.eventType);
+      submissionFormData.append('categories', JSON.stringify(savedTournamentCategories));
+      submissionFormData.append('expectedParticipants', parseInt(tournamentFormData.expectedParticipants));
+      submissionFormData.append('eventSummary', tournamentFormData.eventSummary);
+      submissionFormData.append('scoringFormat', tournamentFormData.scoringFormat);
+      submissionFormData.append('dataConsent', tournamentFormData.dataConsent);
+      submissionFormData.append('termsConsent', tournamentFormData.termsConsent);
+      submissionFormData.append('status', 'Approved');
+      submissionFormData.append('createdByAdmin', 'true');
+
+      // Add tournament poster if uploaded
+      if (tournamentPoster) {
+        submissionFormData.append('tournamentPoster', tournamentPoster);
+      }
+
+      const response = await apiService.submitTournamentApplication(submissionFormData);
       
       alert(`Tournament created successfully! Application ID: ${response.application.applicationId}`);
       
@@ -2279,9 +2339,10 @@ const AdminDashboard = ({ setCurrentPage }) => {
         dataConsent: false,
         termsConsent: false
       });
-      
+
       setSavedTournamentCategories([]);
-      
+      setTournamentPoster(null);
+
     } catch (error) {
       console.error('Tournament creation error:', error);
       setCreateTournamentError(error.message || 'Failed to create tournament. Please try again.');
@@ -7173,7 +7234,68 @@ Settings
                     />
                     <small className="form-note">Note: Should Not Include the National/State Title (e.g. Malaysia Open/Closed, State Open/Closed etc)</small>
                   </div>
-                  
+
+                  <div className="form-group">
+                    <label htmlFor="tournamentPoster">Tournament Poster</label>
+                    <input
+                      type="file"
+                      id="tournamentPoster"
+                      accept="image/jpeg,image/png,image/jpg,image/webp"
+                      onChange={handleTournamentPosterUpload}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <small className="form-note">
+                      Upload your tournament poster/flyer. Supported formats: JPG, PNG, WEBP (Max 10MB)
+                    </small>
+
+                    {/* Display uploaded poster preview */}
+                    {tournamentPoster && (
+                      <div style={{ marginTop: '15px' }}>
+                        <div style={{
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          padding: '15px',
+                          backgroundColor: '#f8f9fa'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '10px'
+                          }}>
+                            <span style={{ fontWeight: '600', color: '#333' }}>
+                              📄 {tournamentPoster.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={removeTournamentPoster}
+                              style={{
+                                backgroundColor: '#dc3545',
+                                color: 'white',
+                                border: 'none',
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '14px'
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <div style={{ fontSize: '14px', color: '#666' }}>
+                            Size: {(tournamentPoster.size / 1024).toFixed(2)} KB
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="form-group date-input-group">
                     <label htmlFor="eventStartDate">Event Start Date *</label>
                     <div className="date-input-wrapper">
@@ -7221,7 +7343,102 @@ Settings
                     </div>
                     <small className="form-note">End date must be on or after start date</small>
                   </div>
-                  
+
+                  {/* Date Conflict Check */}
+                  {tournamentFormData.eventStartDate && tournamentFormData.eventEndDate && (
+                    <div className="approved-tournaments-section" style={{
+                      marginTop: '20px',
+                      marginBottom: '20px',
+                      padding: '20px',
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '8px',
+                      border: '1px solid #dee2e6'
+                    }}>
+                      <div className="section-header">
+                        <h3 style={{ margin: '0 0 10px 0', color: '#2c3e50', fontSize: '18px' }}>Date Conflict Check</h3>
+                        <p className="section-note" style={{ margin: '0 0 15px 0', color: '#6c757d', fontSize: '14px' }}>
+                          Checking for approved tournaments on your selected dates
+                        </p>
+                      </div>
+
+                      {(() => {
+                        // Filter tournaments that overlap with selected dates
+                        const conflictingTournaments = approvedTournaments.filter(tournament =>
+                          checkDateOverlap(
+                            tournamentFormData.eventStartDate,
+                            tournamentFormData.eventEndDate,
+                            tournament.eventStartDate,
+                            tournament.eventEndDate
+                          )
+                        );
+
+                        return conflictingTournaments.length === 0 ? (
+                          <div className="no-conflict-message" style={{
+                            padding: '15px',
+                            backgroundColor: '#d4edda',
+                            color: '#155724',
+                            borderRadius: '6px',
+                            border: '1px solid #c3e6cb'
+                          }}>
+                            ✓ No date conflicts found. Your selected dates are available!
+                          </div>
+                        ) : (
+                          <>
+                            <div className="conflict-warning" style={{
+                              padding: '15px',
+                              backgroundColor: '#fff3cd',
+                              color: '#856404',
+                              borderRadius: '6px',
+                              border: '1px solid #ffeaa7',
+                              marginBottom: '15px'
+                            }}>
+                              ⚠ Notice: {conflictingTournaments.length} approved tournament{conflictingTournaments.length > 1 ? 's' : ''} found on the same dates.
+                            </div>
+                            <div className="tournaments-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {conflictingTournaments.map((tournament, index) => {
+                                const startDate = tournament.eventStartDate ? new Date(tournament.eventStartDate) : null;
+                                const endDate = tournament.eventEndDate ? new Date(tournament.eventEndDate) : null;
+
+                                return (
+                                  <div key={index} className="tournament-item conflict" style={{
+                                    padding: '15px',
+                                    backgroundColor: 'white',
+                                    borderRadius: '6px',
+                                    border: '1px solid #ffc107',
+                                    borderLeft: '4px solid #ff9800'
+                                  }}>
+                                    <div className="tournament-name" style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '8px' }}>
+                                      {tournament.eventTitle || 'Untitled Tournament'}
+                                    </div>
+                                    <div className="tournament-details" style={{ fontSize: '14px', color: '#6c757d', display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
+                                      <span className="tournament-date">
+                                        📅 {startDate && endDate ? (
+                                          `${startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${endDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                                        ) : (
+                                          'Date not available'
+                                        )}
+                                      </span>
+                                      {tournament.city && tournament.state && (
+                                        <span className="tournament-location">
+                                          📍 {tournament.city}, {tournament.state}
+                                        </span>
+                                      )}
+                                      {tournament.organiserName && (
+                                        <span className="tournament-organizer">
+                                          👤 {tournament.organiserName}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
                   <div className="form-group">
                     <label>Location *</label>
                     <div className="location-row">

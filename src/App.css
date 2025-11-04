@@ -49,8 +49,8 @@
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
-  /* Remove scrollbar on homepage */
-  overflow-y: hidden;
+  /* Allow vertical scrolling to see all content */
+  overflow-y: auto;
   /* Normalize text sizing across platforms */
   -webkit-text-size-adjust: 100%;
   -moz-text-size-adjust: 100%;
@@ -69,11 +69,12 @@ body {
   background-color: var(--light-gray);
   color: var(--text-primary);
   line-height: 1.6;
-  /* Remove scrollbar - prevent all overflow */
-  overflow: hidden;
+  /* Allow scrolling to see all content */
+  overflow-y: auto;
+  overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
   margin: 0;
   padding: 0;
   /* Normalize text sizing across platforms */
@@ -124,13 +125,14 @@ body {
 }
 
 .App {
-  /* Remove scrollbar - constrain to viewport */
-  height: 100vh;
+  /* Allow scrolling for content that exceeds viewport */
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: 100vw;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ===== HEADER STYLES ===== */
@@ -4147,9 +4149,10 @@ button.utility-link {
   background: #2c3e50;
   padding: 0;
   border-right: 1px solid #34495e;
-  padding-top: 20px;
+  padding-top: 80px; /* Space for fixed header plus extra padding */
   padding-bottom: 20px;
-  min-height: 100vh; /* Ensure it's at least full height */
+  min-height: 100vh; /* Full height from top */
+  position: relative;
 }
 
 .sidebar-nav {
@@ -4606,7 +4609,7 @@ button.utility-link {
 .dashboard-content {
   flex: 1;
   padding: 20px;
-  padding-top: 20px;
+  padding-top: 80px; /* Space for fixed header plus extra padding */
 }
 
 .dashboard-header {
