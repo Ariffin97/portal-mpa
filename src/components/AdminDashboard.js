@@ -283,7 +283,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
       };
 
       console.log('Updating form:', formData);
-      const response = await apiService.saveAssessmentForm(formData);
+      const response = await apiService.updateAssessmentForm(editingForm._id, formData);
       const updatedForm = response.data;
 
       // Update local state
