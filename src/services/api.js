@@ -88,6 +88,20 @@ class ApiService {
     });
   }
 
+  async requestPasswordReset(email) {
+    return this.makeRequest('/organizations/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async changeOrganizationPassword(organizationId, currentPassword, newPassword) {
+    return this.makeRequest('/organizations/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ organizationId, currentPassword, newPassword }),
+    });
+  }
+
   // Tournament Application APIs
   async submitTournamentApplication(applicationData) {
     return this.makeRequest('/applications', {

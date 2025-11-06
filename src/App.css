@@ -1670,7 +1670,7 @@ button.utility-link {
   max-width: 1200px;
   margin: 0 auto;
   /* Add top padding to account for fixed navbar */
-  padding: 70px 2rem 0 2rem;
+  padding: 20px 2rem 0 2rem;
   text-align: center;
   position: relative;
   z-index: 2;
@@ -1681,7 +1681,7 @@ button.utility-link {
   width: 180px;
   height: 180px;
   object-fit: contain;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.5)) drop-shadow(0 0 40px rgba(0, 255, 127, 0.3));
 }
 
@@ -1728,8 +1728,8 @@ button.utility-link {
   font-size: 3.2rem;
   font-weight: 700;
   color: #00ffff;
-  margin-bottom: 1rem;
-  text-shadow: 
+  margin-bottom: 0.5rem;
+  text-shadow:
     0 0 10px rgba(0, 255, 255, 0.8),
     0 0 20px rgba(0, 255, 255, 0.6),
     0 0 30px rgba(0, 255, 255, 0.4),
@@ -1743,7 +1743,7 @@ button.utility-link {
 .hero-title {
   font-size: 3.2rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   line-height: 1.1;
   color: #ffffff;
   text-shadow: 
@@ -1763,14 +1763,14 @@ button.utility-link {
 .hero-subtitle {
   font-size: 1.5rem;
   font-weight: 600;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
   color: var(--secondary-gold-light);
 }
 
 .hero-description {
   font-size: 1.1rem;
-  margin-bottom: 3rem;
-  max-width: 600px;
+  margin-bottom: 1.5rem;
+  max-width: 900px;
   margin-left: auto;
   margin-right: auto;
   opacity: 0.95;
@@ -3249,12 +3249,16 @@ button.utility-link {
 .form-section {
   background: #ffffff;
   padding: 2.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #e2e8f0;
   position: relative;
   transition: all 0.3s ease;
+}
+
+.form-section:last-child {
+  margin-bottom: 4rem; /* Extra space for last section to prevent footer overlap */
 }
 
 .form-section:hover {
@@ -4610,6 +4614,7 @@ button.utility-link {
   flex: 1;
   padding: 20px;
   padding-top: 80px; /* Space for fixed header plus extra padding */
+  padding-bottom: 100px; /* Extra space to prevent footer overlap */
 }
 
 .dashboard-header {
@@ -7958,6 +7963,20 @@ button.utility-link {
   text-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
 }
 
+/* Optimization Notice - In Hero Section */
+.optimization-notice {
+  text-align: center;
+  margin: 15px auto 0;
+}
+
+.optimization-notice p {
+  color: #ff4444;
+  font-size: 0.85rem;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
 /* Mobile Responsiveness for Notice Portal */
 @media (max-width: 768px) {
   .notice-portal {
@@ -7997,6 +8016,14 @@ button.utility-link {
 
   .notice-item:hover {
     transform: translateY(-2px);
+  }
+
+  .optimization-notice {
+    margin: 10px 0 0;
+  }
+
+  .optimization-notice p {
+    font-size: 0.75rem;
   }
 
   .notice-actions {

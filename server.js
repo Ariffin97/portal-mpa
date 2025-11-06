@@ -1240,6 +1240,10 @@ const organizationSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  requirePasswordChange: {
+    type: Boolean,
+    default: false
+  },
   documents: [{
     filename: String,
     originalName: String,
@@ -3394,13 +3398,218 @@ app.post('/api/organizations/login', async (req, res) => {
         applicantFullName: organization.applicantFullName,
         phoneNumber: organization.phoneNumber,
         email: organization.email,
-        organizationAddress: organization.organizationAddress
+        organizationAddress: organization.organizationAddress,
+        requirePasswordChange: organization.requirePasswordChange || false
       }
     });
 
   } catch (error) {
     console.error('Organization login error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Function to generate temporary password
+function generateTemporaryPassword() {
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const numbers = '0123456789';
+  const symbols = '!@#$%^&*';
+
+  // Ensure at least one of each required character type
+  let password = '';
+  password += uppercase[Math.floor(Math.random() * uppercase.length)];
+  password += lowercase[Math.floor(Math.random() * lowercase.length)];
+  password += numbers[Math.floor(Math.random() * numbers.length)];
+  password += symbols[Math.floor(Math.random() * symbols.length)];
+
+  // Fill rest with random characters from all sets
+  const allChars = uppercase + lowercase + numbers + symbols;
+  for (let i = password.length; i < 12; i++) {
+    password += allChars[Math.floor(Math.random() * allChars.length)];
+  }
+
+  // Shuffle the password
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+// Forgot Password endpoint
+app.post('/api/organizations/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    console.log('Forgot password request for email:', email);
+
+    // Find organization by email
+    const organization = await Organization.findOne({ email: email });
+
+    if (!organization) {
+      console.log('Organization not found for email:', email);
+      return res.status(404).json({
+        success: false,
+        message: 'No organization found with this email address.'
+      });
+    }
+
+    // Generate temporary password
+    const tempPassword = generateTemporaryPassword();
+
+    console.log('Generated temporary password for:', organization.organizationName);
+
+    // Update organization with temporary password and set requirePasswordChange flag
+    organization.password = tempPassword;
+    organization.requirePasswordChange = true;
+    await organization.save();
+
+    // Send email with temporary password
+    const mailOptions = {
+      from: `"Malaysia Pickleball Association" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Password Reset - Temporary Password',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #2c5aa0, #1e3a73); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px; }
+            .alert-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 4px; }
+            .temp-password-box { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
+            .temp-password { font-size: 24px; font-weight: bold; color: #2c5aa0; background: #e3f2fd; padding: 15px; border-radius: 8px; letter-spacing: 2px; font-family: monospace; }
+            .info-label { font-weight: bold; color: #2c3e50; }
+            .warning-section { background: #ffebee; padding: 20px; border-left: 4px solid #f44336; margin: 20px 0; border-radius: 4px; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .steps { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; }
+            .step { padding: 10px 0; border-bottom: 1px solid #eee; }
+            .step:last-child { border-bottom: none; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Password Reset Request</h1>
+            <p>Malaysia Pickleball Association</p>
+          </div>
+
+          <div class="content">
+            <div class="alert-box">
+              <p style="margin: 0;"><strong>🔐 Password Reset Requested</strong></p>
+              <p style="margin: 10px 0 0 0;">A password reset was requested for your organization account.</p>
+            </div>
+
+            <div class="temp-password-box">
+              <p style="margin-top: 0;"><strong>Your Temporary Password:</strong></p>
+              <div class="temp-password">${tempPassword}</div>
+              <p style="margin-bottom: 0; font-size: 12px; color: #666;">Copy this password to login</p>
+            </div>
+
+            <div class="steps">
+              <h3 style="margin-top: 0; color: #2c5aa0;">Next Steps:</h3>
+              <div class="step">
+                <strong>1.</strong> Use the temporary password above to login to your account
+              </div>
+              <div class="step">
+                <strong>2.</strong> You will be prompted to change your password immediately after login
+              </div>
+              <div class="step">
+                <strong>3.</strong> Choose a strong, secure password that meets the requirements
+              </div>
+              <div class="step">
+                <strong>4.</strong> Keep your new password safe and secure
+              </div>
+            </div>
+
+            <div class="warning-section">
+              <p style="margin-top: 0;"><strong>⚠️ Security Notice:</strong></p>
+              <ul style="margin-bottom: 0; padding-left: 20px;">
+                <li>This temporary password will expire after first use</li>
+                <li>You must change this password immediately after logging in</li>
+                <li>If you did not request this password reset, please contact us immediately</li>
+                <li>Never share your password with anyone</li>
+              </ul>
+            </div>
+
+            <div style="background: white; padding: 20px; margin: 20px 0; border-radius: 8px;">
+              <p><span class="info-label">Organization ID:</span> ${organization.organizationId}</p>
+              <p><span class="info-label">Organization Name:</span> ${organization.organizationName}</p>
+              <p><span class="info-label">Email:</span> ${email}</p>
+            </div>
+
+            <div class="footer">
+              <p><strong>Malaysia Pickleball Association</strong></p>
+              <p>Email: info@malaysiapickleball.my | Phone: +6011-16197471</p>
+              <p style="font-size: 12px; color: #999;">This is an automated email. Please do not reply directly to this message.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log('Temporary password email sent to:', email);
+
+    res.json({
+      success: true,
+      message: 'A temporary password has been sent to your email address.'
+    });
+
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while processing your request. Please try again later.',
+      error: error.message
+    });
+  }
+});
+
+// Change Password endpoint
+app.post('/api/organizations/change-password', async (req, res) => {
+  try {
+    const { organizationId, currentPassword, newPassword } = req.body;
+
+    console.log('Change password request for organization ID:', organizationId);
+
+    // Find organization by organizationId
+    const organization = await Organization.findOne({ organizationId: organizationId });
+
+    if (!organization) {
+      console.log('Organization not found for ID:', organizationId);
+      return res.status(404).json({
+        success: false,
+        message: 'Organization not found.'
+      });
+    }
+
+    // Verify current password
+    if (organization.password !== currentPassword) {
+      console.log('Current password mismatch');
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect.'
+      });
+    }
+
+    // Update password and reset requirePasswordChange flag
+    organization.password = newPassword;
+    organization.requirePasswordChange = false;
+    await organization.save();
+
+    console.log('Password changed successfully for:', organization.organizationName);
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully.'
+    });
+
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while changing your password. Please try again.',
+      error: error.message
+    });
   }
 });
 

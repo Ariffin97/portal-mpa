@@ -645,6 +645,13 @@ function App() {
                       </button>
                     </div>
 
+                    {/* Optimization Notice */}
+                    <div className="optimization-notice">
+                      <p>
+                        For optimal functionality, please use a laptop or desktop.
+                      </p>
+                    </div>
+
                   </div>
                 </div>
               </div>

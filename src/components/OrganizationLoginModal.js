@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import mpaLogo from '../assets/images/mpa.png';
 import apiService from '../services/api';
+import ForgotPasswordModal from './ForgotPasswordModal';
+import ChangePasswordModal from './ChangePasswordModal';
 
 const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterClick }) => {
   const [formData, setFormData] = useState({
@@ -9,6 +11,9 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
   });
   const [isLogging, setIsLogging] = useState(false);
   const [error, setError] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [loggedInOrgData, setLoggedInOrgData] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -33,10 +38,17 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
         // Store organization info for tournament application
         localStorage.setItem('organizationData', JSON.stringify(response.organization));
         localStorage.setItem('organizationLoggedIn', 'true');
-        
-        onLoginSuccess();
-        onClose();
-        
+
+        // Check if password change is required
+        if (response.organization.requirePasswordChange) {
+          setLoggedInOrgData(response.organization);
+          setShowChangePassword(true);
+          // Don't close the modal yet, wait for password change
+        } else {
+          onLoginSuccess();
+          onClose();
+        }
+
         // Reset form
         setFormData({ email: '', password: '' });
       } else {
@@ -57,6 +69,7 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
   if (!isOpen) return null;
 
   return (
+    <>
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content organization-login-modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}>×</button>
@@ -96,6 +109,13 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
               placeholder="Enter your password"
               required
             />
+            <button
+              type="button"
+              className="forgot-password-link"
+              onClick={() => setShowForgotPassword(true)}
+            >
+              Forgot Password?
+            </button>
           </div>
 
           {error && (
@@ -343,8 +363,161 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
         .login-help p {
           margin: 0;
         }
+
+        .forgot-password-link {
+          background: none;
+          border: none;
+          color: #2c5aa0;
+          font-size: 13px;
+          cursor: pointer;
+          padding: 0;
+          margin-top: 6px;
+          text-align: left;
+          text-decoration: none;
+          transition: color 0.2s ease;
+        }
+
+        .forgot-password-link:hover {
+          color: #1e3a73;
+          text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+          .modal-content {
+            width: 95%;
+            padding: 24px 16px;
+            max-height: 95vh;
+            margin: 10px;
+          }
+
+          .modal-header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+          }
+
+          .header-content {
+            flex-direction: column;
+            text-align: center;
+            gap: 12px;
+          }
+
+          .modal-logo {
+            width: 70px;
+            height: 70px;
+          }
+
+          .modal-header h2 {
+            font-size: 20px;
+          }
+
+          .modal-header p {
+            font-size: 13px;
+          }
+
+          .organization-login-form .form-group {
+            margin-bottom: 16px;
+          }
+
+          .organization-login-form label {
+            font-size: 13px;
+          }
+
+          .organization-login-form input {
+            padding: 10px 14px;
+            font-size: 14px;
+          }
+
+          .forgot-password-link {
+            font-size: 12px;
+            margin-top: 4px;
+          }
+
+          .login-btn,
+          .register-btn {
+            padding: 12px 20px;
+            font-size: 15px;
+          }
+
+          .error-message {
+            padding: 10px 14px;
+            font-size: 13px;
+            margin-bottom: 14px;
+          }
+
+          .login-separator {
+            margin: 20px 0;
+            font-size: 13px;
+          }
+
+          .login-separator span {
+            margin: 0 12px;
+          }
+
+          .login-help {
+            font-size: 11px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .modal-content {
+            width: 100%;
+            padding: 20px 12px;
+            border-radius: 12px;
+            max-height: 100vh;
+          }
+
+          .modal-logo {
+            width: 60px;
+            height: 60px;
+          }
+
+          .modal-header h2 {
+            font-size: 18px;
+          }
+
+          .organization-login-form input {
+            font-size: 14px;
+            padding: 10px 12px;
+          }
+
+          .modal-close {
+            top: 12px;
+            right: 12px;
+            font-size: 20px;
+            width: 28px;
+            height: 28px;
+          }
+        }
       `}</style>
     </div>
+
+    {/* Forgot Password Modal - Rendered outside parent modal */}
+    {showForgotPassword && (
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
+    )}
+
+    {/* Change Password Modal - Rendered outside parent modal */}
+    {showChangePassword && loggedInOrgData && (
+      <ChangePasswordModal
+        isOpen={showChangePassword}
+        organizationData={loggedInOrgData}
+        onClose={() => {
+          setShowChangePassword(false);
+          setLoggedInOrgData(null);
+        }}
+        onPasswordChanged={() => {
+          setShowChangePassword(false);
+          setLoggedInOrgData(null);
+          onLoginSuccess();
+          onClose();
+        }}
+      />
+    )}
+    </>
   );
 };
 
