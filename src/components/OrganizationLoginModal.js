@@ -391,15 +391,17 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
         /* iPad and Tablet View */
         @media (min-width: 481px) and (max-width: 1024px) {
           .modal-content {
-            max-width: 600px;
+            width: 85% !important;
+            max-width: 600px !important;
           }
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 480px) {
           .modal-content {
-            width: 95%;
-            padding: 24px 16px;
-            max-height: 95vh;
+            width: 100%;
+            padding: 20px 12px;
+            border-radius: 12px;
+            max-height: 100vh;
             margin: 10px;
           }
 
@@ -415,12 +417,12 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
           }
 
           .modal-logo {
-            width: 70px;
-            height: 70px;
+            width: 60px;
+            height: 60px;
           }
 
           .modal-header h2 {
-            font-size: 20px;
+            font-size: 18px;
           }
 
           .modal-header p {
@@ -436,7 +438,7 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
           }
 
           .organization-login-form input {
-            padding: 10px 14px;
+            padding: 10px 12px;
             font-size: 14px;
           }
 
@@ -468,29 +470,6 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
 
           .login-help {
             font-size: 11px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .modal-content {
-            width: 100%;
-            padding: 20px 12px;
-            border-radius: 12px;
-            max-height: 100vh;
-          }
-
-          .modal-logo {
-            width: 60px;
-            height: 60px;
-          }
-
-          .modal-header h2 {
-            font-size: 18px;
-          }
-
-          .organization-login-form input {
-            font-size: 14px;
-            padding: 10px 12px;
           }
 
           .modal-close {
