@@ -4150,6 +4150,8 @@ button.utility-link {
 
 .dashboard-sidebar {
   width: 250px;
+  min-width: 250px;
+  flex-shrink: 0;
   background: #2c3e50;
   padding: 0;
   border-right: 1px solid #34495e;
@@ -7426,6 +7428,8 @@ button.utility-link {
 @media (min-width: 481px) and (max-width: 1024px) {
   .dashboard-sidebar {
     width: 320px !important; /* Increased width for iPad */
+    min-width: 320px !important;
+    flex-shrink: 0 !important;
   }
 }
 
@@ -7433,6 +7437,8 @@ button.utility-link {
   /* Hide sidebar on mobile or make it collapsible */
   .dashboard-sidebar {
     width: 60px !important; /* Collapsed width */
+    min-width: 60px !important;
+    flex-shrink: 0 !important;
     padding-left: 5px;
     padding-right: 5px;
     padding-top: 20px;
