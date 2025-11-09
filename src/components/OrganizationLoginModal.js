@@ -35,16 +35,21 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
       });
 
       if (response.success) {
+        console.log('Login response:', response);
+        console.log('requirePasswordChange:', response.organization.requirePasswordChange);
+
         // Store organization info for tournament application
         localStorage.setItem('organizationData', JSON.stringify(response.organization));
         localStorage.setItem('organizationLoggedIn', 'true');
 
         // Check if password change is required
         if (response.organization.requirePasswordChange) {
+          console.log('Password change required - showing modal');
           setLoggedInOrgData(response.organization);
           setShowChangePassword(true);
           // Don't close the modal yet, wait for password change
         } else {
+          console.log('No password change required - proceeding to dashboard');
           onLoginSuccess();
           onClose();
         }
@@ -383,6 +388,13 @@ const OrganizationLoginModal = ({ isOpen, onClose, onLoginSuccess, onRegisterCli
         }
 
         /* Responsive Design */
+        /* iPad and Tablet View */
+        @media (min-width: 481px) and (max-width: 1024px) {
+          .modal-content {
+            max-width: 600px;
+          }
+        }
+
         @media (max-width: 768px) {
           .modal-content {
             width: 95%;

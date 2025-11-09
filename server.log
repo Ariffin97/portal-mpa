@@ -38,3 +38,8 @@ Organization found: Fenix Digital
 Stored password: Ariffin.97
 Provided password: Ariffin.97
 Passwords match: true
+Login attempt for email: test@test.com
+Organization not found for email: test@test.com
+Forgot password request for email: ariffinanuar@gmail.com
+Generated temporary password for: Fenix Digital
+Temporary password email sent to: ariffinanuar@gmail.com

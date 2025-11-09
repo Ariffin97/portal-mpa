@@ -7422,6 +7422,13 @@ button.utility-link {
 }
 
 /* ===== RESPONSIVE FIXES FOR ADMIN DASHBOARD ===== */
+/* iPad and Tablet View */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-sidebar {
+    width: 320px; /* Increased width for iPad */
+  }
+}
+
 @media (max-width: 768px) {
   /* Hide sidebar on mobile or make it collapsible */
   .dashboard-sidebar {
