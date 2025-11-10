@@ -64,7 +64,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
     malaysianEntryFee: '',
     internationalEntryFee: '',
     expectedParticipants: '',
-    tournamentSoftware: '',
+    tournamentSoftware: [],
     tournamentSoftwareOther: '',
     eventSummary: '',
 
@@ -310,6 +310,22 @@ const TournamentApplication = ({ setCurrentPage }) => {
   const startEditTournament = (tournament) => {
     console.log('Editing tournament:', tournament);
     setEditingTournament(tournament);
+
+    // Parse tournamentSoftware - ensure it's an array
+    let softwareArray = [];
+    if (tournament.tournamentSoftware) {
+      if (Array.isArray(tournament.tournamentSoftware)) {
+        softwareArray = tournament.tournamentSoftware;
+      } else if (typeof tournament.tournamentSoftware === 'string') {
+        try {
+          softwareArray = JSON.parse(tournament.tournamentSoftware);
+        } catch (e) {
+          // If parsing fails, treat it as a single value
+          softwareArray = [tournament.tournamentSoftware];
+        }
+      }
+    }
+
     setEditFormData({
       organiserName: tournament.organiserName || '',
       registrationNo: tournament.registrationNo || '',
@@ -329,6 +345,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
       malaysianEntryFee: (tournament.malaysianEntryFee || '').toString(),
       internationalEntryFee: (tournament.internationalEntryFee || '').toString(),
       expectedParticipants: (tournament.expectedParticipants || '').toString(),
+      tournamentSoftware: softwareArray,
+      tournamentSoftwareOther: tournament.tournamentSoftwareOther || '',
       eventSummary: tournament.eventSummary || '',
       scoringFormat: tournament.scoringFormat || 'traditional',
       dataConsent: true,
@@ -340,10 +358,25 @@ const TournamentApplication = ({ setCurrentPage }) => {
 
   const handleEditInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setEditFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+
+    // Handle tournament software checkboxes (multiple selection)
+    if (name === 'tournamentSoftware') {
+      setEditFormData(prev => {
+        const currentSoftware = prev.tournamentSoftware || [];
+        if (checked) {
+          // Add the software to the array
+          return { ...prev, tournamentSoftware: [...currentSoftware, value] };
+        } else {
+          // Remove the software from the array
+          return { ...prev, tournamentSoftware: currentSoftware.filter(s => s !== value) };
+        }
+      });
+    } else {
+      setEditFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
   };
 
   const handleEditStateChange = (e) => {
@@ -397,7 +430,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
       if (editTournamentPoster) {
         updatePayload = new FormData();
         Object.keys(editFormData).forEach(key => {
-          updatePayload.append(key, editFormData[key]);
+          // Stringify arrays for FormData
+          if (Array.isArray(editFormData[key])) {
+            updatePayload.append(key, JSON.stringify(editFormData[key]));
+          } else {
+            updatePayload.append(key, editFormData[key]);
+          }
         });
         updatePayload.append('tournamentPoster', editTournamentPoster);
         updatePayload.append('applicationId', tournamentId);
@@ -483,10 +521,25 @@ const TournamentApplication = ({ setCurrentPage }) => {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+
+    // Handle tournament software checkboxes (multiple selection)
+    if (name === 'tournamentSoftware') {
+      setFormData(prev => {
+        const currentSoftware = prev.tournamentSoftware || [];
+        if (checked) {
+          // Add the software to the array
+          return { ...prev, tournamentSoftware: [...currentSoftware, value] };
+        } else {
+          // Remove the software from the array
+          return { ...prev, tournamentSoftware: currentSoftware.filter(s => s !== value) };
+        }
+      });
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
   };
 
   const handleStateChange = (e) => {
@@ -732,10 +785,22 @@ const TournamentApplication = ({ setCurrentPage }) => {
       yPosition = addInfoRow('Expected Participants', dataToUse.expectedParticipants, yPosition, true);
 
       // Tournament Software
-      const softwareName = dataToUse.tournamentSoftware === 'Other'
-        ? dataToUse.tournamentSoftwareOther
-        : dataToUse.tournamentSoftware;
-      yPosition = addInfoRow('Tournament Software', softwareName || 'Not specified', yPosition, true);
+      let softwareNames = [];
+      if (Array.isArray(dataToUse.tournamentSoftware)) {
+        softwareNames = dataToUse.tournamentSoftware.map(software => {
+          if (software === 'Other' && dataToUse.tournamentSoftwareOther) {
+            return dataToUse.tournamentSoftwareOther;
+          }
+          return software;
+        });
+      } else if (dataToUse.tournamentSoftware) {
+        // Handle old single-value format for backward compatibility
+        softwareNames = dataToUse.tournamentSoftware === 'Other'
+          ? [dataToUse.tournamentSoftwareOther]
+          : [dataToUse.tournamentSoftware];
+      }
+      const softwareDisplay = softwareNames.length > 0 ? softwareNames.join(', ') : 'Not specified';
+      yPosition = addInfoRow('Tournament Software', softwareDisplay, yPosition, true);
       yPosition += 10;
 
       // EVENT SUMMARY Section
@@ -861,8 +926,15 @@ const TournamentApplication = ({ setCurrentPage }) => {
       return;
     }
 
+    // Validate tournament software selection
+    if (!formData.tournamentSoftware || formData.tournamentSoftware.length === 0) {
+      alert('Please select at least one tournament software.');
+      setIsSubmitting(false);
+      return;
+    }
+
     // Validate tournament software "Other" field
-    if (formData.tournamentSoftware === 'Other' && !formData.tournamentSoftwareOther.trim()) {
+    if (formData.tournamentSoftware.includes('Other') && !formData.tournamentSoftwareOther.trim()) {
       alert('Please specify the tournament software name.');
       setIsSubmitting(false);
       return;
@@ -891,7 +963,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
       submissionFormData.append('eventType', formData.eventType);
       submissionFormData.append('categories', JSON.stringify(savedCategories));
       submissionFormData.append('expectedParticipants', parseInt(formData.expectedParticipants));
-      submissionFormData.append('tournamentSoftware', formData.tournamentSoftware);
+      submissionFormData.append('tournamentSoftware', JSON.stringify(formData.tournamentSoftware));
       submissionFormData.append('tournamentSoftwareOther', formData.tournamentSoftwareOther || '');
       submissionFormData.append('eventSummary', formData.eventSummary);
       submissionFormData.append('scoringFormat', formData.scoringFormat);
@@ -1987,25 +2059,76 @@ const TournamentApplication = ({ setCurrentPage }) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="tournamentSoftware">Tournament Software Being Used *</label>
-            <select
-              id="tournamentSoftware"
-              name="tournamentSoftware"
-              value={formData.tournamentSoftware}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="">Select tournament software</option>
+            <label>Tournament Software Being Used * (Select all that apply)</label>
+            <div style={{
+              maxHeight: '200px',
+              overflowY: 'auto',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              padding: '10px',
+              backgroundColor: '#f9f9f9'
+            }}>
               {approvedSoftware.map((software) => (
-                <option key={software._id} value={software.softwareName}>
-                  {software.softwareName}
-                </option>
+                <div key={software._id} style={{
+                  padding: '8px',
+                  marginBottom: '5px'
+                }}>
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}>
+                    <input
+                      type="checkbox"
+                      name="tournamentSoftware"
+                      value={software.softwareName}
+                      checked={formData.tournamentSoftware.includes(software.softwareName)}
+                      onChange={handleInputChange}
+                      style={{
+                        marginRight: '10px',
+                        width: '16px',
+                        height: '16px',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    {software.softwareName}
+                  </label>
+                </div>
               ))}
-              <option value="Other">Other (Please specify)</option>
-            </select>
+              <div style={{
+                padding: '8px',
+                borderTop: '1px solid #ddd',
+                marginTop: '5px',
+                paddingTop: '10px'
+              }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500'
+                }}>
+                  <input
+                    type="checkbox"
+                    name="tournamentSoftware"
+                    value="Other"
+                    checked={formData.tournamentSoftware.includes('Other')}
+                    onChange={handleInputChange}
+                    style={{
+                      marginRight: '10px',
+                      width: '16px',
+                      height: '16px',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  Other (Please specify)
+                </label>
+              </div>
+            </div>
           </div>
 
-          {formData.tournamentSoftware === 'Other' && (
+          {formData.tournamentSoftware.includes('Other') && (
             <div className="form-group">
               <label htmlFor="tournamentSoftwareOther">Please specify the software name *</label>
               <input
@@ -2608,25 +2731,76 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="edit-tournamentSoftware">Tournament Software Being Used *</label>
-                  <select
-                    id="edit-tournamentSoftware"
-                    name="tournamentSoftware"
-                    value={editFormData.tournamentSoftware || ''}
-                    onChange={handleEditInputChange}
-                    required
-                  >
-                    <option value="">Select tournament software</option>
+                  <label>Tournament Software Being Used * (Select all that apply)</label>
+                  <div style={{
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    padding: '10px',
+                    backgroundColor: '#f9f9f9'
+                  }}>
                     {approvedSoftware.map((software) => (
-                      <option key={software._id} value={software.softwareName}>
-                        {software.softwareName}
-                      </option>
+                      <div key={software._id} style={{
+                        padding: '8px',
+                        marginBottom: '5px'
+                      }}>
+                        <label style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}>
+                          <input
+                            type="checkbox"
+                            name="tournamentSoftware"
+                            value={software.softwareName}
+                            checked={editFormData.tournamentSoftware && editFormData.tournamentSoftware.includes(software.softwareName)}
+                            onChange={handleEditInputChange}
+                            style={{
+                              marginRight: '10px',
+                              width: '16px',
+                              height: '16px',
+                              cursor: 'pointer'
+                            }}
+                          />
+                          {software.softwareName}
+                        </label>
+                      </div>
                     ))}
-                    <option value="Other">Other (Please specify)</option>
-                  </select>
+                    <div style={{
+                      padding: '8px',
+                      borderTop: '1px solid #ddd',
+                      marginTop: '5px',
+                      paddingTop: '10px'
+                    }}>
+                      <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}>
+                        <input
+                          type="checkbox"
+                          name="tournamentSoftware"
+                          value="Other"
+                          checked={editFormData.tournamentSoftware && editFormData.tournamentSoftware.includes('Other')}
+                          onChange={handleEditInputChange}
+                          style={{
+                            marginRight: '10px',
+                            width: '16px',
+                            height: '16px',
+                            cursor: 'pointer'
+                          }}
+                        />
+                        Other (Please specify)
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
-                {editFormData.tournamentSoftware === 'Other' && (
+                {editFormData.tournamentSoftware && editFormData.tournamentSoftware.includes('Other') && (
                   <div className="form-group">
                     <label htmlFor="edit-tournamentSoftwareOther">Please specify the software name *</label>
                     <input

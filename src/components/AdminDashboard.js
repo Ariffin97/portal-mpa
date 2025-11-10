@@ -792,6 +792,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
     venue: '',
     classification: '',
     expectedParticipants: '',
+    tournamentSoftware: [],
+    tournamentSoftwareOther: '',
     eventSummary: '',
     scoringFormat: 'traditional',
     dataConsent: false,
@@ -1880,6 +1882,22 @@ const AdminDashboard = ({ setCurrentPage }) => {
     console.log('Formatted start date for input:', formatDateForInput(startDateRaw));
     console.log('Formatted end date for input:', formatDateForInput(endDateRaw));
     
+    // Parse tournamentSoftware - ensure it's an array
+    let softwareArray = [];
+    const rawSoftware = tournament.tournamentSoftware || tournament.tournament_software;
+    if (rawSoftware) {
+      if (Array.isArray(rawSoftware)) {
+        softwareArray = rawSoftware;
+      } else if (typeof rawSoftware === 'string') {
+        try {
+          softwareArray = JSON.parse(rawSoftware);
+        } catch (e) {
+          // If parsing fails, treat it as a single value
+          softwareArray = [rawSoftware];
+        }
+      }
+    }
+
     setEditingTournament(tournament);
     setEditFormData({
       organiserName: tournament.organiserName || tournament.organizer || '',
@@ -1898,6 +1916,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
       venue: tournament.venue || tournament.event_venue || '',
       classification: tournament.classification || tournament.event_type || tournament.level || '',
       expectedParticipants: (tournament.expectedParticipants || tournament.expected_participants || tournament.participants || '')?.toString() || '',
+      tournamentSoftware: softwareArray,
+      tournamentSoftwareOther: tournament.tournamentSoftwareOther || tournament.tournament_software_other || '',
       eventSummary: tournament.eventSummary || tournament.event_summary || tournament.summary || tournament.description || '',
       scoringFormat: tournament.scoringFormat || tournament.scoring_format || 'traditional',
       dataConsent: true,
@@ -1911,10 +1931,25 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
   const handleEditInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setEditFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+
+    // Handle tournament software checkboxes (multiple selection)
+    if (name === 'tournamentSoftware') {
+      setEditFormData(prev => {
+        const currentSoftware = prev.tournamentSoftware || [];
+        if (checked) {
+          // Add the software to the array
+          return { ...prev, tournamentSoftware: [...currentSoftware, value] };
+        } else {
+          // Remove the software from the array
+          return { ...prev, tournamentSoftware: currentSoftware.filter(s => s !== value) };
+        }
+      });
+    } else {
+      setEditFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
   };
 
   const handleEditStateChange = (e) => {
@@ -1966,6 +2001,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
         venue: editFormData.venue?.trim() || '',
         classification: editFormData.classification?.trim() || '',
         expectedParticipants: editFormData.expectedParticipants ? parseInt(editFormData.expectedParticipants) || 0 : 0,
+        tournamentSoftware: editFormData.tournamentSoftware || [],
+        tournamentSoftwareOther: editFormData.tournamentSoftwareOther?.trim() || '',
         eventSummary: editFormData.eventSummary?.trim() || '',
         scoringFormat: editFormData.scoringFormat?.trim() || 'traditional',
         dataConsent: editFormData.dataConsent,
@@ -1995,6 +2032,16 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
       if (missingFields.length > 0) {
         throw new Error(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Validate tournament software selection
+      if (!submissionData.tournamentSoftware || submissionData.tournamentSoftware.length === 0) {
+        throw new Error('Please select at least one tournament software.');
+      }
+
+      // Validate tournament software "Other" field
+      if (submissionData.tournamentSoftware.includes('Other') && !submissionData.tournamentSoftwareOther.trim()) {
+        throw new Error('Please specify the tournament software name.');
       }
 
       // Safety check - ensure tournament still exists
@@ -2071,6 +2118,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
         city: 'City',
         classification: 'Classification',
         expectedParticipants: 'Expected Participants',
+        tournamentSoftware: 'Tournament Software',
+        tournamentSoftwareOther: 'Tournament Software (Other)',
         telContact: 'Contact Number',
         email: 'Email',
         personInCharge: 'Person in Charge',
@@ -2080,7 +2129,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
       Object.keys(fieldsToCheck).forEach(key => {
         const oldValue = editingTournament[key];
         const newValue = submissionData[key];
-        
+
         // Special handling for date fields
         if (key === 'eventStartDate' || key === 'eventEndDate') {
           // Helper function to format date to YYYY-MM-DD without timezone issues
@@ -2100,15 +2149,43 @@ const AdminDashboard = ({ setCurrentPage }) => {
           // Convert both dates to YYYY-MM-DD format for comparison
           const oldDateStr = formatDateToLocal(oldValue);
           const newDateStr = formatDateToLocal(newValue);
-          
+
           if (oldDateStr !== newDateStr && newDateStr !== '') {
             changes.push(`${fieldsToCheck[key]}: "${oldDateStr}" → "${newDateStr}"`);
+          }
+        } else if (key === 'tournamentSoftware') {
+          // Special handling for tournament software array
+          let oldArray = [];
+          let newArray = [];
+
+          // Parse old value
+          if (Array.isArray(oldValue)) {
+            oldArray = oldValue;
+          } else if (typeof oldValue === 'string' && oldValue) {
+            try {
+              oldArray = JSON.parse(oldValue);
+            } catch (e) {
+              oldArray = [oldValue];
+            }
+          }
+
+          // Parse new value
+          if (Array.isArray(newValue)) {
+            newArray = newValue;
+          }
+
+          // Compare arrays
+          const oldStr = oldArray.sort().join(', ');
+          const newStr = newArray.sort().join(', ');
+
+          if (oldStr !== newStr && newStr !== '') {
+            changes.push(`${fieldsToCheck[key]}: "${oldStr}" → "${newStr}"`);
           }
         } else {
           // Regular string comparison for non-date fields
           const oldStr = oldValue != null ? String(oldValue) : '';
           const newStr = newValue != null ? String(newValue) : '';
-          
+
           if (oldStr !== newStr && newStr !== '' && newValue != null) {
             changes.push(`${fieldsToCheck[key]}: "${oldValue}" → "${newValue}"`);
           }
@@ -8099,7 +8176,92 @@ Settings
                           required
                         />
                       </div>
-                      
+
+                      <div className="form-group">
+                        <label>Tournament Software Being Used * (Select all that apply)</label>
+                        <div style={{
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          padding: '10px',
+                          backgroundColor: '#f9f9f9'
+                        }}>
+                          {tournamentSoftware.filter(software => software.status === 'approved').map((software) => (
+                            <div key={software._id} style={{
+                              padding: '8px',
+                              marginBottom: '5px'
+                            }}>
+                              <label style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                fontSize: '14px'
+                              }}>
+                                <input
+                                  type="checkbox"
+                                  name="tournamentSoftware"
+                                  value={software.softwareName}
+                                  checked={editFormData.tournamentSoftware && editFormData.tournamentSoftware.includes(software.softwareName)}
+                                  onChange={handleEditInputChange}
+                                  style={{
+                                    marginRight: '10px',
+                                    width: '16px',
+                                    height: '16px',
+                                    cursor: 'pointer'
+                                  }}
+                                />
+                                {software.softwareName}
+                              </label>
+                            </div>
+                          ))}
+                          <div style={{
+                            padding: '8px',
+                            borderTop: '1px solid #ddd',
+                            marginTop: '5px',
+                            paddingTop: '10px'
+                          }}>
+                            <label style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              fontSize: '14px',
+                              fontWeight: '500'
+                            }}>
+                              <input
+                                type="checkbox"
+                                name="tournamentSoftware"
+                                value="Other"
+                                checked={editFormData.tournamentSoftware && editFormData.tournamentSoftware.includes('Other')}
+                                onChange={handleEditInputChange}
+                                style={{
+                                  marginRight: '10px',
+                                  width: '16px',
+                                  height: '16px',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                              Other (Please specify)
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {editFormData.tournamentSoftware && editFormData.tournamentSoftware.includes('Other') && (
+                        <div className="form-group">
+                          <label htmlFor="edit-tournamentSoftwareOther">Please specify the software name *</label>
+                          <input
+                            type="text"
+                            id="edit-tournamentSoftwareOther"
+                            name="tournamentSoftwareOther"
+                            value={editFormData.tournamentSoftwareOther}
+                            onChange={handleEditInputChange}
+                            placeholder="Enter software name"
+                            required
+                          />
+                        </div>
+                      )}
+
                       <div className="form-group">
                         <label htmlFor="edit-eventSummary">Brief Summary/Purpose of Event *</label>
                         <textarea
@@ -8270,7 +8432,6 @@ Settings
                             <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Tournament ID</th>
                             <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Status</th>
                             <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Event Date</th>
-                            <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Organizer</th>
                             <th style={{ padding: '12px', textAlign: 'center', borderBottom: '2px solid #e9ecef', color: '#495057', fontWeight: '600' }}>Actions</th>
                           </tr>
                         </thead>
@@ -8313,16 +8474,13 @@ Settings
                                 </span>
                               </td>
                               <td style={{ padding: '12px', color: '#495057' }}>
-                                {tournament.eventStartDate ? 
+                                {tournament.eventStartDate ?
                                   new Date(tournament.eventStartDate).toLocaleDateString('en-MY', {
                                     year: 'numeric',
                                     month: 'short',
                                     day: 'numeric'
                                   }) : 'Not specified'
                                 }
-                              </td>
-                              <td style={{ padding: '12px', color: '#495057' }}>
-                                {tournament.organiserName || 'Unknown'}
                               </td>
                               <td style={{ padding: '12px', textAlign: 'center' }}>
                                 <button
