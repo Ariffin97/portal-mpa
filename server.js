@@ -411,7 +411,11 @@ const emailTemplates = {
             </tr>
             <tr>
               <td style="padding: 8px 0; color: #666; font-weight: bold;">Tournament Software:</td>
-              <td style="padding: 8px 0;">${applicationData.tournamentSoftware === 'Other' ? (applicationData.tournamentSoftwareOther || 'Not provided') : (applicationData.tournamentSoftware || 'Not provided')}</td>
+              <td style="padding: 8px 0;">${
+                Array.isArray(applicationData.tournamentSoftware)
+                  ? applicationData.tournamentSoftware.map(s => s === 'Other' ? (applicationData.tournamentSoftwareOther || 'Other') : s).join(', ')
+                  : (applicationData.tournamentSoftware === 'Other' ? (applicationData.tournamentSoftwareOther || 'Not provided') : (applicationData.tournamentSoftware || 'Not provided'))
+              }</td>
             </tr>
             <tr>
               <td style="padding: 8px 0; color: #666; font-weight: bold;">Submission Date:</td>
@@ -746,7 +750,11 @@ const generateApplicationPDF = async (applicationData) => {
       { label: 'Level of Event', value: applicationData.classification },
       { label: 'Type of Event', value: applicationData.eventType },
       { label: 'Expected Participants', value: applicationData.expectedParticipants?.toString() },
-      { label: 'Tournament Software', value: applicationData.tournamentSoftware === 'Other' ? applicationData.tournamentSoftwareOther : applicationData.tournamentSoftware },
+      { label: 'Tournament Software', value:
+        Array.isArray(applicationData.tournamentSoftware)
+          ? applicationData.tournamentSoftware.map(s => s === 'Other' ? (applicationData.tournamentSoftwareOther || 'Other') : s).join(', ')
+          : (applicationData.tournamentSoftware === 'Other' ? applicationData.tournamentSoftwareOther : applicationData.tournamentSoftware)
+      },
       { label: 'Event Summary', value: applicationData.eventSummary }
     ]);
 
@@ -1043,8 +1051,14 @@ const tournamentApplicationSchema = new mongoose.Schema({
     required: true
   },
   tournamentSoftware: {
-    type: String,
-    required: true
+    type: [String],
+    required: true,
+    validate: {
+      validator: function(v) {
+        return Array.isArray(v) && v.length > 0;
+      },
+      message: 'At least one tournament software must be selected'
+    }
   },
   tournamentSoftwareOther: {
     type: String,
@@ -3950,6 +3964,22 @@ app.post('/api/applications', uploadApplication.any(), async (req, res) => {
       }
     }
 
+    // If tournamentSoftware is a string (from FormData), parse it
+    if (typeof applicationData.tournamentSoftware === 'string') {
+      try {
+        applicationData.tournamentSoftware = JSON.parse(applicationData.tournamentSoftware);
+      } catch (e) {
+        console.error('Error parsing tournamentSoftware:', e);
+        // If parsing fails, treat it as a single value (backward compatibility)
+        applicationData.tournamentSoftware = [applicationData.tournamentSoftware];
+      }
+    }
+
+    // Ensure tournamentSoftware is always an array
+    if (!Array.isArray(applicationData.tournamentSoftware)) {
+      applicationData.tournamentSoftware = applicationData.tournamentSoftware ? [applicationData.tournamentSoftware] : [];
+    }
+
     // Handle uploaded files - req.files is an array when using .any()
     const supportDocuments = [];
     if (req.files && req.files.length > 0) {
@@ -4506,6 +4536,22 @@ app.patch('/api/applications/:id', uploadApplication.any(), async (req, res) => 
   try {
     const { applicationId } = req.params;
     const updateData = req.body;
+
+    // If tournamentSoftware is a string (from FormData), parse it
+    if (typeof updateData.tournamentSoftware === 'string') {
+      try {
+        updateData.tournamentSoftware = JSON.parse(updateData.tournamentSoftware);
+      } catch (e) {
+        console.error('Error parsing tournamentSoftware:', e);
+        // If parsing fails, treat it as a single value (backward compatibility)
+        updateData.tournamentSoftware = [updateData.tournamentSoftware];
+      }
+    }
+
+    // Ensure tournamentSoftware is always an array
+    if (updateData.tournamentSoftware && !Array.isArray(updateData.tournamentSoftware)) {
+      updateData.tournamentSoftware = [updateData.tournamentSoftware];
+    }
 
     // Handle uploaded files - req.files is an array when using .any()
     if (req.files && req.files.length > 0) {
