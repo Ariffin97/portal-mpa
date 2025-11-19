@@ -33,23 +33,9 @@ function App() {
   const [showApplyDropdown, setShowApplyDropdown] = useState(false);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [tournamentSoftwareUserData, setTournamentSoftwareUserData] = useState(null);
-  const [showSystemUpdateNotice, setShowSystemUpdateNotice] = useState(false);
 
   // Assessment submissions are now saved directly to database
   // AdminDashboard loads them from the database via API
-
-  // Show system update notice on homepage load (once per session)
-  useEffect(() => {
-    const hasSeenSystemUpdate = sessionStorage.getItem('hasSeenSystemUpdate');
-    if (!hasSeenSystemUpdate && currentPage === 'home') {
-      // Delay slightly for better UX
-      const timer = setTimeout(() => {
-        setShowSystemUpdateNotice(true);
-        sessionStorage.setItem('hasSeenSystemUpdate', 'true');
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [currentPage]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -412,54 +398,6 @@ function App() {
     </div>
   );
 
-  const renderSystemUpdateNotice = () => (
-    <div className="tournament-guidelines-modal">
-      <div className="modal-overlay" onClick={() => setShowSystemUpdateNotice(false)}>
-        <div className="modal-content tournament-guidelines-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '500px' }}>
-          <div className="modal-header">
-            <h2>System Update</h2>
-            <button
-              className="modal-close-btn"
-              onClick={() => setShowSystemUpdateNotice(false)}
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="modal-body tournament-guidelines-body" style={{ padding: '1.5rem' }}>
-            <ol style={{ paddingLeft: '1.5rem', lineHeight: '1.8', margin: 0 }}>
-              <li>Applicants will be notified if their selected date clashes with another tournament.</li>
-              <li>Applicants can now upload their tournament poster during application.</li>
-            </ol>
-          </div>
-
-          <div className="modal-footer" style={{
-            padding: '1rem 1.5rem',
-            borderTop: '1px solid #e0e0e0',
-            display: 'flex',
-            justifyContent: 'center'
-          }}>
-            <button
-              onClick={() => setShowSystemUpdateNotice(false)}
-              style={{
-                padding: '0.65rem 1.5rem',
-                backgroundColor: '#003f7f',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '0.95rem',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   const renderPage = () => {
     switch(currentPage) {
       case 'login':
@@ -771,7 +709,7 @@ function App() {
       <main className="App-main">
         {renderPage()}
       </main>
-      {currentPage !== 'login' && !showAssessmentModal && <Footer />}
+      {currentPage !== 'login' && !showAssessmentModal && <Footer setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
 
       <OrganizationLoginModal 
         isOpen={showLoginModal}
@@ -788,9 +726,6 @@ function App() {
 
       {/* Important Notice Modal */}
       {showImportantNotice && renderImportantNotice()}
-
-      {/* System Update Notice Modal */}
-      {showSystemUpdateNotice && renderSystemUpdateNotice()}
 
       {/* Assessment System */}
       <AssessmentSystem

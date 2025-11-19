@@ -2085,6 +2085,40 @@ button.utility-link {
   font-weight: 400;
 }
 
+.footer-admin-login {
+  display: flex;
+  align-items: center;
+  margin-left: 0.5rem;
+}
+
+.footer-admin-login::before {
+  content: '|';
+  margin-right: 0.5rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.footer-admin-btn {
+  padding: 0;
+  background: none;
+  color: var(--white);
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.footer-admin-btn:hover {
+  color: #00ffff;
+  text-decoration: underline;
+}
+
+.footer-admin-btn:active {
+  color: #00cccc;
+}
+
 .footer-column {
   display: flex;
   flex-direction: column;
@@ -2408,7 +2442,11 @@ button.utility-link {
   .footer-partner {
     display: none;
   }
-  
+
+  .footer-admin-btn {
+    font-size: 0.8rem;
+  }
+
   .newsletter-form {
     flex-direction: column;
     gap: 0.75rem;
@@ -2488,6 +2526,10 @@ button.utility-link {
   /* Hide Fenix Digital partner section on mobile */
   .footer-partner {
     display: none;
+  }
+
+  .footer-admin-btn {
+    font-size: 0.75rem;
   }
 
   .footer-title {

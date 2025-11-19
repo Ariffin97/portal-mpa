@@ -53,15 +53,6 @@ const Header = ({ currentPage, setCurrentPage, isLoggedIn, setIsLoggedIn }) => {
                 >
                   Terms & Conditions
                 </button>
-                {isLoggedIn ? (
-                  <button className="utility-link" onClick={handleLogout}>
-                    Logout
-                  </button>
-                ) : (
-                  <button className="utility-link" onClick={() => setCurrentPage('login')}>
-                    Login
-                  </button>
-                )}
               </div>
 
               {/* Mobile view - all buttons in dropdown */}
@@ -110,18 +101,6 @@ const Header = ({ currentPage, setCurrentPage, isLoggedIn, setIsLoggedIn }) => {
                       >
                         Terms & Conditions
                       </button>
-                      {isLoggedIn ? (
-                        <button className="mobile-menu-item" onClick={handleLogout}>
-                          Logout
-                        </button>
-                      ) : (
-                        <button className="mobile-menu-item" onClick={() => {
-                          setCurrentPage('login');
-                          setShowMobileMenu(false);
-                        }}>
-                          Login
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
