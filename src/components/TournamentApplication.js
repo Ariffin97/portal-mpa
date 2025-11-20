@@ -352,7 +352,6 @@ const TournamentApplication = ({ setCurrentPage }) => {
       termsConsent: true
     });
     setEditTournamentError('');
-    setTournamentUpdated(false);
   };
 
   const handleEditInputChange = (e) => {
@@ -460,7 +459,6 @@ const TournamentApplication = ({ setCurrentPage }) => {
         )
       );
 
-      setTournamentUpdated(true);
       setEditTournamentError('');
       setEditTournamentPoster(null);
       alert('Tournament updated successfully!');
@@ -478,7 +476,6 @@ const TournamentApplication = ({ setCurrentPage }) => {
     setEditingTournament(null);
     setEditFormData({});
     setEditTournamentError('');
-    setTournamentUpdated(false);
     setEditTournamentPoster(null);
   };
 

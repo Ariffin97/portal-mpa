@@ -246,7 +246,6 @@ const AssessmentSystem = ({ isOpen, onClose }) => {
       // Continue with local saving even if database save fails
     }
 
-    setAllSubmissions(prev => [...prev, submission]);
     setResults(finalResults);
     setCurrentView('results');
   };
