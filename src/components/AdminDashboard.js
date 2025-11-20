@@ -7047,7 +7047,7 @@ Settings
                 className={`status-filter-btn ${selectedStatusFilter === 'Rejected' ? 'active' : ''}`}
                 onClick={() => setSelectedStatusFilter('Rejected')}
               >
-                ❌ Rejected ({applications.filter(app => app.status === 'Rejected').length})
+                Rejected ({applications.filter(app => app.status === 'Rejected').length})
               </button>
               <button 
                 className={`status-filter-btn ${selectedStatusFilter === 'All' ? 'active' : ''}`}
