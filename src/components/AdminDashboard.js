@@ -32,7 +32,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
   const [error, setError] = useState('');
 
   // Current user authority level from localStorage (set during login)
-  const [currentUserAuthority, setCurrentUserAuthority] = useState(
+  const [currentUserAuthority] = useState(
     localStorage.getItem('userAuthority') || 'admin'
   );
 
@@ -182,7 +182,6 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
   // Security Notice Modal States
   const [showSecurityNoticeModal, setShowSecurityNoticeModal] = useState(false);
-  const [pendingFormData, setPendingFormData] = useState(null);
 
   // Temporary Codes Management States
   const [showTempCodesListModal, setShowTempCodesListModal] = useState(false);
@@ -591,6 +590,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
     if (currentView === 'assessment-statistics') {
       loadAssessmentResults();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView]);
 
   // Reload data when date filter changes
@@ -598,6 +598,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
     if (currentView === 'assessment-statistics') {
       loadAssessmentResults();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, dateFilterEnabled]);
 
   // Handle date filter toggle
@@ -8759,7 +8760,7 @@ Settings
 
                               // Create temporary URL and open in new tab
                               const url = URL.createObjectURL(blob);
-                              const newWindow = window.open(url, '_blank');
+                              window.open(url, '_blank');
 
                               // Clean up the URL after a delay
                               setTimeout(() => URL.revokeObjectURL(url), 60000); // 1 minute

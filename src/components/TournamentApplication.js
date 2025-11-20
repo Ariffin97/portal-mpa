@@ -18,7 +18,6 @@ const TournamentApplication = ({ setCurrentPage }) => {
   const [editingTournament, setEditingTournament] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [editTournamentError, setEditTournamentError] = useState('');
-  const [tournamentUpdated, setTournamentUpdated] = useState(false);
   const [editTournamentPoster, setEditTournamentPoster] = useState(null);
   
   // Malaysian States and Cities data

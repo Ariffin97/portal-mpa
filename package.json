@@ -34,9 +34,9 @@
     "eject": "react-scripts eject",
     "server": "node server.js",
     "server:dev": "node server-dev.js",
-    "dev": "concurrently \"npm run server\" \"PORT=3000 npm run client\"",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
     "dev:local": "concurrently \"npm run server:dev\" \"PORT=3000 npm run client\"",
-    "client": "react-scripts start",
+    "client": "cross-env PORT=3000 react-scripts start",
     "copy-to-local": "node copy-to-local.js",
     "verify-setup": "node verify-setup.js",
     "heroku-postbuild": "npm run build"
@@ -60,6 +60,7 @@
     ]
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0"
   }
 }

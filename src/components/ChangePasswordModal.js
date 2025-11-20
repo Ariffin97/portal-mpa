@@ -32,7 +32,7 @@ const ChangePasswordModal = ({ isOpen, organizationData, onClose, onPasswordChan
         hasUppercase: /[A-Z]/.test(value),
         hasLowercase: /[a-z]/.test(value),
         hasNumber: /[0-9]/.test(value),
-        hasSymbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)
+        hasSymbol: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(value)
       });
     }
   };

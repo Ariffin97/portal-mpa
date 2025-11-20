@@ -84,12 +84,6 @@ const AdminPanel = ({ questions, setQuestions, timeLimit, setTimeLimit, assessme
     });
   };
 
-  const getScoreClass = (percentage) => {
-    if (percentage >= 80) return 'score-excellent';
-    if (percentage >= 60) return 'score-good';
-    return 'score-needs-improvement';
-  };
-
   const validateQuestion = () => {
     if (!newQuestion) {
       alert('Question data is missing');

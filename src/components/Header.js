@@ -1,18 +1,8 @@
 import { useState } from 'react';
 import mpaLogo from '../assets/images/mpa.png';
 
-const Header = ({ currentPage, setCurrentPage, isLoggedIn, setIsLoggedIn }) => {
+const Header = ({ currentPage, setCurrentPage, isLoggedIn }) => {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userAuthority');
-    localStorage.removeItem('username');
-    localStorage.removeItem('loginTimestamp');
-    setCurrentPage('home');
-    setShowMobileMenu(false);
-  };
 
   return (
     <>

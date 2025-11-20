@@ -9,7 +9,6 @@ const AssessmentSystem = ({ isOpen, onClose }) => {
   const [userInfo, setUserInfo] = useState(null);
   const [timeLimit, setTimeLimit] = useState(30);
   const [results, setResults] = useState(null);
-  const [allSubmissions, setAllSubmissions] = useState([]);
   const [savedForms, setSavedForms] = useState([]);
   const [assessmentFormData, setAssessmentFormData] = useState(null);
 
@@ -126,6 +125,7 @@ const AssessmentSystem = ({ isOpen, onClose }) => {
     if (questions.length === 0) {
       setQuestions(sampleQuestions);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Helper function to compare answers (moved to parent scope)
@@ -139,33 +139,18 @@ const AssessmentSystem = ({ isOpen, onClose }) => {
 
   const generateFormCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let code;
-    do {
+    let code = '';
+    for (let i = 0; i < 5; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    // Check for duplicates and regenerate if needed
+    while (savedForms.some(form => form.code === code)) {
       code = '';
       for (let i = 0; i < 5; i++) {
         code += chars.charAt(Math.floor(Math.random() * chars.length));
       }
-    } while (savedForms.some(form => form.code === code));
-    return code;
-  };
-
-  const saveForm = () => {
-    if (questions.length === 0) {
-      alert('Please add at least one question before saving the form.');
-      return null;
     }
-
-    const formCode = generateFormCode();
-    const savedForm = {
-      code: formCode,
-      questions: [...questions],
-      timeLimit,
-      createdAt: new Date(),
-      title: `Assessment Form ${formCode}`
-    };
-
-    setSavedForms(prev => [...prev, savedForm]);
-    return formCode;
+    return code;
   };
 
   const loadForm = async (code) => {
@@ -244,7 +229,7 @@ const AssessmentSystem = ({ isOpen, onClose }) => {
         answers: assessmentResults.answers ? Object.entries(assessmentResults.answers).map(([questionId, selectedAnswer]) => ({
           questionId: parseInt(questionId),
           selectedAnswer: selectedAnswer,
-          isCorrect: getAnswerStatus(questions.find(q => q.id == questionId), selectedAnswer)
+          isCorrect: getAnswerStatus(questions.find(q => q.id === parseInt(questionId)), selectedAnswer)
         })) : [],
         score: assessmentResults.percentage,
         correctAnswers: assessmentResults.score,
@@ -343,7 +328,6 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) =>
   const [icNumber, setIcNumber] = useState('');
   const [formCode, setFormCode] = useState('');
   const [errors, setErrors] = useState({});
-  const [isFormValid, setIsFormValid] = useState(false);
 
   const formatIcNumber = (value) => {
     const digits = value.replace(/\D/g, '');
@@ -382,9 +366,7 @@ const UserRegistration = ({ onRegister, loadForm, savedForms = [], onClose }) =>
     }
 
     setErrors(newErrors);
-    const isValid = Object.keys(newErrors).length === 0;
-    setIsFormValid(isValid);
-    return isValid;
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
@@ -616,7 +598,8 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, getAnswerStatu
     }
 
     return scoreData;
-  }, [answers, questions, timeLimit, timeRemaining, userInfo, assessmentFormData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, questions, timeLimit, timeRemaining]);
 
   const handleSubmit = useCallback(() => {
     if (!isSubmitted) {
@@ -677,7 +660,6 @@ const Assessment = ({ questions, userInfo, timeLimit, onComplete, getAnswerStatu
   }
 
   const currentQ = questions[currentQuestion];
-  const progress = ((currentQuestion + 1) / questions.length) * 100;
 
   return (
     <div style={{
@@ -1085,12 +1067,6 @@ const Results = ({ results, userInfo, questions, assessmentFormData, getAnswerSt
       console.error('Error generating PDF:', error);
       alert('Error generating PDF. Please try again.');
     }
-  };
-
-  const getScoreClass = (percentage) => {
-    if (percentage >= 80) return 'score-excellent';
-    if (percentage >= 60) return 'score-good';
-    return 'score-needs-improvement';
   };
 
   return (

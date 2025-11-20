@@ -46,18 +46,11 @@
   --transition-slow: 0.5s ease;
 }
 
+/* ===== OPTIMIZED LAYOUT SYSTEM ===== */
 html {
-  scroll-behavior: smooth;
-  overflow-x: hidden;
-  /* Allow vertical scrolling to see all content */
-  overflow-y: auto;
-  /* Normalize text sizing across platforms */
-  -webkit-text-size-adjust: 100%;
-  -moz-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  /* Set base font size for consistent rem units */
   font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -69,70 +62,27 @@ body {
   background-color: var(--light-gray);
   color: var(--text-primary);
   line-height: 1.6;
-  /* Allow scrolling to see all content */
-  overflow-y: auto;
-  overflow-x: hidden;
-  width: 100%;
-  max-width: 100vw;
   min-height: 100vh;
-  margin: 0;
-  padding: 0;
-  /* Normalize text sizing across platforms */
-  -webkit-text-size-adjust: 100%;
-  -moz-text-size-adjust: 100%;
-  -ms-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
-/* Platform-specific zoom normalization for high-DPI Windows displays */
-@media screen and (-webkit-min-device-pixel-ratio: 1.25) {
-  body {
-    zoom: 0.8;
-  }
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-@media screen and (-webkit-min-device-pixel-ratio: 1.5) {
-  body {
-    zoom: 0.67;
-  }
-}
-
-/* For Firefox which doesn't support zoom, use transform as fallback */
-@supports not (zoom: 1) {
-  @media screen and (min-resolution: 120dpi) {
-    body {
-      transform: scale(0.8);
-      transform-origin: top left;
-      width: 125%;
-      height: 125%;
-    }
-  }
-
-  @media screen and (min-resolution: 144dpi) {
-    body {
-      transform: scale(0.67);
-      transform-origin: top left;
-      width: 150%;
-      height: 150%;
-    }
-  }
+.App {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
-}
-
-.App {
-  /* Allow scrolling for content that exceeds viewport */
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 100vw;
-  overflow-y: auto;
-  overflow-x: hidden;
 }
 
 /* ===== HEADER STYLES ===== */
@@ -308,16 +258,15 @@ button.utility-link {
 /* ===== MAIN CONTENT ===== */
 .App-main {
   flex: 1;
-  padding: 0;
-  background: var(--light-gray);
-  /* Remove margins to eliminate white space on homepage */
-  margin-top: 0;
-  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ===== HOME PAGE STYLES ===== */
 .home-content {
-  max-width: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Hero Actions Column Layout */
@@ -1614,17 +1563,14 @@ button.utility-link {
     radial-gradient(circle at 80% 20%, rgba(0, 255, 127, 0.1) 0%, transparent 50%),
     linear-gradient(135deg, #0a0e27 0%, #1a1f3a  30%, #162447 70%, #0f3460 100%);
   color: var(--white);
-  /* Remove scrollbar - use exact height to fit viewport */
-  height: 100vh;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  /* Fix logo overlap - no extra padding needed with fixed positioning */
-  padding-top: 0;
-  padding-bottom: 0;
-  margin-top: 0;
-  margin-bottom: 0;
+  min-height: 100vh;
+  /* Content padding to avoid fixed header */
+  padding-top: 48px;
   overflow: hidden;
 }
 
@@ -1886,9 +1832,10 @@ button.utility-link {
 
 /* ===== PAGE CONTENT STYLES ===== */
 .page-content {
-  max-width: 1200px;
-  margin: 0 auto;
+  flex: 1;
   padding: 2rem;
+  padding-top: calc(48px + 2rem);
+  background: var(--light-gray);
 }
 
 .hero-section {
@@ -1946,8 +1893,8 @@ button.utility-link {
 }
 
 .contact-content {
-  max-width: 800px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
 }
 
 .contact-methods {
