@@ -18,6 +18,7 @@ console.log('🔍 Cloudinary env check:', {
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const compression = require('compression');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
@@ -32,6 +33,7 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors());
+app.use(compression());
 app.use(express.json());
 
 // Serve static files from the React app build directory
@@ -1173,6 +1175,12 @@ const tournamentApplicationSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Performance indexes
+tournamentApplicationSchema.index({ applicationId: 1 });
+tournamentApplicationSchema.index({ email: 1 });
+tournamentApplicationSchema.index({ status: 1 });
+tournamentApplicationSchema.index({ submissionDate: -1 });
 
 const TournamentApplication = mongoose.model('TournamentApplication', tournamentApplicationSchema);
 
@@ -3862,7 +3870,12 @@ app.patch('/api/organizations/profile', upload.array('documents', 10), async (re
 // Get all tournament applications (for admin)
 app.get('/api/applications', async (req, res) => {
   try {
-    const applications = await TournamentApplication.find().sort({ submissionDate: -1 });
+    const applications = await TournamentApplication
+      .find()
+      .select('-supportDocuments')
+      .sort({ submissionDate: -1 })
+      .lean()
+      .exec();
     res.json(applications);
   } catch (error) {
     res.status(500).json({ error: error.message });
