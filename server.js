@@ -16,6 +16,8 @@ console.log('🔍 Cloudinary env check:', {
 });
 
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const compression = require('compression');
@@ -29,7 +31,23 @@ const jwt = require('jsonwebtoken');
 const fetch = require('node-fetch');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
 const PORT = process.env.PORT || 5001;
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
 
 // Middleware
 app.use(cors());
@@ -4287,6 +4305,14 @@ app.post('/api/applications', uploadApplication.any(), async (req, res) => {
       }
     }
 
+    // Emit WebSocket event for new application
+    io.emit('newApplication', {
+      applicationId: savedApplication.applicationId,
+      eventTitle: savedApplication.eventTitle,
+      status: savedApplication.status,
+      organiserName: savedApplication.organiserName
+    });
+
     res.status(201).json({
       message: 'Application submitted successfully',
       application: savedApplication
@@ -4428,7 +4454,15 @@ app.patch('/api/applications/:id/status', async (req, res) => {
         // Still return success for the status update, even if email fails
       }
     }
-    
+
+    // Emit WebSocket event for status update
+    io.emit('applicationUpdated', {
+      applicationId: application.applicationId,
+      eventTitle: application.eventTitle,
+      status: application.status,
+      organiserName: application.organiserName
+    });
+
     res.json(application);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -7492,7 +7526,8 @@ async function initializeDefaultAssessmentForm() {
 }
 
 // Start server
-app.listen(PORT, async () => {
+server.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log(`WebSocket server ready`);
   await initializeDefaultAssessmentForm();
 });
