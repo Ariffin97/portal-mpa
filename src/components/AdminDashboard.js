@@ -127,6 +127,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
     expectedParticipants: '',
     eventSummary: '',
     scoringFormat: 'traditional',
+    tournamentSoftware: [],
+    tournamentSoftwareOther: '',
     dataConsent: false,
     termsConsent: false
   });
@@ -1739,10 +1741,25 @@ const AdminDashboard = ({ setCurrentPage }) => {
   // Tournament form handlers
   const handleTournamentInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setTournamentFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+
+    // Handle tournament software checkboxes (multiple selection)
+    if (name === 'tournamentSoftware') {
+      setTournamentFormData(prev => {
+        const currentSoftware = prev.tournamentSoftware || [];
+        if (checked) {
+          // Add the software to the array
+          return { ...prev, tournamentSoftware: [...currentSoftware, value] };
+        } else {
+          // Remove the software from the array
+          return { ...prev, tournamentSoftware: currentSoftware.filter(s => s !== value) };
+        }
+      });
+    } else {
+      setTournamentFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+    }
   };
 
   const handleTournamentStateChange = (e) => {
@@ -2359,6 +2376,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
       submissionFormData.append('expectedParticipants', parseInt(tournamentFormData.expectedParticipants));
       submissionFormData.append('eventSummary', tournamentFormData.eventSummary);
       submissionFormData.append('scoringFormat', tournamentFormData.scoringFormat);
+      submissionFormData.append('tournamentSoftware', JSON.stringify(tournamentFormData.tournamentSoftware || []));
+      submissionFormData.append('tournamentSoftwareOther', tournamentFormData.tournamentSoftwareOther || '');
       submissionFormData.append('dataConsent', tournamentFormData.dataConsent);
       submissionFormData.append('termsConsent', tournamentFormData.termsConsent);
       submissionFormData.append('status', 'Approved');
@@ -2414,6 +2433,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
         expectedParticipants: '',
         eventSummary: '',
         scoringFormat: 'traditional',
+        tournamentSoftware: [],
+        tournamentSoftwareOther: '',
         dataConsent: false,
         termsConsent: false
       });
@@ -7822,7 +7843,100 @@ Settings
                     </ul>
                   </div>
                 </div>
-                
+
+                <div className="form-section">
+                  <h3>Tournament Software</h3>
+                  <div className="form-group">
+                    <label>Tournament Software Being Used * (Select all that apply)</label>
+                    <div style={{
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      padding: '10px',
+                      backgroundColor: '#f9f9f9'
+                    }}>
+                      {tournamentSoftware.filter(software => software.status === 'approved').map((software) => (
+                        <div key={software._id} style={{
+                          padding: '8px',
+                          marginBottom: '5px'
+                        }}>
+                          <label style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            fontSize: '14px'
+                          }}>
+                            <input
+                              type="checkbox"
+                              name="tournamentSoftware"
+                              value={software.softwareName}
+                              checked={tournamentFormData.tournamentSoftware && tournamentFormData.tournamentSoftware.includes(software.softwareName)}
+                              onChange={handleTournamentInputChange}
+                              style={{
+                                marginRight: '10px',
+                                width: '16px',
+                                height: '16px',
+                                cursor: 'pointer'
+                              }}
+                            />
+                            {software.softwareName}
+                          </label>
+                        </div>
+                      ))}
+                      {tournamentSoftware.filter(software => software.status === 'approved').length === 0 && (
+                        <div style={{ padding: '10px', color: '#666', fontStyle: 'italic' }}>
+                          No approved tournament software available. Please select "Other" below.
+                        </div>
+                      )}
+                      <div style={{
+                        padding: '8px',
+                        borderTop: '1px solid #ddd',
+                        marginTop: '5px',
+                        paddingTop: '10px'
+                      }}>
+                        <label style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '500'
+                        }}>
+                          <input
+                            type="checkbox"
+                            name="tournamentSoftware"
+                            value="Other"
+                            checked={tournamentFormData.tournamentSoftware && tournamentFormData.tournamentSoftware.includes('Other')}
+                            onChange={handleTournamentInputChange}
+                            style={{
+                              marginRight: '10px',
+                              width: '16px',
+                              height: '16px',
+                              cursor: 'pointer'
+                            }}
+                          />
+                          Other (Please specify)
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {tournamentFormData.tournamentSoftware && tournamentFormData.tournamentSoftware.includes('Other') && (
+                    <div className="form-group">
+                      <label htmlFor="tournamentSoftwareOther">Please specify the software name *</label>
+                      <input
+                        type="text"
+                        id="tournamentSoftwareOther"
+                        name="tournamentSoftwareOther"
+                        value={tournamentFormData.tournamentSoftwareOther}
+                        onChange={handleTournamentInputChange}
+                        placeholder="Enter software name"
+                        required
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="form-section">
                   <h3>Tournament Categories & Skill Ratings</h3>
                   <div className="skill-ratings-info">
