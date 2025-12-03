@@ -19,6 +19,13 @@ const TournamentApplication = ({ setCurrentPage }) => {
   const [editFormData, setEditFormData] = useState({});
   const [editTournamentError, setEditTournamentError] = useState('');
   const [editTournamentPoster, setEditTournamentPoster] = useState(null);
+
+  // Cancel Application States
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancellingTournament, setCancellingTournament] = useState(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
   
   // Malaysian States and Cities data
   const malaysianStatesAndCities = {
@@ -479,6 +486,68 @@ const TournamentApplication = ({ setCurrentPage }) => {
     setEditTournamentPoster(null);
   };
 
+  // Cancel Application handlers
+  const openCancelModal = (tournament) => {
+    setCancellingTournament(tournament);
+    setCancellationReason('');
+    setCancelError('');
+    setShowCancelModal(true);
+  };
+
+  const closeCancelModal = () => {
+    setShowCancelModal(false);
+    setCancellingTournament(null);
+    setCancellationReason('');
+    setCancelError('');
+  };
+
+  const handleCancelApplication = async () => {
+    if (!cancellationReason.trim()) {
+      setCancelError('Please provide a reason for cancellation');
+      return;
+    }
+
+    if (cancellationReason.trim().length < 10) {
+      setCancelError('Please provide a more detailed reason (at least 10 characters)');
+      return;
+    }
+
+    setIsCancelling(true);
+    setCancelError('');
+
+    try {
+      const response = await fetch(`${apiService.baseURL}/applications/${cancellingTournament._id}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reason: cancellationReason.trim(),
+          organizerEmail: organizationData?.email,
+          organizerName: organizationData?.organizationName || cancellingTournament.organiserName
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cancel application');
+      }
+
+      // Refresh tournaments list
+      if (organizationData?.email) {
+        await loadAppliedTournaments(organizationData.email);
+      }
+
+      alert('Application cancelled successfully. The admin has been notified.');
+      closeCancelModal();
+    } catch (error) {
+      console.error('Error cancelling application:', error);
+      setCancelError(error.message || 'Failed to cancel application. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const updateOrganizationData = async (orgData) => {
     // If organizationId is missing, try to fetch it
     if (!orgData.organizationId && orgData.email) {
@@ -511,6 +580,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
       case 'Approved': return '#28a745';
       case 'Rejected': return '#dc3545';
       case 'Under Review': return '#007bff';
+      case 'Cancelled': return '#6c757d';
       default: return '#6c757d';
     }
   };
@@ -1458,31 +1528,72 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       }
                     </div>
 
-                    <button
-                      onClick={() => startEditTournament(tournament)}
-                      style={{
+                    {tournament.status === 'Cancelled' ? (
+                      <div style={{
                         width: '100%',
-                        backgroundColor: 'rgba(255,255,255,0.95)',
-                        color: '#667eea',
-                        border: 'none',
+                        backgroundColor: 'rgba(108, 117, 125, 0.2)',
+                        color: '#6c757d',
                         padding: '8px 16px',
                         borderRadius: '6px',
                         fontSize: '13px',
                         fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'white';
-                        e.currentTarget.style.transform = 'scale(1.02)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.95)';
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
-                    >
-                      Edit Application
-                    </button>
+                        textAlign: 'center'
+                      }}>
+                        Application Cancelled
+                      </div>
+                    ) : tournament.status === 'Approved' ? (
+                      <button
+                        onClick={() => openCancelModal(tournament)}
+                        style={{
+                          width: '100%',
+                          backgroundColor: 'rgba(220, 53, 69, 0.9)',
+                          color: 'white',
+                          border: 'none',
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(200, 35, 51, 1)';
+                          e.currentTarget.style.transform = 'scale(1.02)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(220, 53, 69, 0.9)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        Cancel Application
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => startEditTournament(tournament)}
+                        style={{
+                          width: '100%',
+                          backgroundColor: 'rgba(255,255,255,0.95)',
+                          color: '#667eea',
+                          border: 'none',
+                          padding: '8px 16px',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                          e.currentTarget.style.transform = 'scale(1.02)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.95)';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }}
+                      >
+                        Edit Application
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -3576,6 +3687,163 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Application Modal */}
+      {showCancelModal && cancellingTournament && (
+        <div className="modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div className="modal-content" style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '0',
+            maxWidth: '500px',
+            width: '90%',
+            overflow: 'hidden',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div className="modal-header" style={{
+              padding: '20px 30px',
+              borderBottom: '1px solid #ddd',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: '#dc3545'
+            }}>
+              <h2 style={{ margin: 0, color: 'white', fontSize: '18px' }}>Cancel Application</h2>
+              <button
+                onClick={closeCancelModal}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: 'white'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: '30px' }}>
+              <div style={{
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '6px',
+                padding: '15px',
+                marginBottom: '20px'
+              }}>
+                <strong style={{ color: '#856404' }}>Warning:</strong>
+                <p style={{ margin: '8px 0 0 0', color: '#856404', fontSize: '14px' }}>
+                  You are about to cancel your approved tournament application. This action cannot be undone.
+                  The admin will be notified about this cancellation.
+                </p>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <p style={{ margin: '0 0 10px 0', fontWeight: '600', color: '#333' }}>Tournament Details:</p>
+                <div style={{
+                  backgroundColor: '#f8f9fa',
+                  padding: '15px',
+                  borderRadius: '6px',
+                  fontSize: '14px'
+                }}>
+                  <p style={{ margin: '0 0 5px 0' }}><strong>Title:</strong> {cancellingTournament.eventTitle}</p>
+                  <p style={{ margin: '0 0 5px 0' }}><strong>Application ID:</strong> {cancellingTournament.applicationId}</p>
+                  <p style={{ margin: '0' }}><strong>Event Date:</strong> {new Date(cancellingTournament.eventStartDate).toLocaleDateString('en-MY')} - {new Date(cancellingTournament.eventEndDate).toLocaleDateString('en-MY')}</p>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: '600',
+                  color: '#333'
+                }}>
+                  Reason for Cancellation <span style={{ color: '#dc3545' }}>*</span>
+                </label>
+                <textarea
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                  placeholder="Please provide a detailed reason for cancelling this application..."
+                  style={{
+                    width: '100%',
+                    minHeight: '120px',
+                    padding: '12px',
+                    border: cancelError ? '1px solid #dc3545' : '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    resize: 'vertical',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {cancelError && (
+                  <p style={{
+                    color: '#dc3545',
+                    fontSize: '13px',
+                    margin: '8px 0 0 0'
+                  }}>
+                    {cancelError}
+                  </p>
+                )}
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '10px',
+                justifyContent: 'flex-end'
+              }}>
+                <button
+                  type="button"
+                  onClick={closeCancelModal}
+                  disabled={isCancelling}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: isCancelling ? 'not-allowed' : 'pointer',
+                    opacity: isCancelling ? 0.6 : 1
+                  }}
+                >
+                  Keep Application
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelApplication}
+                  disabled={isCancelling}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: isCancelling ? 'not-allowed' : 'pointer',
+                    opacity: isCancelling ? 0.6 : 1
+                  }}
+                >
+                  {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
+                </button>
               </div>
             </div>
           </div>

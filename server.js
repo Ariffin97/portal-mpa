@@ -471,6 +471,149 @@ const emailTemplates = {
         </div>
       </div>
     `
+  }),
+
+  applicationCancelled: (cancellationData) => ({
+    subject: `URGENT: Tournament Application CANCELLED - ${cancellationData.eventTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px; background-color: #dc3545; padding: 20px; border-radius: 8px;">
+          <h2 style="color: #fff; margin: 0;">Malaysia Pickleball Association</h2>
+          <h3 style="color: #ffe0e0; margin: 10px 0 0 0;">Tournament Cancellation Notice</h3>
+        </div>
+
+        <div style="background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #721c24; margin-top: 0;">⚠️ Tournament Application Cancelled by Organizer</h4>
+          <p style="color: #721c24; margin-bottom: 0;">An approved tournament application has been cancelled by the organizer. Immediate attention may be required.</p>
+        </div>
+
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #2c5aa0; margin-top: 0;">Cancelled Tournament Details</h4>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold; width: 40%;">Application ID:</td>
+              <td style="padding: 8px 0;">${cancellationData.applicationId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Event Title:</td>
+              <td style="padding: 8px 0;">${cancellationData.eventTitle}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Organiser Name:</td>
+              <td style="padding: 8px 0;">${cancellationData.organiserName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Organiser Email:</td>
+              <td style="padding: 8px 0;">${cancellationData.organizerEmail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Event Date:</td>
+              <td style="padding: 8px 0;">${new Date(cancellationData.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} - ${new Date(cancellationData.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Location:</td>
+              <td style="padding: 8px 0;">${cancellationData.city}, ${cancellationData.state}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Venue:</td>
+              <td style="padding: 8px 0;">${cancellationData.venue || 'Not provided'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Cancellation Date:</td>
+              <td style="padding: 8px 0;">${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #856404; margin-top: 0;">📝 Reason for Cancellation</h4>
+          <p style="color: #856404; margin-bottom: 0; white-space: pre-wrap;">${cancellationData.cancellationReason}</p>
+        </div>
+
+        <div style="background-color: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #0056b3; margin-top: 0;">Recommended Actions</h4>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+            <li>Review the cancellation reason provided by the organizer</li>
+            <li>Update the sanctioned tournaments list if applicable</li>
+            <li>Remove any promotional materials for this event</li>
+            <li>Consider contacting the organizer for further clarification if needed</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.PORTAL_URL || 'https://portal.malaysiapickleball.my'}"
+             style="background-color: #2c5aa0; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+            Open Admin Dashboard
+          </a>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+          <p style="color: #666; font-size: 13px; margin: 0;">
+            This is an automated notification from the MPA Tournament Portal.<br>
+            Malaysia Pickleball Association<br>
+            Email: info@malaysiapickleball.my | Phone: +6011-16197471
+          </p>
+        </div>
+      </div>
+    `
+  }),
+
+  supportLetterGenerated: (applicationData, documentUrl) => ({
+    subject: 'Support Letter Generated - Malaysia Pickleball Association',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h2 style="color: #2c5aa0;">Malaysia Pickleball Association</h2>
+          <h3 style="color: #666;">Official Support Letter</h3>
+        </div>
+
+        <div style="background-color: #d4edda; border: 1px solid #c3e6cb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #155724; margin-top: 0;">📄 Your Support Letter is Ready!</h4>
+          <p><strong>Reference Number:</strong> ${applicationData.approvalRef}</p>
+          <p><strong>Tournament:</strong> ${applicationData.eventTitle}</p>
+          <p><strong>Organiser:</strong> ${applicationData.organiserName}</p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <p>Dear ${applicationData.organiserName},</p>
+          ${documentUrl
+            ? '<p>Your official Support Letter from the Malaysia Pickleball Association has been generated and is ready for download.</p>'
+            : '<p>Your official Support Letter from the Malaysia Pickleball Association has been generated and is attached to this email.</p>'
+          }
+          <p>This document serves as official endorsement from MPA for your tournament.</p>
+        </div>
+
+        ${documentUrl ? `
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${documentUrl}"
+             style="background-color: #28a745; color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold; font-size: 16px;">
+            📥 Download Support Letter
+          </a>
+        </div>
+        ` : `
+        <div style="background-color: #e7f3ff; border: 1px solid #b3d9ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+          <p style="margin: 0; color: #0056b3; font-weight: bold;">📎 Please find the Support Letter attached to this email</p>
+        </div>
+        `}
+
+        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="color: #856404; margin-top: 0;">Important Notes:</h4>
+          <ul style="margin-bottom: 0; line-height: 1.6;">
+            <li>Keep this document for your records</li>
+            <li>Present this letter when dealing with relevant authorities</li>
+            <li>This letter is valid only for the approved tournament</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+          <p style="color: #666; font-size: 14px;">
+            Malaysia Pickleball Association<br>
+            Email: info@malaysiapickleball.my<br>
+            Phone: +6011-16197471
+          </p>
+        </div>
+      </div>
+    `
   })
 };
 
@@ -1150,7 +1293,7 @@ const tournamentApplicationSchema = new mongoose.Schema({
   status: {
     type: String,
     default: 'Pending Review',
-    enum: ['Pending Review', 'Under Review', 'Approved', 'Rejected', 'More Info Required']
+    enum: ['Pending Review', 'Under Review', 'Approved', 'Rejected', 'More Info Required', 'Cancelled']
   },
   submissionDate: {
     type: Date,
@@ -1166,6 +1309,18 @@ const tournamentApplicationSchema = new mongoose.Schema({
     default: ''
   },
   requiredInfo: {
+    type: String,
+    default: ''
+  },
+  // Cancellation fields
+  cancellationReason: {
+    type: String,
+    default: ''
+  },
+  cancelledAt: {
+    type: Date
+  },
+  cancelledBy: {
     type: String,
     default: ''
   },
@@ -1189,6 +1344,12 @@ const tournamentApplicationSchema = new mongoose.Schema({
   approvedBy: {
     type: String,
     default: ''
+  },
+  // Support Letter PDF
+  supportLetterPdf: {
+    data: String,       // Base64 encoded PDF
+    fileName: String,
+    generatedAt: Date
   }
 }, {
   timestamps: true
@@ -4424,15 +4585,206 @@ app.patch('/api/applications/:id/status', async (req, res) => {
     if (status === 'Approved' && application.email) {
       const emailTemplate = emailTemplates.applicationApproved(application);
       const emailResult = await sendEmail(application.email, emailTemplate);
-      
+
       if (!emailResult.success) {
         console.error('Failed to send approval email:', emailResult.error);
         // Still return success for the status update, even if email fails
       }
-      
+
+      // Generate and send Support Letter with attachments
+      try {
+        const SUPPORT_LETTER_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw6im3bFlI8X-KBnz-7HFKSyXfIk8DK1i0KIieyGVEs-T44NnTrAv8V-rbt7g6B5giW/exec';
+
+        // Helper function to format date with ordinal suffix (e.g., "3rd December 2025")
+        const formatDateWithOrdinal = (date) => {
+          const d = new Date(date);
+          const day = d.getDate();
+          const month = d.toLocaleString('en-GB', { month: 'long' });
+          const year = d.getFullYear();
+          const ordinal = (day) => {
+            if (day > 3 && day < 21) return 'th';
+            switch (day % 10) {
+              case 1: return 'st';
+              case 2: return 'nd';
+              case 3: return 'rd';
+              default: return 'th';
+            }
+          };
+          return `${day}${ordinal(day)} ${month} ${year}`;
+        };
+
+        // Helper function to format date range
+        const formatDateRange = (startDate, endDate) => {
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+
+          if (start.toDateString() === end.toDateString()) {
+            return formatDateWithOrdinal(start);
+          }
+
+          const startDay = start.getDate();
+          const endDay = end.getDate();
+          const startOrdinal = (day) => {
+            if (day > 3 && day < 21) return 'th';
+            switch (day % 10) {
+              case 1: return 'st';
+              case 2: return 'nd';
+              case 3: return 'rd';
+              default: return 'th';
+            }
+          };
+
+          if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+            return `${startDay}${startOrdinal(startDay)} - ${endDay}${startOrdinal(endDay)} ${start.toLocaleString('en-GB', { month: 'long' })} ${start.getFullYear()}`;
+          }
+
+          return `${formatDateWithOrdinal(start)} - ${formatDateWithOrdinal(end)}`;
+        };
+
+        // Helper function to make HTTPS GET request (for following redirects)
+        const makeHttpsGet = (url) => {
+          return new Promise((resolve, reject) => {
+            const https = require('https');
+            https.get(url, (response) => {
+              let data = '';
+              response.on('data', chunk => data += chunk);
+              response.on('end', () => resolve(data));
+            }).on('error', reject);
+          });
+        };
+
+        // Helper function to make HTTPS POST request
+        const makeHttpsPost = (url, postData) => {
+          return new Promise((resolve, reject) => {
+            const https = require('https');
+            const urlObj = new URL(url);
+            const options = {
+              hostname: urlObj.hostname,
+              path: urlObj.pathname + urlObj.search,
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(postData)
+              }
+            };
+            const req = https.request(options, (response) => {
+              let data = '';
+              response.on('data', chunk => data += chunk);
+              response.on('end', () => resolve({ data, statusCode: response.statusCode }));
+            });
+            req.on('error', reject);
+            req.write(postData);
+            req.end();
+          });
+        };
+
+        const supportLetterPayload = {
+          Date: formatDateWithOrdinal(new Date()),
+          RefNumber: application.approvalRef || application.applicationId,
+          ApplicantName: application.organiserName,
+          CompanyName: application.organiserName,
+          CompanyRegNumber: application.registrationNo || 'N/A',
+          CompanyAddress: `${application.city}, ${application.state}`,
+          ApplicantEmail: application.email,
+          TournamentName: application.eventTitle,
+          TournamentDate: formatDateRange(application.eventStartDate, application.eventEndDate),
+          TournamentVenue: application.venue
+        };
+
+        console.log('📤 Sending Support Letter request to Google Apps Script...');
+
+        const postData = JSON.stringify(supportLetterPayload);
+        const response = await makeHttpsPost(SUPPORT_LETTER_WEBHOOK_URL, postData);
+
+        let supportLetterResult;
+
+        // Handle redirect from Google Apps Script
+        if (response.data.includes('Moved Temporarily') || response.data.includes('HREF=')) {
+          console.log('📄 Following redirect...');
+          const redirectMatch = response.data.match(/HREF="([^"]+)"/);
+          if (redirectMatch) {
+            const redirectUrl = redirectMatch[1].replace(/&amp;/g, '&');
+            const redirectData = await makeHttpsGet(redirectUrl);
+
+            if (redirectData.includes('Moved Temporarily')) {
+              const secondMatch = redirectData.match(/HREF="([^"]+)"/);
+              if (secondMatch) {
+                const finalUrl = secondMatch[1].replace(/&amp;/g, '&');
+                const finalData = await makeHttpsGet(finalUrl);
+                supportLetterResult = JSON.parse(finalData);
+              }
+            } else {
+              try {
+                supportLetterResult = JSON.parse(redirectData);
+              } catch (e) {
+                supportLetterResult = { ok: false, error: 'Could not parse redirect response' };
+              }
+            }
+          }
+        } else {
+          try {
+            supportLetterResult = JSON.parse(response.data);
+          } catch (e) {
+            supportLetterResult = { ok: false, error: 'Could not parse response' };
+          }
+        }
+
+        console.log('📄 Support Letter webhook response:', supportLetterResult?.ok ? 'Success' : 'Failed');
+
+        // If the Google Apps Script returns PDF base64, send email with attachment
+        if (supportLetterResult && supportLetterResult.ok && supportLetterResult.pdfBase64 && application.email) {
+          // Save PDF to application record using updateOne to avoid validation issues
+          await TournamentApplication.updateOne(
+            { _id: application._id },
+            {
+              $set: {
+                supportLetterPdf: {
+                  data: supportLetterResult.pdfBase64,
+                  fileName: supportLetterResult.fileName || `${application.approvalRef || application.applicationId} - Support Letter.pdf`,
+                  generatedAt: new Date()
+                }
+              }
+            }
+          );
+          console.log('💾 Support Letter PDF saved to database');
+
+          // Send email with PDF attachments (Support Letter + Safe Sport Code + Guidelines)
+          const supportLetterEmailTemplate = emailTemplates.supportLetterGenerated(application, null);
+          const attachments = [
+            {
+              filename: supportLetterResult.fileName || `${application.approvalRef || application.applicationId} - Support Letter.pdf`,
+              content: supportLetterResult.pdfBase64,
+              encoding: 'base64',
+              contentType: 'application/pdf'
+            },
+            {
+              filename: 'MPA Safe Sport Code.pdf',
+              path: path.join(__dirname, 'src/assets/documents/safesportcode.pdf'),
+              contentType: 'application/pdf'
+            },
+            {
+              filename: 'MPA Additional Guidelines for Pickleball Tournament.pdf',
+              path: path.join(__dirname, 'src/assets/documents/MPA Additional Guidelines for Pickleball TournamentR1a.pdf'),
+              contentType: 'application/pdf'
+            }
+          ];
+          const supportLetterEmailResult = await sendEmail(application.email, supportLetterEmailTemplate, attachments);
+
+          if (supportLetterEmailResult.success) {
+            console.log('📧 Support Letter email with attachments sent to:', application.email);
+          } else {
+            console.error('❌ Failed to send Support Letter email:', supportLetterEmailResult.error);
+          }
+        }
+
+        console.log('📄 Support Letter webhook completed');
+      } catch (supportLetterError) {
+        console.error('❌ Support Letter webhook failed:', supportLetterError.message);
+        // Don't fail the approval if support letter webhook fails
+      }
     }
-    
-    
+
+
     // Send rejection email if status is changed to 'Rejected'
     if (status === 'Rejected' && application.email && rejectionReason) {
       const emailTemplate = emailTemplates.applicationRejected(application, rejectionReason);
@@ -4562,6 +4914,211 @@ app.post('/api/applications/:id/approve', async (req, res) => {
       console.error('❌ Webhook failed:', webhookError.message);
     }
 
+    // Send Support Letter data to Google Apps Script
+    try {
+      const SUPPORT_LETTER_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw6im3bFlI8X-KBnz-7HFKSyXfIk8DK1i0KIieyGVEs-T44NnTrAv8V-rbt7g6B5giW/exec';
+
+      // Helper function to format date with ordinal suffix (e.g., "3rd December 2025")
+      const formatDateWithOrdinal = (date) => {
+        const d = new Date(date);
+        const day = d.getDate();
+        const month = d.toLocaleString('en-GB', { month: 'long' });
+        const year = d.getFullYear();
+        const ordinal = (day) => {
+          if (day > 3 && day < 21) return 'th';
+          switch (day % 10) {
+            case 1: return 'st';
+            case 2: return 'nd';
+            case 3: return 'rd';
+            default: return 'th';
+          }
+        };
+        return `${day}${ordinal(day)} ${month} ${year}`;
+      };
+
+      // Format tournament date range (e.g., "3rd - 5th January 2025")
+      const formatDateRange = (startDate, endDate) => {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const startDay = start.getDate();
+        const endDay = end.getDate();
+        const startMonth = start.toLocaleString('en-GB', { month: 'long' });
+        const endMonth = end.toLocaleString('en-GB', { month: 'long' });
+        const startYear = start.getFullYear();
+        const endYear = end.getFullYear();
+
+        const ordinal = (day) => {
+          if (day > 3 && day < 21) return 'th';
+          switch (day % 10) {
+            case 1: return 'st';
+            case 2: return 'nd';
+            case 3: return 'rd';
+            default: return 'th';
+          }
+        };
+
+        // Same month and year
+        if (startMonth === endMonth && startYear === endYear) {
+          return `${startDay}${ordinal(startDay)} - ${endDay}${ordinal(endDay)} ${endMonth} ${endYear}`;
+        }
+        // Different months, same year
+        if (startYear === endYear) {
+          return `${startDay}${ordinal(startDay)} ${startMonth} - ${endDay}${ordinal(endDay)} ${endMonth} ${endYear}`;
+        }
+        // Different years
+        return `${startDay}${ordinal(startDay)} ${startMonth} ${startYear} - ${endDay}${ordinal(endDay)} ${endMonth} ${endYear}`;
+      };
+
+      // Helper function to make HTTPS GET request
+      const makeHttpsGet = (url) => {
+        return new Promise((resolve, reject) => {
+          const https = require('https');
+          https.get(url, (response) => {
+            let data = '';
+            response.on('data', chunk => data += chunk);
+            response.on('end', () => resolve(data));
+          }).on('error', reject);
+        });
+      };
+
+      // Helper function to make HTTPS POST request
+      const makeHttpsPost = (url, postData) => {
+        return new Promise((resolve, reject) => {
+          const https = require('https');
+          const urlObj = new URL(url);
+          const options = {
+            hostname: urlObj.hostname,
+            path: urlObj.pathname + urlObj.search,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(postData)
+            }
+          };
+          const req = https.request(options, (response) => {
+            let data = '';
+            response.on('data', chunk => data += chunk);
+            response.on('end', () => resolve({ data, statusCode: response.statusCode }));
+          });
+          req.on('error', reject);
+          req.write(postData);
+          req.end();
+        });
+      };
+
+      const supportLetterPayload = {
+        Date: formatDateWithOrdinal(new Date()),
+        RefNumber: t.approvalRef,
+        ApplicantName: t.organiserName,
+        CompanyName: t.organiserName,
+        CompanyRegNumber: t.registrationNo,
+        CompanyAddress: `${t.city}, ${t.state}`,
+        ApplicantEmail: t.email,
+        TournamentName: t.eventTitle,
+        TournamentDate: formatDateRange(t.eventStartDate, t.eventEndDate),
+        TournamentVenue: t.venue
+      };
+
+      console.log('📤 Sending Support Letter request to Google Apps Script...');
+
+      // Call Google Apps Script using https module
+      const postData = JSON.stringify(supportLetterPayload);
+      const response = await makeHttpsPost(SUPPORT_LETTER_WEBHOOK_URL, postData);
+
+      let supportLetterResult;
+
+      // Handle redirect from Google Apps Script
+      if (response.data.includes('Moved Temporarily') || response.data.includes('HREF=')) {
+        console.log('📄 Following redirect...');
+        const redirectMatch = response.data.match(/HREF="([^"]+)"/);
+        if (redirectMatch) {
+          const redirectUrl = redirectMatch[1].replace(/&amp;/g, '&');
+          const redirectData = await makeHttpsGet(redirectUrl);
+
+          if (redirectData.includes('Moved Temporarily')) {
+            const secondMatch = redirectData.match(/HREF="([^"]+)"/);
+            if (secondMatch) {
+              const finalUrl = secondMatch[1].replace(/&amp;/g, '&');
+              const finalData = await makeHttpsGet(finalUrl);
+              supportLetterResult = JSON.parse(finalData);
+            }
+          } else {
+            try {
+              supportLetterResult = JSON.parse(redirectData);
+            } catch (e) {
+              console.log('📄 Could not parse redirect response as JSON');
+              supportLetterResult = { ok: false, error: 'Could not parse response' };
+            }
+          }
+        } else {
+          supportLetterResult = { ok: false, error: 'Unexpected response format' };
+        }
+      } else {
+        try {
+          supportLetterResult = JSON.parse(response.data);
+        } catch (e) {
+          supportLetterResult = { ok: false, error: 'Could not parse response' };
+        }
+      }
+
+      console.log('📄 Support Letter webhook response:', supportLetterResult?.ok ? 'Success' : 'Failed');
+
+      // If the Google Apps Script returns PDF base64, send email with attachment
+      if (supportLetterResult && supportLetterResult.ok && supportLetterResult.pdfBase64 && t.email) {
+        // Save PDF to tournament record
+        t.supportLetterPdf = {
+          data: supportLetterResult.pdfBase64,
+          fileName: supportLetterResult.fileName || `${t.approvalRef} - Support Letter.pdf`,
+          generatedAt: new Date()
+        };
+        await t.save();
+        console.log('💾 Support Letter PDF saved to database');
+
+        // Send email with PDF attachments (Support Letter + Safe Sport Code)
+        const emailTemplate = emailTemplates.supportLetterGenerated(t, null);
+        const attachments = [
+          {
+            filename: supportLetterResult.fileName || `${t.approvalRef} - Support Letter.pdf`,
+            content: supportLetterResult.pdfBase64,
+            encoding: 'base64',
+            contentType: 'application/pdf'
+          },
+          {
+            filename: 'MPA Safe Sport Code.pdf',
+            path: path.join(__dirname, 'src/assets/documents/safesportcode.pdf'),
+            contentType: 'application/pdf'
+          },
+          {
+            filename: 'MPA Additional Guidelines for Pickleball Tournament.pdf',
+            path: path.join(__dirname, 'src/assets/documents/MPA Additional Guidelines for Pickleball TournamentR1a.pdf'),
+            contentType: 'application/pdf'
+          }
+        ];
+        const emailResult = await sendEmail(t.email, emailTemplate, attachments);
+
+        if (emailResult.success) {
+          console.log('📧 Support Letter email with attachment sent to:', t.email);
+        } else {
+          console.error('❌ Failed to send Support Letter email:', emailResult.error);
+        }
+      } else if (supportLetterResult && supportLetterResult.ok && supportLetterResult.pdfUrl && t.email) {
+        // Fallback: If only URL is returned, send email with link
+        const emailTemplate = emailTemplates.supportLetterGenerated(t, supportLetterResult.pdfUrl);
+        const emailResult = await sendEmail(t.email, emailTemplate);
+
+        if (emailResult.success) {
+          console.log('📧 Support Letter email sent to:', t.email);
+        } else {
+          console.error('❌ Failed to send Support Letter email:', emailResult.error);
+        }
+      }
+
+      console.log('📄 Support Letter webhook completed successfully');
+    } catch (supportLetterError) {
+      console.error('❌ Support Letter webhook failed:', supportLetterError.message);
+      // Don't fail the approval if support letter webhook fails
+    }
+
     return res.json({
       ok: true,
       message: 'Approved & emailed',
@@ -4574,6 +5131,109 @@ app.post('/api/applications/:id/approve', async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: error.message || 'Failed to approve tournament'
+    });
+  }
+});
+
+// Cancel tournament application (organizer)
+app.post('/api/applications/:id/cancel', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason, organizerEmail, organizerName } = req.body;
+
+    if (!reason || reason.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide a detailed reason for cancellation (at least 10 characters)'
+      });
+    }
+
+    // Find the application
+    const application = await TournamentApplication.findById(id);
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        error: 'Application not found'
+      });
+    }
+
+    // Verify the application is approved
+    if (application.status !== 'Approved') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only approved applications can be cancelled using this endpoint'
+      });
+    }
+
+    // Update the application status to Cancelled
+    application.status = 'Cancelled';
+    application.cancellationReason = reason.trim();
+    application.cancelledAt = new Date();
+    application.cancelledBy = organizerEmail || application.email;
+    application.lastUpdated = new Date();
+
+    await application.save();
+
+    console.log(`📋 Application ${application.applicationId} cancelled by organizer`);
+
+    // Send cancellation email to admin
+    try {
+      const notificationSettings = await NotificationSettings.findOne();
+
+      if (notificationSettings && notificationSettings.enabled && notificationSettings.emailAddresses.length > 0) {
+        const cancellationData = {
+          applicationId: application.applicationId,
+          eventTitle: application.eventTitle,
+          organiserName: organizerName || application.organiserName,
+          organizerEmail: organizerEmail || application.email,
+          eventStartDate: application.eventStartDate,
+          eventEndDate: application.eventEndDate,
+          city: application.city,
+          state: application.state,
+          venue: application.venue,
+          cancellationReason: reason.trim()
+        };
+
+        const cancellationEmailTemplate = emailTemplates.applicationCancelled(cancellationData);
+
+        // Send to all configured admin emails
+        for (const emailConfig of notificationSettings.emailAddresses) {
+          try {
+            const emailResult = await sendEmail(emailConfig.email, cancellationEmailTemplate);
+            if (emailResult.success) {
+              console.log(`✅ Cancellation notification sent to: ${emailConfig.email}`);
+            } else {
+              console.error(`❌ Failed to send cancellation notification to ${emailConfig.email}:`, emailResult.error);
+            }
+          } catch (emailError) {
+            console.error(`❌ Error sending cancellation notification to ${emailConfig.email}:`, emailError);
+          }
+        }
+      } else {
+        console.log('ℹ️ Admin notifications are disabled or no email addresses configured');
+      }
+    } catch (emailError) {
+      console.error('❌ Error sending cancellation email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.json({
+      success: true,
+      message: 'Application cancelled successfully',
+      application: {
+        applicationId: application.applicationId,
+        status: application.status,
+        cancellationReason: application.cancellationReason,
+        cancelledAt: application.cancelledAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Error cancelling application:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to cancel application'
     });
   }
 });
@@ -7524,6 +8184,180 @@ async function initializeDefaultAssessmentForm() {
     console.error('Error initializing default assessment form:', error);
   }
 }
+
+// Test Support Letter endpoint (for testing purposes only)
+app.post('/api/test-support-letter', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const testEmail = email || 'ariffinanuar@gmail.com';
+
+    console.log('🧪 Testing Support Letter generation and email...');
+
+    const SUPPORT_LETTER_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw6im3bFlI8X-KBnz-7HFKSyXfIk8DK1i0KIieyGVEs-T44NnTrAv8V-rbt7g6B5giW/exec';
+
+    // Helper function to format date with ordinal suffix
+    const formatDateWithOrdinal = (date) => {
+      const d = new Date(date);
+      const day = d.getDate();
+      const month = d.toLocaleString('en-GB', { month: 'long' });
+      const year = d.getFullYear();
+      const ordinal = (day) => {
+        if (day > 3 && day < 21) return 'th';
+        switch (day % 10) {
+          case 1: return 'st';
+          case 2: return 'nd';
+          case 3: return 'rd';
+          default: return 'th';
+        }
+      };
+      return `${day}${ordinal(day)} ${month} ${year}`;
+    };
+
+    const testPayload = {
+      Date: formatDateWithOrdinal(new Date()),
+      RefNumber: 'MPA/2025/TEST-EMAIL',
+      ApplicantName: 'Ariffin Anuar',
+      CompanyName: 'Test Tournament Organizer',
+      CompanyRegNumber: '123456-A',
+      CompanyAddress: 'Kuala Lumpur, Selangor',
+      ApplicantEmail: testEmail,
+      TournamentName: 'Test Pickleball Championship 2025',
+      TournamentDate: '15th - 17th December 2025',
+      TournamentVenue: 'Axiata Arena, Bukit Jalil'
+    };
+
+    console.log('📤 Sending test request to Google Apps Script...');
+
+    // Helper function to make HTTPS request
+    const makeRequest = (url) => {
+      return new Promise((resolve, reject) => {
+        const https = require('https');
+        https.get(url, (response) => {
+          let data = '';
+          response.on('data', chunk => data += chunk);
+          response.on('end', () => resolve(data));
+        }).on('error', reject);
+      });
+    };
+
+    // Helper function to make HTTPS POST request
+    const makePostRequest = (url, postData) => {
+      return new Promise((resolve, reject) => {
+        const https = require('https');
+        const urlObj = new URL(url);
+        const options = {
+          hostname: urlObj.hostname,
+          path: urlObj.pathname + urlObj.search,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+          }
+        };
+        const req = https.request(options, (response) => {
+          let data = '';
+          response.on('data', chunk => data += chunk);
+          response.on('end', () => resolve({ data, headers: response.headers, statusCode: response.statusCode }));
+        });
+        req.on('error', reject);
+        req.write(postData);
+        req.end();
+      });
+    };
+
+    // Call Google Apps Script
+    const postData = JSON.stringify(testPayload);
+    const response = await makePostRequest(SUPPORT_LETTER_WEBHOOK_URL, postData);
+
+    let supportLetterResult;
+
+    // Handle redirect
+    if (response.data.includes('Moved Temporarily') || response.data.includes('HREF=')) {
+      console.log('📄 Following redirect...');
+      const redirectMatch = response.data.match(/HREF="([^"]+)"/);
+      if (redirectMatch) {
+        const redirectUrl = redirectMatch[1].replace(/&amp;/g, '&');
+        const redirectData = await makeRequest(redirectUrl);
+
+        if (redirectData.includes('Moved Temporarily')) {
+          const secondMatch = redirectData.match(/HREF="([^"]+)"/);
+          if (secondMatch) {
+            const finalUrl = secondMatch[1].replace(/&amp;/g, '&');
+            const finalData = await makeRequest(finalUrl);
+            supportLetterResult = JSON.parse(finalData);
+          }
+        } else {
+          supportLetterResult = JSON.parse(redirectData);
+        }
+      }
+    } else {
+      supportLetterResult = JSON.parse(response.data);
+    }
+
+    console.log('📄 Support Letter result:', supportLetterResult.ok ? 'Success' : 'Failed');
+
+    if (supportLetterResult.ok && supportLetterResult.pdfBase64) {
+      // Create mock tournament data for email template
+      const mockTournament = {
+        approvalRef: testPayload.RefNumber,
+        eventTitle: testPayload.TournamentName,
+        organiserName: testPayload.ApplicantName
+      };
+
+      // Send email with PDF attachments (Support Letter + Safe Sport Code)
+      const emailTemplate = emailTemplates.supportLetterGenerated(mockTournament, null);
+      const attachments = [
+        {
+          filename: `${testPayload.RefNumber} - Support Letter.pdf`,
+          content: supportLetterResult.pdfBase64,
+          encoding: 'base64',
+          contentType: 'application/pdf'
+        },
+        {
+          filename: 'MPA Safe Sport Code.pdf',
+          path: path.join(__dirname, 'src/assets/documents/safesportcode.pdf'),
+          contentType: 'application/pdf'
+        },
+        {
+          filename: 'MPA Additional Guidelines for Pickleball Tournament.pdf',
+          path: path.join(__dirname, 'src/assets/documents/MPA Additional Guidelines for Pickleball TournamentR1a.pdf'),
+          contentType: 'application/pdf'
+        }
+      ];
+
+      console.log('📧 Sending email with attachments to:', testEmail);
+      const emailResult = await sendEmail(testEmail, emailTemplate, attachments);
+
+      if (emailResult.success) {
+        console.log('✅ Test email sent successfully!');
+        return res.json({
+          ok: true,
+          message: 'Support Letter generated and email sent successfully!',
+          email: testEmail,
+          pdfSize: supportLetterResult.pdfBase64.length
+        });
+      } else {
+        console.error('❌ Email failed:', emailResult.error);
+        return res.status(500).json({
+          ok: false,
+          error: 'Email sending failed: ' + emailResult.error
+        });
+      }
+    } else {
+      return res.status(500).json({
+        ok: false,
+        error: supportLetterResult.error || 'Failed to generate Support Letter'
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Test Support Letter error:', error);
+    return res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
 
 // Start server
 server.listen(PORT, async () => {
