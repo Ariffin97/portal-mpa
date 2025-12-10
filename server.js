@@ -31,6 +31,7 @@ const jwt = require('jsonwebtoken');
 const fetch = require('node-fetch');
 
 const app = express();
+app.enable('trust proxy');
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -51,6 +52,15 @@ io.on('connection', (socket) => {
 
 // Middleware
 app.use(cors());
+
+// Redirect non-www to www
+app.get('*', (req, res, next) => {
+  if (req.headers.host === 'mpaportal.com') {
+    return res.redirect(301, 'https://www.mpaportal.com');
+  }
+  next();
+});
+
 app.use(compression());
 app.use(express.json());
 
@@ -4678,13 +4688,41 @@ app.patch('/api/applications/:id/status', async (req, res) => {
           });
         };
 
+        // Look up organization to get full company address, registration number, and applicant name
+        let companyAddress = `${application.city}, ${application.state}`;
+        let companyRegNumber = 'N/A';
+        let applicantName = application.organiserName;
+        if (application.organiserName) {
+          const org = await Organization.findOne({ organizationName: application.organiserName });
+          console.log('📋 Organization lookup for:', application.organiserName, '- Found:', org ? 'Yes' : 'No');
+          if (org) {
+            if (org.addressLine1) {
+              // Filter out null, undefined, and empty strings then join with comma
+              const addressParts = [];
+              if (org.addressLine1 && org.addressLine1.trim()) addressParts.push(org.addressLine1.trim());
+              if (org.addressLine2 && org.addressLine2.trim()) addressParts.push(org.addressLine2.trim());
+              if (org.city && org.city.trim()) addressParts.push(org.city.trim());
+              if (org.postcode && org.postcode.trim()) addressParts.push(org.postcode.trim());
+              if (org.state && org.state.trim()) addressParts.push(org.state.trim());
+              companyAddress = addressParts.join(', ');
+            }
+            if (org.registrationNo) {
+              companyRegNumber = org.registrationNo;
+            }
+            if (org.applicantFullName) {
+              applicantName = org.applicantFullName;
+            }
+            console.log('📋 Using org data - RegNo:', companyRegNumber, 'Address:', companyAddress, 'Applicant:', applicantName);
+          }
+        }
+
         const supportLetterPayload = {
           Date: formatDateWithOrdinal(new Date()),
           RefNumber: application.approvalRef || application.applicationId,
-          ApplicantName: application.organiserName,
+          ApplicantName: applicantName,
           CompanyName: application.organiserName,
-          CompanyRegNumber: application.registrationNo || 'N/A',
-          CompanyAddress: `${application.city}, ${application.state}`,
+          CompanyRegNumber: companyRegNumber,
+          CompanyAddress: companyAddress,
           ApplicantEmail: application.email,
           TournamentName: application.eventTitle,
           TournamentDate: formatDateRange(application.eventStartDate, application.eventEndDate),
@@ -5006,13 +5044,41 @@ app.post('/api/applications/:id/approve', async (req, res) => {
         });
       };
 
+      // Look up organization to get full company address, registration number, and applicant name
+      let companyAddress = `${t.city}, ${t.state}`;
+      let companyRegNumber = 'N/A';
+      let applicantName = t.organiserName;
+      if (t.organiserName) {
+        const org = await Organization.findOne({ organizationName: t.organiserName });
+        console.log('📋 Organization lookup for:', t.organiserName, '- Found:', org ? 'Yes' : 'No');
+        if (org) {
+          if (org.addressLine1) {
+            // Filter out null, undefined, and empty strings then join with comma
+            const addressParts = [];
+            if (org.addressLine1 && org.addressLine1.trim()) addressParts.push(org.addressLine1.trim());
+            if (org.addressLine2 && org.addressLine2.trim()) addressParts.push(org.addressLine2.trim());
+            if (org.city && org.city.trim()) addressParts.push(org.city.trim());
+            if (org.postcode && org.postcode.trim()) addressParts.push(org.postcode.trim());
+            if (org.state && org.state.trim()) addressParts.push(org.state.trim());
+            companyAddress = addressParts.join(', ');
+          }
+          if (org.registrationNo) {
+            companyRegNumber = org.registrationNo;
+          }
+          if (org.applicantFullName) {
+            applicantName = org.applicantFullName;
+          }
+          console.log('📋 Using org data - RegNo:', companyRegNumber, 'Address:', companyAddress, 'Applicant:', applicantName);
+        }
+      }
+
       const supportLetterPayload = {
         Date: formatDateWithOrdinal(new Date()),
         RefNumber: t.approvalRef,
-        ApplicantName: t.organiserName,
+        ApplicantName: applicantName,
         CompanyName: t.organiserName,
-        CompanyRegNumber: t.registrationNo,
-        CompanyAddress: `${t.city}, ${t.state}`,
+        CompanyRegNumber: companyRegNumber,
+        CompanyAddress: companyAddress,
         ApplicantEmail: t.email,
         TournamentName: t.eventTitle,
         TournamentDate: formatDateRange(t.eventStartDate, t.eventEndDate),
