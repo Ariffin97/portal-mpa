@@ -42,7 +42,26 @@ const AdminDashboard = ({ setCurrentPage }) => {
   const [showEditAdminModal, setShowEditAdminModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [resetPasswordId, setResetPasswordId] = useState(null);
-  
+
+  // State User Management States
+  const [stateUsers, setStateUsers] = useState([]);
+  const [showCreateStateUserModal, setShowCreateStateUserModal] = useState(false);
+  const [showEditStateUserModal, setShowEditStateUserModal] = useState(false);
+  const [selectedStateUser, setSelectedStateUser] = useState(null);
+  const [newStateUserData, setNewStateUserData] = useState({
+    username: '',
+    password: '',
+    confirmPassword: '',
+    email: '',
+    stateName: '',
+    stateCode: '',
+    contactPerson: '',
+    phone: ''
+  });
+
+  // Registered states list (states with registered state users)
+  const [registeredStates, setRegisteredStates] = useState([]);
+
   // Create Account States
   const [newAccountData, setNewAccountData] = useState({
     username: '',
@@ -814,7 +833,44 @@ const AdminDashboard = ({ setCurrentPage }) => {
     loadTournamentSoftware();
     loadAdminUsers();
     loadTournamentUpdates();
+    loadRegisteredStates();
   }, []);
+
+  // Load list of registered states (states with active state users)
+  const loadRegisteredStates = async () => {
+    try {
+      const response = await fetch(`${apiService.baseURL}/state/registered-states`);
+      const data = await response.json();
+      console.log('Registered states API response:', data);
+      if (data.success && data.registeredStates) {
+        setRegisteredStates(data.registeredStates);
+        console.log('Registered states loaded:', data.registeredStates);
+      } else {
+        console.warn('No registered states found or API error');
+      }
+    } catch (error) {
+      console.error('Failed to load registered states:', error);
+    }
+  };
+
+  // Check if a state has a registered state user
+  const isStateRegistered = (stateName) => {
+    if (!stateName) return false;
+    const normalizedState = stateName.toLowerCase().trim();
+    const result = registeredStates.includes(normalizedState);
+    // Debug log - remove after testing
+    if (!result && registeredStates.length > 0) {
+      console.log(`State check failed: "${normalizedState}" not in [${registeredStates.join(', ')}]`);
+    }
+    return result;
+  };
+
+  // Check if application requires state approval (District, Divisional, State levels)
+  const requiresStateApproval = (app) => {
+    if (!app || !app.classification) return false;
+    const level = app.classification.toLowerCase();
+    return level === 'district' || level === 'divisional' || level === 'state';
+  };
 
   // Role-based access control - redirect assessment_admin to assessments view
   useEffect(() => {
@@ -830,6 +886,13 @@ const AdminDashboard = ({ setCurrentPage }) => {
   useEffect(() => {
     if (currentView === 'settings') {
       fetchNotificationSettings();
+    }
+  }, [currentView]);
+
+  // Fetch state users when state-users view is opened
+  useEffect(() => {
+    if (currentView === 'state-users') {
+      loadStateUsers();
     }
   }, [currentView]);
 
@@ -1564,7 +1627,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
       case 'super_admin':
         return true; // Super admin has access to everything
       case 'admin':
-        return section !== 'admin_management'; // Admin has access except admin management
+        // Admin has access except admin management
+        return section !== 'admin_management';
       case 'assessment_admin':
         // Assessment admin only has access to assessment-related features
         return ['assessments', 'assessment-management', 'assessment-list', 'assessment-statistics', 'saved-forms'].includes(section);
@@ -4592,6 +4656,404 @@ const AdminDashboard = ({ setCurrentPage }) => {
     </div>
   );
 
+  // State Users Management Functions
+  const loadStateUsers = async () => {
+    try {
+      const response = await apiService.getAllStateUsers();
+      if (response.success) {
+        setStateUsers(response.users);
+      }
+    } catch (error) {
+      console.error('Error loading state users:', error);
+    }
+  };
+
+  const handleCreateStateUser = async () => {
+    // Validation
+    if (!newStateUserData.username.trim()) {
+      alert('Username is required.');
+      return;
+    }
+    if (!newStateUserData.password.trim()) {
+      alert('Password is required.');
+      return;
+    }
+    if (newStateUserData.password !== newStateUserData.confirmPassword) {
+      alert('Passwords do not match.');
+      return;
+    }
+    if (!newStateUserData.stateName.trim()) {
+      alert('State name is required.');
+      return;
+    }
+
+    try {
+      const response = await apiService.createStateUser({
+        username: newStateUserData.username.trim(),
+        password: newStateUserData.password.trim(),
+        email: newStateUserData.email.trim() || null,
+        stateName: newStateUserData.stateName.trim(),
+        stateCode: newStateUserData.stateCode.trim() || null,
+        contactPerson: newStateUserData.contactPerson.trim() || null,
+        phone: newStateUserData.phone.trim() || null
+      });
+
+      if (response.success) {
+        alert('State user created successfully!');
+        setNewStateUserData({
+          username: '',
+          password: '',
+          confirmPassword: '',
+          email: '',
+          stateName: '',
+          stateCode: '',
+          contactPerson: '',
+          phone: ''
+        });
+        setShowCreateStateUserModal(false);
+        loadStateUsers();
+      } else {
+        alert(response.message || 'Failed to create state user');
+      }
+    } catch (error) {
+      console.error('Error creating state user:', error);
+      alert(error.message || 'Failed to create state user');
+    }
+  };
+
+  const handleUpdateStateUser = async () => {
+    if (!selectedStateUser) return;
+
+    try {
+      const response = await apiService.updateStateUser(selectedStateUser._id, {
+        username: selectedStateUser.username,
+        email: selectedStateUser.email,
+        stateName: selectedStateUser.stateName,
+        stateCode: selectedStateUser.stateCode,
+        contactPerson: selectedStateUser.contactPerson,
+        phone: selectedStateUser.phone
+      });
+
+      if (response.success) {
+        alert('State user updated successfully!');
+        setShowEditStateUserModal(false);
+        setSelectedStateUser(null);
+        loadStateUsers();
+      } else {
+        alert(response.message || 'Failed to update state user');
+      }
+    } catch (error) {
+      console.error('Error updating state user:', error);
+      alert(error.message || 'Failed to update state user');
+    }
+  };
+
+  const handleToggleStateUserStatus = async (userId, currentStatus) => {
+    const newStatus = currentStatus === 'active' ? 'disabled' : 'active';
+    try {
+      const response = await apiService.updateStateUserStatus(userId, newStatus);
+      if (response.success) {
+        loadStateUsers();
+      } else {
+        alert(response.message || 'Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating state user status:', error);
+      alert(error.message || 'Failed to update status');
+    }
+  };
+
+  const handleDeleteStateUser = async (userId) => {
+    if (!window.confirm('Are you sure you want to delete this state user?')) return;
+
+    try {
+      const response = await apiService.deleteStateUser(userId);
+      if (response.success) {
+        alert('State user deleted successfully!');
+        loadStateUsers();
+      } else {
+        alert(response.message || 'Failed to delete state user');
+      }
+    } catch (error) {
+      console.error('Error deleting state user:', error);
+      alert(error.message || 'Failed to delete state user');
+    }
+  };
+
+  const malaysianStates = [
+    'Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan', 'Pahang',
+    'Penang', 'Perak', 'Perlis', 'Sabah', 'Sarawak', 'Selangor',
+    'Terengganu', 'Kuala Lumpur', 'Putrajaya', 'Labuan'
+  ];
+
+  const renderStateUsers = () => (
+    <div className="state-users-management">
+      {/* Header */}
+      <div className="state-users-header">
+        <div className="header-content">
+          <h1>State Users Management</h1>
+          <p>Manage state association portal access</p>
+        </div>
+        <button className="create-btn" onClick={() => { loadStateUsers(); setShowCreateStateUserModal(true); }}>
+          + Add State User
+        </button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="state-users-stats">
+        <div className="stat-card">
+          <div className="stat-value">{stateUsers.length}</div>
+          <div className="stat-label">Total Users</div>
+        </div>
+        <div className="stat-card active">
+          <div className="stat-value">{stateUsers.filter(u => u.status === 'active').length}</div>
+          <div className="stat-label">Active</div>
+        </div>
+        <div className="stat-card inactive">
+          <div className="stat-value">{stateUsers.filter(u => u.status !== 'active').length}</div>
+          <div className="stat-label">Disabled</div>
+        </div>
+      </div>
+
+      {/* Users Grid */}
+      <div className="state-users-grid">
+        {stateUsers.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">👥</div>
+            <h3>No State Users</h3>
+            <p>Click "Add State User" to create the first state association account.</p>
+          </div>
+        ) : (
+          stateUsers.map((user) => (
+            <div key={user._id} className={`state-user-card ${user.status !== 'active' ? 'disabled' : ''}`}>
+              <div className="card-header">
+                <div className="state-avatar">{user.stateName?.charAt(0) || 'S'}</div>
+                <div className="state-info">
+                  <h3>{user.stateName}</h3>
+                  <span className="username">@{user.username}</span>
+                </div>
+                <span className={`status-badge ${user.status === 'active' ? 'active' : 'disabled'}`}>
+                  {user.status === 'active' ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+              <div className="card-body">
+                <div className="info-row">
+                  <span className="label">Email</span>
+                  <span className="value">{user.email || '-'}</span>
+                </div>
+                <div className="info-row">
+                  <span className="label">Contact</span>
+                  <span className="value">{user.contactPerson || '-'}</span>
+                </div>
+                <div className="info-row">
+                  <span className="label">Phone</span>
+                  <span className="value">{user.phone || '-'}</span>
+                </div>
+                {user.lastLogin && (
+                  <div className="info-row">
+                    <span className="label">Last Login</span>
+                    <span className="value">{new Date(user.lastLogin).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+              <div className="card-actions">
+                <button className="btn-edit" onClick={() => { setSelectedStateUser(user); setShowEditStateUserModal(true); }}>
+                  Edit
+                </button>
+                <button
+                  className={`btn-toggle ${user.status === 'active' ? 'disable' : 'enable'}`}
+                  onClick={() => handleToggleStateUserStatus(user._id, user.status)}
+                >
+                  {user.status === 'active' ? 'Disable' : 'Enable'}
+                </button>
+                <button className="btn-delete" onClick={() => handleDeleteStateUser(user._id)}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Create State User Modal */}
+      {showCreateStateUserModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateStateUserModal(false)}>
+          <div className="state-user-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Add State User</h2>
+              <button className="close-btn" onClick={() => setShowCreateStateUserModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Username <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="Enter username"
+                    value={newStateUserData.username}
+                    onChange={(e) => setNewStateUserData({ ...newStateUserData, username: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>State <span className="required">*</span></label>
+                  <select
+                    value={newStateUserData.stateName}
+                    onChange={(e) => setNewStateUserData({ ...newStateUserData, stateName: e.target.value })}
+                  >
+                    <option value="">Select State</option>
+                    {malaysianStates.map((state) => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Password <span className="required">*</span></label>
+                  <input
+                    type="password"
+                    placeholder="Enter password"
+                    value={newStateUserData.password}
+                    onChange={(e) => setNewStateUserData({ ...newStateUserData, password: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Confirm Password <span className="required">*</span></label>
+                  <input
+                    type="password"
+                    placeholder="Confirm password"
+                    value={newStateUserData.confirmPassword}
+                    onChange={(e) => setNewStateUserData({ ...newStateUserData, confirmPassword: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    placeholder="Enter email"
+                    value={newStateUserData.email}
+                    onChange={(e) => setNewStateUserData({ ...newStateUserData, email: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>State Code</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., SWK"
+                    value={newStateUserData.stateCode}
+                    onChange={(e) => setNewStateUserData({ ...newStateUserData, stateCode: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Contact Person</label>
+                  <input
+                    type="text"
+                    placeholder="Enter name"
+                    value={newStateUserData.contactPerson}
+                    onChange={(e) => setNewStateUserData({ ...newStateUserData, contactPerson: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="Enter phone"
+                    value={newStateUserData.phone}
+                    onChange={(e) => setNewStateUserData({ ...newStateUserData, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setShowCreateStateUserModal(false)}>Cancel</button>
+              <button className="btn-submit" onClick={handleCreateStateUser}>Create User</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit State User Modal */}
+      {showEditStateUserModal && selectedStateUser && (
+        <div className="modal-overlay" onClick={() => setShowEditStateUserModal(false)}>
+          <div className="state-user-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header edit">
+              <h2>Edit State User</h2>
+              <button className="close-btn" onClick={() => setShowEditStateUserModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Username <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    value={selectedStateUser.username}
+                    onChange={(e) => setSelectedStateUser({ ...selectedStateUser, username: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>State <span className="required">*</span></label>
+                  <select
+                    value={selectedStateUser.stateName}
+                    onChange={(e) => setSelectedStateUser({ ...selectedStateUser, stateName: e.target.value })}
+                  >
+                    <option value="">Select State</option>
+                    {malaysianStates.map((state) => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    value={selectedStateUser.email || ''}
+                    onChange={(e) => setSelectedStateUser({ ...selectedStateUser, email: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>State Code</label>
+                  <input
+                    type="text"
+                    value={selectedStateUser.stateCode || ''}
+                    onChange={(e) => setSelectedStateUser({ ...selectedStateUser, stateCode: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Contact Person</label>
+                  <input
+                    type="text"
+                    value={selectedStateUser.contactPerson || ''}
+                    onChange={(e) => setSelectedStateUser({ ...selectedStateUser, contactPerson: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Phone</label>
+                  <input
+                    type="tel"
+                    value={selectedStateUser.phone || ''}
+                    onChange={(e) => setSelectedStateUser({ ...selectedStateUser, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setShowEditStateUserModal(false)}>Cancel</button>
+              <button className="btn-submit edit" onClick={handleUpdateStateUser}>Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   const renderSettings = () => (
     <div className="settings-view">
       <div className="dashboard-header">
@@ -6315,6 +6777,26 @@ const AdminDashboard = ({ setCurrentPage }) => {
             )}
           </div>
           )}
+          {hasAccessTo('state-users') && (
+            <button
+              className={`sidebar-nav-item ${currentView === 'state-users' ? 'active' : ''}`}
+              onClick={() => setCurrentView('state-users')}
+              style={{
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: currentView === 'state-users' ? '#fff' : '#ccc',
+                cursor: 'pointer',
+                padding: '12px 20px',
+                width: '100%',
+                textAlign: 'left',
+                fontSize: '16px',
+                fontWeight: '500',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              State Users
+            </button>
+          )}
           {hasAccessTo('settings') && (
             <button
               className={`sidebar-nav-item ${currentView === 'settings' ? 'active' : ''}`}
@@ -7174,7 +7656,7 @@ Settings
                                 <div className="table-actions">
                                   {selectedStatusFilter === 'ApprovedTournaments' ? (
                                     <>
-                                      <button 
+                                      <button
                                         onClick={() => showApplicationDetails(app)}
                                         className="view-btn-table"
                                         title="View Tournament Details"
@@ -7187,18 +7669,39 @@ Settings
                                     </>
                                   ) : (
                                     <>
-                                      <select
-                                        value={app.status}
-                                        onChange={(e) => updateApplicationStatus(appId, e.target.value)}
-                                        className="status-select-table"
-                                        disabled={app.status === 'Rejected'}
-                                      >
-                                        <option value="Pending Review">Pending Review</option>
-                                        <option value="Under Review">Under Review</option>
-                                        <option value="Approved">Approved</option>
-                                        <option value="Rejected">Rejected</option>
-                                        <option value="More Info Required">More Info Required</option>
-                                      </select>
+                                      {/* Check if District/Divisional/State application with registered state - show badge instead of dropdown */}
+                                      {requiresStateApproval(app) && isStateRegistered(app.state) ? (
+                                        <span
+                                          className="state-approval-badge"
+                                          title={`${app.classification} level - managed by ${app.state} State Association`}
+                                          style={{
+                                            backgroundColor: app.status === 'Approved' ? '#d1fae5' :
+                                                           app.status === 'Rejected' ? '#fee2e2' : '#fef3c7',
+                                            color: app.status === 'Approved' ? '#065f46' :
+                                                  app.status === 'Rejected' ? '#991b1b' : '#92400e',
+                                            padding: '4px 10px',
+                                            borderRadius: '4px',
+                                            fontSize: '11px',
+                                            fontWeight: '600',
+                                            marginRight: '8px'
+                                          }}
+                                        >
+                                          {app.state}: {app.status}
+                                        </span>
+                                      ) : (
+                                        <select
+                                          value={app.status}
+                                          onChange={(e) => updateApplicationStatus(appId, e.target.value)}
+                                          className="status-select-table"
+                                          disabled={app.status === 'Rejected'}
+                                        >
+                                          <option value="Pending Review">Pending Review</option>
+                                          <option value="Under Review">Under Review</option>
+                                          <option value="Approved">Approved</option>
+                                          <option value="Rejected">Rejected</option>
+                                          <option value="More Info Required">More Info Required</option>
+                                        </select>
+                                      )}
                                       <button
                                         onClick={() => showApplicationDetails(app)}
                                         className="view-btn-table"
@@ -8647,6 +9150,7 @@ Settings
         {currentView === 'assessment-list' && renderAssessmentList()}
         {currentView === 'assessment-statistics' && renderAssessmentStatistics()}
         {currentView === 'saved-forms' && renderSavedForms()}
+        {currentView === 'state-users' && renderStateUsers()}
         {currentView === 'settings' && renderSettings()}
       </div>
 
@@ -8966,8 +9470,8 @@ Settings
                 <div className="detail-grid">
                   <div className="detail-item">
                     <label>Current Status:</label>
-                    <span 
-                      className="status-badge-detail" 
+                    <span
+                      className="status-badge-detail"
                       style={{ backgroundColor: getStatusColor(selectedApplication.status) }}
                     >
                       {selectedApplication.status}
@@ -8978,6 +9482,69 @@ Settings
                     <span>{formatDate(selectedApplication.submissionDate)}</span>
                   </div>
                 </div>
+                {/* Notice for District/Divisional/State applications with registered state */}
+                {requiresStateApproval(selectedApplication) &&
+                 isStateRegistered(selectedApplication.state) &&
+                 (selectedApplication.status === 'Pending Review' || selectedApplication.status === 'Under Review') && (
+                  <div style={{
+                    marginTop: '15px',
+                    padding: '15px',
+                    backgroundColor: '#fef3c7',
+                    borderRadius: '8px',
+                    borderLeft: '4px solid #f59e0b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <span style={{ fontSize: '24px' }}>🏛️</span>
+                    <div>
+                      <strong style={{ color: '#92400e', display: 'block', marginBottom: '4px' }}>{selectedApplication.classification} Level Tournament</strong>
+                      <span style={{ color: '#78350f', fontSize: '14px' }}>
+                        This application requires approval from the <strong>{selectedApplication.state}</strong> State Association. MPA can only view the status.
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {/* Notice for District/Divisional/State applications WITHOUT registered state */}
+                {requiresStateApproval(selectedApplication) &&
+                 !isStateRegistered(selectedApplication.state) &&
+                 (selectedApplication.status === 'Pending Review' || selectedApplication.status === 'Under Review') && (
+                  <div style={{
+                    marginTop: '15px',
+                    padding: '15px',
+                    backgroundColor: '#dbeafe',
+                    borderRadius: '8px',
+                    borderLeft: '4px solid #3b82f6',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <span style={{ fontSize: '24px' }}>ℹ️</span>
+                    <div>
+                      <strong style={{ color: '#1e40af', display: 'block', marginBottom: '4px' }}>{selectedApplication.classification} Level Tournament (No State Portal)</strong>
+                      <span style={{ color: '#1e3a8a', fontSize: '14px' }}>
+                        <strong>{selectedApplication.state}</strong> does not have a registered State Association portal. MPA admin can approve/reject this application.
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {/* Show state approval info if approved by state */}
+                {selectedApplication.stateApprovedBy && (
+                  <div style={{
+                    marginTop: '15px',
+                    padding: '15px',
+                    backgroundColor: '#d1fae5',
+                    borderRadius: '8px',
+                    borderLeft: '4px solid #10b981'
+                  }}>
+                    <strong style={{ color: '#065f46' }}>✓ Approved by {selectedApplication.stateApprovedBy} State Association</strong>
+                    {selectedApplication.stateApprovedDate && (
+                      <span style={{ color: '#047857', fontSize: '14px', display: 'block', marginTop: '4px' }}>
+                        on {formatDate(selectedApplication.stateApprovedDate)}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
                 </>
               ) : (

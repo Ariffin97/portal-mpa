@@ -1,7 +1,7 @@
-[dotenv@17.2.1] injecting env (11) from .env.local -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[dotenv@17.2.1] injecting env (12) from .env.local -- tip: ⚙️  suppress all logs with { quiet: true }
 📁 Using .env.local (local development mode)
 🔍 Cloudinary env check: { CLOUD_NAME: '✓ Set', API_KEY: '✓ Set', API_SECRET: '✓ Set' }
-[dotenv@17.2.1] injecting env (3) from .env -- tip: 📡 version env with Radar: https://dotenvx.com/radar
+[dotenv@17.2.1] injecting env (3) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
 🏠 Using LOCAL MongoDB for development
 🏠 Using LOCAL MongoDB for development
 
@@ -12,34 +12,11 @@ Safe Mode: ✅ ON (localhost only)
 Database: mongodb://localhost:27017/malaysia-pickleball-portal-dev
 ===============================
 
+(node:11054) [MONGOOSE] Warning: Duplicate schema index on {"applicationId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
 Server is running on port 5001
+WebSocket server ready
 ✅ Connected to MongoDB (local)
 ✅ Default GNRAL assessment form already exists
-Forgot password request for email: test@example.com
-Organization not found for email: test@example.com
-Forgot password request for email: ariffinanuar@gmail.com
-Generated temporary password for: Fenix Digital
-Temporary password email sent to: ariffinanuar@gmail.com
-Login attempt for email: ariffinanuar@gmail.com
-Organization found: Fenix Digital
-Stored password: lfhv9e6W#v2g
-Provided password: lfhv9e6W#v2g
-Passwords match: true
-Change password request for organization ID: MPO87218
-Password changed successfully for: Fenix Digital
-Forgot password request for email: posha@gmail.com
-Organization not found for email: posha@gmail.com
-Admin login attempt: { username: 'admin', password: 'admin123' }
-Checking credentials: { username: 'admin', password: '***' }
-Login successful for hardcoded super admin
-Login record saved
-Login attempt for email: ariffinanuar@gmail.com
-Organization found: Fenix Digital
-Stored password: Ariffin.97
-Provided password: Ariffin.97
-Passwords match: true
-Login attempt for email: test@test.com
-Organization not found for email: test@test.com
-Forgot password request for email: ariffinanuar@gmail.com
-Generated temporary password for: Fenix Digital
-Temporary password email sent to: ariffinanuar@gmail.com
+Creating new state user: { username: 'test_state', password: 'test123', stateName: 'Selangor' }
+New state user created successfully

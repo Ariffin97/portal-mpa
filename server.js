@@ -1618,6 +1618,52 @@ const adminUserSchema = new mongoose.Schema({
 
 const AdminUser = mongoose.model('AdminUser', adminUserSchema);
 
+// State User Schema
+const stateUserSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  email: {
+    type: String,
+    required: false
+  },
+  stateName: {
+    type: String,
+    required: true
+  },
+  stateCode: {
+    type: String,
+    required: false
+  },
+  contactPerson: {
+    type: String,
+    required: false
+  },
+  phone: {
+    type: String,
+    required: false
+  },
+  status: {
+    type: String,
+    enum: ['active', 'disabled'],
+    default: 'active'
+  },
+  lastLogin: {
+    type: Date,
+    default: null
+  }
+}, {
+  timestamps: true
+});
+
+const StateUser = mongoose.model('StateUser', stateUserSchema);
+
 // Player/Member Schema
 const playerSchema = new mongoose.Schema({
   playerId: {
@@ -5201,6 +5247,435 @@ app.post('/api/applications/:id/approve', async (req, res) => {
   }
 });
 
+// ============================================
+// STATE ASSOCIATION APPROVAL/REJECTION ROUTES
+// ============================================
+
+// State approve application (for state-level tournaments only)
+app.put('/api/applications/:id/state-approve', async (req, res) => {
+  try {
+    const { approvedBy, approvedByUser } = req.body;
+
+    const application = await TournamentApplication.findOne({ applicationId: req.params.id });
+
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    // Verify this is a District, Divisional, or State level tournament
+    const validLevels = ['district', 'divisional', 'state'];
+    if (!validLevels.includes(application.classification?.toLowerCase())) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only District, Divisional, and State level tournaments can be approved by state associations'
+      });
+    }
+
+    // Verify the approving state matches the tournament state
+    const stateUser = await StateUser.findOne({
+      stateName: { $regex: new RegExp(`^${approvedBy}$`, 'i') },
+      status: 'active'
+    });
+
+    if (!stateUser) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your state is not registered in the system'
+      });
+    }
+
+    if (application.state?.toLowerCase() !== approvedBy?.toLowerCase()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only approve tournaments in your own state'
+      });
+    }
+
+    // Update application status
+    application.status = 'Approved';
+    application.stateApprovedBy = approvedBy;
+    application.stateApprovedByUser = approvedByUser;
+    application.stateApprovedDate = new Date();
+    application.lastUpdated = new Date();
+    application.approvalRef = `STATE/${approvedBy?.toUpperCase().slice(0, 3) || 'ST'}/${new Date().getFullYear()}/${application.applicationId.slice(-4)}`;
+
+    await application.save();
+
+    console.log(`✅ State-level tournament approved by ${approvedBy}:`, application.applicationId);
+
+    // Send approval email to organizer
+    if (application.email) {
+      try {
+        const emailTemplate = {
+          subject: `Tournament Approved by ${approvedBy} State Association - Malaysia Pickleball Association`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                <h1 style="color: white; margin: 0;">Tournament Approved!</h1>
+              </div>
+              <div style="padding: 30px; background: #f8fafc; border-radius: 0 0 12px 12px;">
+                <p style="color: #1e293b; font-size: 16px;">Dear ${application.organiserName},</p>
+                <p style="color: #1e293b; font-size: 16px;">Congratulations! Your tournament application has been <strong style="color: #10b981;">APPROVED</strong> by the <strong>${approvedBy}</strong> State Association.</p>
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0;">
+                  <p style="margin: 5px 0;"><strong>Tournament:</strong> ${application.eventTitle}</p>
+                  <p style="margin: 5px 0;"><strong>Application ID:</strong> ${application.applicationId}</p>
+                  <p style="margin: 5px 0;"><strong>Approval Reference:</strong> ${application.approvalRef}</p>
+                  <p style="margin: 5px 0;"><strong>Event Date:</strong> ${application.eventStartDate ? new Date(application.eventStartDate).toLocaleDateString('en-GB') : 'N/A'}</p>
+                  <p style="margin: 5px 0;"><strong>Venue:</strong> ${application.venue}, ${application.city}</p>
+                </div>
+                <p style="color: #64748b; font-size: 14px;">You may now proceed with your tournament preparations.</p>
+              </div>
+            </div>
+          `
+        };
+        await sendEmail(application.email, emailTemplate);
+        console.log('📧 State approval email sent to:', application.email);
+      } catch (emailError) {
+        console.error('❌ Failed to send state approval email:', emailError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Application approved by ${approvedBy} State Association`,
+      application: {
+        applicationId: application.applicationId,
+        status: application.status,
+        approvalRef: application.approvalRef
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ State approval error:', error);
+    res.status(500).json({ success: false, message: 'Failed to approve application' });
+  }
+});
+
+// State reject application (for state-level tournaments only)
+app.put('/api/applications/:id/state-reject', async (req, res) => {
+  try {
+    const { rejectionReason, rejectedBy, rejectedByUser } = req.body;
+
+    if (!rejectionReason || rejectionReason.trim().length < 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a detailed rejection reason (at least 10 characters)'
+      });
+    }
+
+    const application = await TournamentApplication.findOne({ applicationId: req.params.id });
+
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    // Verify this is a District, Divisional, or State level tournament
+    const validLevels = ['district', 'divisional', 'state'];
+    if (!validLevels.includes(application.classification?.toLowerCase())) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only District, Divisional, and State level tournaments can be rejected by state associations'
+      });
+    }
+
+    // Verify the rejecting state matches the tournament state
+    const stateUser = await StateUser.findOne({
+      stateName: { $regex: new RegExp(`^${rejectedBy}$`, 'i') },
+      status: 'active'
+    });
+
+    if (!stateUser) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your state is not registered in the system'
+      });
+    }
+
+    if (application.state?.toLowerCase() !== rejectedBy?.toLowerCase()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only reject tournaments in your own state'
+      });
+    }
+
+    // Update application status
+    application.status = 'Rejected';
+    application.rejectionReason = rejectionReason.trim();
+    application.stateRejectedBy = rejectedBy;
+    application.stateRejectedByUser = rejectedByUser;
+    application.stateRejectedDate = new Date();
+    application.lastUpdated = new Date();
+
+    await application.save();
+
+    console.log(`❌ State-level tournament rejected by ${rejectedBy}:`, application.applicationId);
+
+    // Send rejection email to organizer
+    if (application.email) {
+      try {
+        const emailTemplate = {
+          subject: `Tournament Application Rejected - ${rejectedBy} State Association`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                <h1 style="color: white; margin: 0;">Application Rejected</h1>
+              </div>
+              <div style="padding: 30px; background: #f8fafc; border-radius: 0 0 12px 12px;">
+                <p style="color: #1e293b; font-size: 16px;">Dear ${application.organiserName},</p>
+                <p style="color: #1e293b; font-size: 16px;">We regret to inform you that your tournament application has been <strong style="color: #ef4444;">REJECTED</strong> by the <strong>${rejectedBy}</strong> State Association.</p>
+                <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 20px 0;">
+                  <p style="margin: 5px 0;"><strong>Tournament:</strong> ${application.eventTitle}</p>
+                  <p style="margin: 5px 0;"><strong>Application ID:</strong> ${application.applicationId}</p>
+                </div>
+                <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                  <p style="color: #991b1b; margin: 0 0 10px 0;"><strong>Reason for Rejection:</strong></p>
+                  <p style="color: #7f1d1d; margin: 0;">${rejectionReason}</p>
+                </div>
+                <p style="color: #64748b; font-size: 14px;">If you believe this decision was made in error or would like to discuss further, please contact the ${rejectedBy} State Association directly.</p>
+              </div>
+            </div>
+          `
+        };
+        await sendEmail(application.email, emailTemplate);
+        console.log('📧 State rejection email sent to:', application.email);
+      } catch (emailError) {
+        console.error('❌ Failed to send state rejection email:', emailError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Application rejected by ${rejectedBy} State Association`,
+      application: {
+        applicationId: application.applicationId,
+        status: application.status
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ State rejection error:', error);
+    res.status(500).json({ success: false, message: 'Failed to reject application' });
+  }
+});
+
+// State update application status (for state-level tournaments only)
+app.put('/api/applications/:id/state-status', async (req, res) => {
+  try {
+    const { status, stateName, stateUser, notes } = req.body;
+
+    // Validate status
+    const validStatuses = ['Pending Review', 'Under Review', 'Approved', 'Rejected', 'More Info Required'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be one of: ' + validStatuses.join(', ')
+      });
+    }
+
+    // For rejection, notes are required
+    if (status === 'Rejected' && (!notes || notes.trim().length < 10)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a detailed rejection reason (at least 10 characters)'
+      });
+    }
+
+    // For More Info Required, notes are required
+    if (status === 'More Info Required' && (!notes || notes.trim().length < 5)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please specify what additional information is needed'
+      });
+    }
+
+    const application = await TournamentApplication.findOne({ applicationId: req.params.id });
+
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    // Verify this is a District, Divisional, or State level tournament
+    const validLevels = ['district', 'divisional', 'state'];
+    if (!validLevels.includes(application.classification?.toLowerCase())) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only District, Divisional, and State level tournaments can be managed by state associations'
+      });
+    }
+
+    // Verify the state matches the tournament state
+    const stateUserRecord = await StateUser.findOne({
+      stateName: { $regex: new RegExp(`^${stateName}$`, 'i') },
+      status: 'active'
+    });
+
+    if (!stateUserRecord) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your state is not registered in the system'
+      });
+    }
+
+    if (application.state?.toLowerCase() !== stateName?.toLowerCase()) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only manage tournaments in your own state'
+      });
+    }
+
+    const previousStatus = application.status;
+
+    // Update application status
+    application.status = status;
+    application.lastUpdated = new Date();
+    application.stateUpdatedBy = stateName;
+    application.stateUpdatedByUser = stateUser;
+    application.stateUpdatedDate = new Date();
+
+    // Handle specific status updates
+    if (status === 'Approved') {
+      application.stateApprovedBy = stateName;
+      application.stateApprovedByUser = stateUser;
+      application.stateApprovedDate = new Date();
+      application.approvalRef = `STATE/${stateName?.toUpperCase().slice(0, 3) || 'ST'}/${new Date().getFullYear()}/${application.applicationId.slice(-4)}`;
+    } else if (status === 'Rejected') {
+      application.rejectionReason = notes.trim();
+      application.stateRejectedBy = stateName;
+      application.stateRejectedByUser = stateUser;
+      application.stateRejectedDate = new Date();
+    } else if (status === 'More Info Required') {
+      application.moreInfoRequired = notes.trim();
+      application.moreInfoRequestedBy = stateName;
+      application.moreInfoRequestedDate = new Date();
+    }
+
+    await application.save();
+
+    console.log(`📝 State status update by ${stateName}: ${previousStatus} → ${status} for ${application.applicationId}`);
+
+    // Send email notification based on status
+    if (application.email) {
+      try {
+        let emailTemplate = null;
+
+        if (status === 'Approved') {
+          emailTemplate = {
+            subject: `Tournament Approved by ${stateName} State Association - Malaysia Pickleball Association`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                  <h1 style="color: white; margin: 0;">Tournament Approved!</h1>
+                </div>
+                <div style="padding: 30px; background: #f8fafc; border-radius: 0 0 12px 12px;">
+                  <p style="color: #1e293b; font-size: 16px;">Dear ${application.organiserName},</p>
+                  <p style="color: #1e293b; font-size: 16px;">Congratulations! Your tournament application has been <strong style="color: #10b981;">APPROVED</strong> by the <strong>${stateName}</strong> State Association.</p>
+                  <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Tournament:</strong> ${application.eventTitle}</p>
+                    <p style="margin: 5px 0;"><strong>Application ID:</strong> ${application.applicationId}</p>
+                    <p style="margin: 5px 0;"><strong>Approval Reference:</strong> ${application.approvalRef}</p>
+                    <p style="margin: 5px 0;"><strong>Event Date:</strong> ${application.eventStartDate ? new Date(application.eventStartDate).toLocaleDateString('en-GB') : 'N/A'}</p>
+                  </div>
+                  <p style="color: #64748b; font-size: 14px;">You may now proceed with your tournament preparations.</p>
+                </div>
+              </div>
+            `
+          };
+        } else if (status === 'Rejected') {
+          emailTemplate = {
+            subject: `Tournament Application Rejected - ${stateName} State Association`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                  <h1 style="color: white; margin: 0;">Application Rejected</h1>
+                </div>
+                <div style="padding: 30px; background: #f8fafc; border-radius: 0 0 12px 12px;">
+                  <p style="color: #1e293b; font-size: 16px;">Dear ${application.organiserName},</p>
+                  <p style="color: #1e293b; font-size: 16px;">We regret to inform you that your tournament application has been <strong style="color: #ef4444;">REJECTED</strong> by the <strong>${stateName}</strong> State Association.</p>
+                  <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Tournament:</strong> ${application.eventTitle}</p>
+                    <p style="margin: 5px 0;"><strong>Application ID:</strong> ${application.applicationId}</p>
+                  </div>
+                  <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p style="color: #991b1b; margin: 0 0 10px 0;"><strong>Reason for Rejection:</strong></p>
+                    <p style="color: #7f1d1d; margin: 0;">${notes}</p>
+                  </div>
+                  <p style="color: #64748b; font-size: 14px;">If you believe this decision was made in error, please contact the ${stateName} State Association directly.</p>
+                </div>
+              </div>
+            `
+          };
+        } else if (status === 'More Info Required') {
+          emailTemplate = {
+            subject: `Additional Information Required - ${application.eventTitle}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                  <h1 style="color: white; margin: 0;">More Information Required</h1>
+                </div>
+                <div style="padding: 30px; background: #f8fafc; border-radius: 0 0 12px 12px;">
+                  <p style="color: #1e293b; font-size: 16px;">Dear ${application.organiserName},</p>
+                  <p style="color: #1e293b; font-size: 16px;">The <strong>${stateName}</strong> State Association has reviewed your tournament application and requires additional information before making a decision.</p>
+                  <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Tournament:</strong> ${application.eventTitle}</p>
+                    <p style="margin: 5px 0;"><strong>Application ID:</strong> ${application.applicationId}</p>
+                  </div>
+                  <div style="background: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <p style="color: #92400e; margin: 0 0 10px 0;"><strong>Information Needed:</strong></p>
+                    <p style="color: #78350f; margin: 0;">${notes}</p>
+                  </div>
+                  <p style="color: #64748b; font-size: 14px;">Please provide the requested information as soon as possible to continue the review process.</p>
+                </div>
+              </div>
+            `
+          };
+        } else if (status === 'Under Review') {
+          emailTemplate = {
+            subject: `Application Under Review - ${application.eventTitle}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                  <h1 style="color: white; margin: 0;">Application Under Review</h1>
+                </div>
+                <div style="padding: 30px; background: #f8fafc; border-radius: 0 0 12px 12px;">
+                  <p style="color: #1e293b; font-size: 16px;">Dear ${application.organiserName},</p>
+                  <p style="color: #1e293b; font-size: 16px;">Your tournament application is now <strong style="color: #3b82f6;">UNDER REVIEW</strong> by the <strong>${stateName}</strong> State Association.</p>
+                  <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+                    <p style="margin: 5px 0;"><strong>Tournament:</strong> ${application.eventTitle}</p>
+                    <p style="margin: 5px 0;"><strong>Application ID:</strong> ${application.applicationId}</p>
+                    <p style="margin: 5px 0;"><strong>Event Date:</strong> ${application.eventStartDate ? new Date(application.eventStartDate).toLocaleDateString('en-GB') : 'N/A'}</p>
+                  </div>
+                  <p style="color: #64748b; font-size: 14px;">We will notify you once a decision has been made on your application.</p>
+                </div>
+              </div>
+            `
+          };
+        }
+
+        if (emailTemplate) {
+          await sendEmail(application.email, emailTemplate);
+          console.log('📧 Status update email sent to:', application.email);
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send status update email:', emailError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Application status updated to "${status}" by ${stateName} State Association`,
+      application: {
+        applicationId: application.applicationId,
+        status: application.status,
+        approvalRef: application.approvalRef || null
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ State status update error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update application status' });
+  }
+});
+
 // Cancel tournament application (organizer)
 app.post('/api/applications/:id/cancel', async (req, res) => {
   try {
@@ -8158,11 +8633,6 @@ app.get('/api/documents/:applicationId/:documentIndex', async (req, res) => {
   }
 });
 
-// Catch-all handler: send back React's index.html file for any non-API routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
-
 // Initialize default assessment form
 async function initializeDefaultAssessmentForm() {
   try {
@@ -8423,6 +8893,290 @@ app.post('/api/test-support-letter', async (req, res) => {
       error: error.message
     });
   }
+});
+
+// ============================================
+// STATE USER ROUTES
+// ============================================
+
+// State Login
+app.post('/api/state/login', async (req, res) => {
+  try {
+    console.log('State login attempt:', req.body.username);
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username and password are required'
+      });
+    }
+
+    const stateUser = await StateUser.findOne({
+      username: username.trim(),
+      status: 'active'
+    });
+
+    if (!stateUser) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid username or password'
+      });
+    }
+
+    // Simple password comparison (in production, use bcrypt)
+    if (stateUser.password !== password.trim()) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid username or password'
+      });
+    }
+
+    // Update last login
+    stateUser.lastLogin = new Date();
+    await stateUser.save();
+
+    console.log('State login successful for:', username);
+
+    res.json({
+      success: true,
+      message: 'Login successful',
+      user: {
+        id: stateUser._id,
+        username: stateUser.username,
+        email: stateUser.email,
+        stateName: stateUser.stateName,
+        stateCode: stateUser.stateCode,
+        contactPerson: stateUser.contactPerson,
+        phone: stateUser.phone
+      }
+    });
+  } catch (error) {
+    console.error('State login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Create State User
+app.post('/api/state/users', async (req, res) => {
+  try {
+    console.log('Creating new state user:', req.body);
+    const { username, password, email, stateName, stateCode, contactPerson, phone } = req.body;
+
+    // Validation
+    if (!username || !password || !stateName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Username, password, and state name are required'
+      });
+    }
+
+    // Check if username already exists
+    const existingUser = await StateUser.findOne({ username: username.trim() });
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'Username already exists'
+      });
+    }
+
+    // Create new state user
+    const newStateUser = new StateUser({
+      username: username.trim(),
+      password: password.trim(),
+      email: email ? email.trim() : null,
+      stateName: stateName.trim(),
+      stateCode: stateCode ? stateCode.trim() : null,
+      contactPerson: contactPerson ? contactPerson.trim() : null,
+      phone: phone ? phone.trim() : null,
+      status: 'active'
+    });
+
+    await newStateUser.save();
+    console.log('New state user created successfully');
+
+    res.json({
+      success: true,
+      message: 'State user created successfully',
+      user: {
+        id: newStateUser._id,
+        username: newStateUser.username,
+        email: newStateUser.email,
+        stateName: newStateUser.stateName,
+        stateCode: newStateUser.stateCode,
+        contactPerson: newStateUser.contactPerson,
+        phone: newStateUser.phone,
+        status: newStateUser.status,
+        createdAt: newStateUser.createdAt
+      }
+    });
+  } catch (error) {
+    console.error('Error creating state user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to create state user'
+    });
+  }
+});
+
+// Get list of registered states (public endpoint for checking state registration)
+app.get('/api/state/registered-states', async (req, res) => {
+  try {
+    const stateUsers = await StateUser.find({ status: 'active' }, 'stateName stateCode').sort({ stateName: 1 });
+    const registeredStates = stateUsers.map(user => user.stateName.toLowerCase().trim());
+    res.json({
+      success: true,
+      registeredStates: registeredStates,
+      count: registeredStates.length
+    });
+  } catch (error) {
+    console.error('Error fetching registered states:', error);
+    res.status(500).json({
+      success: false,
+      registeredStates: []
+    });
+  }
+});
+
+// Get all state users
+app.get('/api/state/users', async (req, res) => {
+  try {
+    const stateUsers = await StateUser.find({}, '-password').sort({ createdAt: -1 });
+    console.log('📋 State users found:', stateUsers.length, stateUsers.map(u => u.username));
+    res.json({
+      success: true,
+      users: stateUsers
+    });
+  } catch (error) {
+    console.error('Error fetching state users:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to fetch state users'
+    });
+  }
+});
+
+// Update state user
+app.patch('/api/state/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { username, password, email, stateName, stateCode, contactPerson, phone } = req.body;
+
+    const updateData = {};
+    if (username) updateData.username = username.trim();
+    if (password) updateData.password = password.trim();
+    if (email !== undefined) updateData.email = email ? email.trim() : null;
+    if (stateName) updateData.stateName = stateName.trim();
+    if (stateCode !== undefined) updateData.stateCode = stateCode ? stateCode.trim() : null;
+    if (contactPerson !== undefined) updateData.contactPerson = contactPerson ? contactPerson.trim() : null;
+    if (phone !== undefined) updateData.phone = phone ? phone.trim() : null;
+
+    const updatedUser = await StateUser.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, select: '-password' }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'State user not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'State user updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating state user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to update state user'
+    });
+  }
+});
+
+// Update state user status
+app.patch('/api/state/users/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['active', 'disabled'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be "active" or "disabled"'
+      });
+    }
+
+    const updatedUser = await StateUser.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, select: '-password' }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'State user not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'User status updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating state user status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to update user status'
+    });
+  }
+});
+
+// Delete state user
+app.delete('/api/state/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedUser = await StateUser.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'State user not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'State user deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting state user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: 'Failed to delete state user'
+    });
+  }
+});
+
+// Catch-all handler: send back React's index.html file for any non-API routes
+// IMPORTANT: This must be AFTER all API routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 // Start server

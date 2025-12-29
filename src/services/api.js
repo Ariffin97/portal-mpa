@@ -368,6 +368,45 @@ class ApiService {
   async getMessageById(messageId) {
     return this.makeRequest(`/messages/${messageId}`);
   }
+
+  // State User Management APIs
+  async stateLogin(credentials) {
+    return this.makeRequest('/state/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+  }
+
+  async createStateUser(userData) {
+    return this.makeRequest('/state/users', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async getAllStateUsers() {
+    return this.makeRequest('/state/users');
+  }
+
+  async updateStateUser(userId, userData) {
+    return this.makeRequest(`/state/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async updateStateUserStatus(userId, status) {
+    return this.makeRequest(`/state/users/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  async deleteStateUser(userId) {
+    return this.makeRequest(`/state/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 const apiService = new ApiService();

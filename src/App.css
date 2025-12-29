@@ -2066,6 +2066,1870 @@ button.utility-link {
   color: #00cccc;
 }
 
+.footer-state-btn {
+  margin-left: 1rem;
+  padding-left: 1rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+/* State Dashboard Styles */
+/* ===== STATE DASHBOARD WITH SIDEBAR LAYOUT ===== */
+.state-dashboard {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  display: flex;
+}
+
+/* Sidebar Styles */
+.state-dashboard .dashboard-sidebar {
+  width: 280px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 100;
+  padding-top: 10px;
+}
+
+.state-dashboard .sidebar-header {
+  padding: 15px 20px 15px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.state-dashboard .sidebar-logo {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+}
+
+.state-dashboard .sidebar-title h2 {
+  color: #fff;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.state-dashboard .sidebar-title p {
+  color: #10b981;
+  font-size: 0.85rem;
+  margin: 4px 0 0 0;
+  font-weight: 500;
+}
+
+.state-dashboard .sidebar-nav {
+  flex: 1;
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.state-dashboard .nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  position: relative;
+}
+
+.state-dashboard .nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.state-dashboard .nav-item.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-right: 3px solid #10b981;
+}
+
+.state-dashboard .nav-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.state-dashboard .nav-item.disabled:hover {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.state-dashboard .nav-icon {
+  font-size: 1.2rem;
+}
+
+.state-dashboard .nav-text {
+  flex: 1;
+}
+
+.state-dashboard .nav-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.state-dashboard .sidebar-footer {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.state-dashboard .user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.state-dashboard .user-icon {
+  font-size: 1.2rem;
+}
+
+.state-dashboard .logout-btn {
+  width: 100%;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.state-dashboard .logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+/* Main Content Area */
+.state-dashboard .dashboard-main {
+  flex: 1;
+  margin-left: 280px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.state-dashboard .dashboard-header {
+  padding: 20px 32px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.state-dashboard .header-left h1 {
+  color: #fff;
+  font-size: 1.4rem;
+  margin: 0 0 4px 0;
+  font-weight: 600;
+}
+
+.state-dashboard .header-left p {
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.state-dashboard .dashboard-content {
+  padding: 32px;
+  flex: 1;
+}
+
+/* Welcome Section */
+.state-dashboard .welcome-section {
+  margin-bottom: 28px;
+}
+
+.state-dashboard .welcome-card {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 12px;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.state-dashboard .welcome-icon {
+  font-size: 42px;
+  flex-shrink: 0;
+}
+
+.state-dashboard .welcome-card h2 {
+  color: #fff;
+  font-size: 1.3rem;
+  margin: 0 0 8px 0;
+  font-weight: 600;
+}
+
+.state-dashboard .welcome-card p {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* State Info Section */
+.state-dashboard .state-info-section {
+  margin-bottom: 28px;
+}
+
+.state-dashboard .state-info-section h3,
+.state-dashboard .quick-actions-section h3 {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.state-dashboard .info-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.state-dashboard .info-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.state-dashboard .info-icon {
+  font-size: 28px;
+  opacity: 0.9;
+}
+
+.state-dashboard .info-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.state-dashboard .info-label {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.state-dashboard .info-value {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+/* Feature Cards */
+.state-dashboard .feature-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.state-dashboard .feature-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 24px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.state-dashboard .feature-card.clickable {
+  cursor: pointer;
+}
+
+.state-dashboard .feature-card.clickable:hover {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+  transform: translateY(-2px);
+}
+
+.state-dashboard .feature-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.state-dashboard .feature-icon {
+  font-size: 32px;
+  margin-bottom: 14px;
+}
+
+.state-dashboard .feature-card h4 {
+  color: #fff;
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.state-dashboard .feature-card p {
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.state-dashboard .coming-soon-badge {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ===== TOURNAMENT MANAGEMENT STYLES ===== */
+.state-dashboard .tournament-management {
+  color: #fff;
+}
+
+.state-dashboard .section-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.state-dashboard .section-header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.state-dashboard .back-btn {
+  padding: 8px 16px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .back-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.state-dashboard .refresh-btn {
+  padding: 8px 16px;
+  background: #10b981;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .refresh-btn:hover:not(:disabled) {
+  background: #059669;
+}
+
+.state-dashboard .refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.state-dashboard .error-message {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+
+/* Status Folders */
+.state-dashboard .status-folders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.state-dashboard .status-folder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .status-folder:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.state-dashboard .status-folder.active {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.state-dashboard .folder-icon {
+  font-size: 1.5rem;
+  opacity: 0.8;
+}
+
+.state-dashboard .folder-icon.approved {
+  color: #10b981;
+}
+
+.state-dashboard .folder-icon.rejected {
+  color: #ef4444;
+}
+
+.state-dashboard .folder-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.state-dashboard .folder-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.state-dashboard .folder-count {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Applications List */
+.state-dashboard .applications-list {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.state-dashboard .applications-list h3 {
+  margin: 0;
+  padding: 16px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.state-dashboard .loading-spinner {
+  text-align: center;
+  padding: 50px 20px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+}
+
+.state-dashboard .empty-state {
+  text-align: center;
+  padding: 50px 20px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.state-dashboard .empty-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.state-dashboard .empty-state p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Tournament Cards Grid */
+.state-dashboard .tournament-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.state-dashboard .tournament-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.state-dashboard .tournament-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.state-dashboard .tournament-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 18px 20px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+}
+
+.state-dashboard .tournament-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.state-dashboard .tournament-status-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.state-dashboard .tournament-status-badge.status-pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.state-dashboard .tournament-status-badge.status-review {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.state-dashboard .tournament-status-badge.status-approved {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.state-dashboard .tournament-status-badge.status-rejected {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.state-dashboard .tournament-card-body {
+  padding: 18px 20px;
+}
+
+.state-dashboard .tournament-info-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 14px;
+}
+
+.state-dashboard .tournament-info-row.single {
+  margin-bottom: 0;
+}
+
+.state-dashboard .tournament-info-row:last-child {
+  margin-bottom: 0;
+}
+
+.state-dashboard .tournament-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.state-dashboard .tournament-info-item .info-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.state-dashboard .tournament-info-item .info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.state-dashboard .tournament-info-item .info-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.state-dashboard .tournament-info-item .info-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #ffffff;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.state-dashboard .tournament-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: rgba(0, 0, 0, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.state-dashboard .submitted-date {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.state-dashboard .view-details-btn {
+  padding: 6px 10px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.state-dashboard .view-details-btn:hover {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  transform: translateX(2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* Responsive for tournament cards */
+@media (max-width: 768px) {
+  .state-dashboard .card-actions {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .state-dashboard .card-status-dropdown {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .state-dashboard .card-status-dropdown .status-select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .state-dashboard .tournament-cards-grid {
+    grid-template-columns: 1fr;
+    padding: 15px;
+    gap: 15px;
+  }
+
+  .state-dashboard .tournament-info-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .state-dashboard .tournament-card-footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .state-dashboard .view-details-btn {
+    text-align: center;
+  }
+}
+
+/* Applications Table (keeping for backwards compatibility) */
+.state-dashboard .applications-table-container {
+  overflow-x: auto;
+}
+
+.state-dashboard .applications-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.state-dashboard .applications-table th,
+.state-dashboard .applications-table td {
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.state-dashboard .applications-table th {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.state-dashboard .applications-table td {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+}
+
+.state-dashboard .applications-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.state-dashboard .applications-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.state-dashboard .applications-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.state-dashboard .tournament-name {
+  font-weight: 500;
+  color: #fff;
+}
+
+.state-dashboard .view-btn {
+  padding: 6px 14px;
+  background: transparent;
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .view-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+}
+
+/* Application Modal - Professional Design */
+.state-dashboard .application-modal {
+  max-width: 950px !important;
+  width: 95% !important;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #ffffff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3) !important;
+}
+
+.state-dashboard .application-modal .modal-header {
+  background: #1e3a5f;
+  border-bottom: none;
+  padding: 24px 32px;
+}
+
+.state-dashboard .application-modal .modal-header h2 {
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.state-dashboard .application-modal .modal-close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: none;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+}
+
+.state-dashboard .application-modal .modal-close-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.state-dashboard .application-modal .modal-body {
+  background: #ffffff;
+  padding: 32px;
+}
+
+.state-dashboard .application-modal .application-status-banner {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.state-dashboard .application-modal .status-badge {
+  display: inline-block;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.state-dashboard .application-modal .status-badge.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.state-dashboard .application-modal .status-badge.status-review {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.state-dashboard .application-modal .status-badge.status-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.state-dashboard .application-modal .status-badge.status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.state-dashboard .application-modal .detail-section {
+  margin-bottom: 32px;
+  padding-bottom: 28px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.state-dashboard .application-modal .detail-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.state-dashboard .application-modal .detail-section h3 {
+  color: #1e3a5f;
+  font-size: 1.1rem;
+  margin: 0 0 20px 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid #10b981;
+  display: inline-block;
+}
+
+.state-dashboard .application-modal .detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.state-dashboard .application-modal .detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f8fafc;
+  padding: 16px 20px;
+  border-radius: 8px;
+  border-left: 4px solid #10b981;
+}
+
+.state-dashboard .application-modal .detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.state-dashboard .application-modal .detail-item label {
+  color: #64748b;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.state-dashboard .application-modal .detail-item span {
+  color: #1e293b;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.state-dashboard .application-modal .event-summary {
+  color: #334155;
+  line-height: 1.8;
+  margin: 0;
+  background: #f8fafc;
+  padding: 16px 20px;
+  border-radius: 8px;
+  border-left: 4px solid #10b981;
+  font-size: 1rem;
+}
+
+.state-dashboard .application-modal .categories-table-container {
+  overflow-x: auto;
+}
+
+.state-dashboard .application-modal .categories-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.state-dashboard .application-modal .categories-table th {
+  background: #1e3a5f;
+  color: #ffffff;
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.state-dashboard .application-modal .categories-table td {
+  padding: 14px 16px;
+  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 500;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.state-dashboard .application-modal .categories-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.state-dashboard .application-modal .categories-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.state-dashboard .application-modal .categories-table tbody tr:hover {
+  background: #e0f2fe;
+}
+
+.state-dashboard .application-modal .rejection-section {
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  border-radius: 8px;
+  padding: 20px;
+  border-left: 4px solid #ef4444;
+}
+
+.state-dashboard .application-modal .rejection-section h3 {
+  color: #991b1b;
+  border-bottom-color: #ef4444;
+}
+
+.state-dashboard .application-modal .rejection-reason {
+  color: #7f1d1d;
+  line-height: 1.7;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.state-dashboard .application-modal .application-id {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.95rem;
+  color: #475569;
+  background: #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.state-dashboard .application-modal .modal-footer {
+  background: #f8fafc;
+  border-top: 2px solid #e5e7eb;
+  padding: 20px 32px;
+}
+
+.state-dashboard .application-modal .btn-secondary {
+  background: #1e3a5f;
+  color: #ffffff;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .application-modal .btn-secondary:hover {
+  background: #0f2942;
+}
+
+/* Action buttons in modal footer */
+.state-dashboard .application-modal .modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.state-dashboard .application-modal .action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.state-dashboard .application-modal .btn-approve {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .application-modal .btn-approve:hover:not(:disabled) {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.state-dashboard .application-modal .btn-approve:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.state-dashboard .application-modal .btn-reject {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .application-modal .btn-reject:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.state-dashboard .application-modal .btn-reject:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.state-dashboard .application-modal .info-note {
+  color: #64748b;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* Status Change Section */
+.state-dashboard .status-change-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  max-width: 500px;
+}
+
+.state-dashboard .status-dropdown-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.state-dashboard .status-dropdown-container label {
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.state-dashboard .status-dropdown {
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+.state-dashboard .status-dropdown:hover:not(:disabled) {
+  border-color: #3b82f6;
+}
+
+.state-dashboard .status-dropdown:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.state-dashboard .status-dropdown:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.state-dashboard .status-notes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.state-dashboard .status-notes-container label {
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.state-dashboard .status-notes-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .status-notes-input:hover:not(:disabled) {
+  border-color: #94a3b8;
+}
+
+.state-dashboard .status-notes-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.state-dashboard .status-notes-input:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.state-dashboard .error-message-inline {
+  color: #dc2626;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  background: #fef2f2;
+  border-radius: 6px;
+  border-left: 3px solid #dc2626;
+}
+
+.state-dashboard .btn-update-status {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+}
+
+.state-dashboard .btn-update-status:hover:not(:disabled) {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.state-dashboard .btn-update-status:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* More Info Required status badge */
+.state-dashboard .status-info-required {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+}
+
+.state-dashboard .tournament-status-badge.status-info-required {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+}
+
+/* Folder icon for More Info Required */
+.state-dashboard .folder-icon.info-required {
+  color: #f59e0b;
+}
+
+/* More Info Required Section */
+.state-dashboard .more-info-section {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.state-dashboard .more-info-section h3 {
+  color: #92400e;
+  margin-bottom: 12px;
+}
+
+.state-dashboard .more-info-text {
+  color: #78350f;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 6px;
+  border-left: 3px solid #f59e0b;
+}
+
+.state-dashboard .more-info-meta {
+  color: #a16207;
+  font-size: 0.85rem;
+  font-style: italic;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+/* Card Actions */
+.state-dashboard .card-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.state-dashboard .card-status-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.state-dashboard .card-status-dropdown label {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.state-dashboard .card-status-dropdown .status-select {
+  padding: 4px 8px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #1e293b;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 140px;
+  height: 32px;
+}
+
+.state-dashboard .card-status-dropdown .status-select:hover:not(:disabled) {
+  border-color: #3b82f6;
+}
+
+.state-dashboard .card-status-dropdown .status-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.state-dashboard .card-status-dropdown .status-select:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Notes Modal */
+.state-dashboard .notes-modal {
+  max-width: 480px !important;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.state-dashboard .notes-modal .modal-header {
+  padding: 20px 24px;
+  border-bottom: none;
+}
+
+.state-dashboard .notes-modal .modal-header.reject-header {
+  background: #dc2626;
+}
+
+.state-dashboard .notes-modal .modal-header.info-header {
+  background: #f59e0b;
+}
+
+.state-dashboard .notes-modal .modal-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.state-dashboard .notes-modal .modal-body {
+  padding: 24px;
+  background: #ffffff;
+}
+
+.state-dashboard .notes-modal .notes-modal-info {
+  color: #475569;
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.state-dashboard .notes-modal .notes-modal-info strong {
+  color: #1e293b;
+  display: block;
+  margin-top: 4px;
+  font-size: 1rem;
+}
+
+.state-dashboard .notes-modal .form-group {
+  margin-bottom: 0;
+}
+
+.state-dashboard .notes-modal .form-group label {
+  display: block;
+  color: #374151;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.state-dashboard .notes-modal .form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  resize: vertical;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  min-height: 100px;
+  background: #f9fafb;
+}
+
+.state-dashboard .notes-modal .form-group textarea:focus {
+  outline: none;
+  border-color: #6b7280;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
+}
+
+.state-dashboard .notes-modal .form-group textarea::placeholder {
+  color: #9ca3af;
+}
+
+.state-dashboard .notes-modal .modal-footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.state-dashboard .notes-modal .btn-cancel {
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #d1d5db;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .notes-modal .btn-cancel:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.state-dashboard .notes-modal .btn-reject-confirm {
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .notes-modal .btn-reject-confirm:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.state-dashboard .notes-modal .btn-reject-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.state-dashboard .notes-modal .btn-info-confirm {
+  background: #f59e0b;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .notes-modal .btn-info-confirm:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.state-dashboard .notes-modal .btn-info-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.state-dashboard .notes-modal .error-message {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border-radius: 6px;
+  border-left: 3px solid #dc2626;
+}
+
+/* Reject Modal */
+.state-dashboard .reject-modal {
+  max-width: 500px !important;
+}
+
+.state-dashboard .reject-modal .modal-header {
+  background: #dc2626;
+}
+
+.state-dashboard .reject-modal .reject-warning {
+  color: #1e293b;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #fef2f2;
+  border-radius: 8px;
+  border-left: 4px solid #ef4444;
+}
+
+.state-dashboard .reject-modal .form-group {
+  margin-bottom: 0;
+}
+
+.state-dashboard .reject-modal .form-group label {
+  display: block;
+  color: #1e293b;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.state-dashboard .reject-modal textarea {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  resize: vertical;
+  font-family: inherit;
+  color: #1e293b;
+  transition: border-color 0.2s ease;
+}
+
+.state-dashboard .reject-modal textarea:focus {
+  outline: none;
+  border-color: #ef4444;
+}
+
+.state-dashboard .reject-modal .btn-cancel {
+  background: #e2e8f0;
+  color: #475569;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .reject-modal .btn-cancel:hover {
+  background: #cbd5e1;
+}
+
+.state-dashboard .reject-modal .btn-reject-confirm {
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-dashboard .reject-modal .btn-reject-confirm:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.state-dashboard .reject-modal .btn-reject-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Success Toast */
+.state-dashboard .success-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  padding: 16px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+  z-index: 2000;
+  animation: slideIn 0.3s ease;
+}
+
+.state-dashboard .success-toast .success-icon {
+  font-size: 1.2rem;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive for modal */
+@media (max-width: 768px) {
+  .state-dashboard .application-modal .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .state-dashboard .application-modal .modal-body {
+    padding: 20px;
+  }
+
+  .state-dashboard .application-modal .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .state-dashboard .application-modal .action-buttons {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .state-dashboard .application-modal .action-buttons button {
+    flex: 1;
+  }
+}
+
+.state-dashboard .categories-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.state-dashboard .category-tag {
+  padding: 6px 12px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border-radius: 15px;
+  font-size: 0.85rem;
+}
+
+.state-dashboard .rejection-section {
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  padding: 15px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.state-dashboard .rejection-section h3 {
+  color: #ef4444;
+}
+
+.state-dashboard .rejection-reason {
+  color: #fca5a5;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.state-dashboard .application-id {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Modal Styles for State Dashboard */
+.state-dashboard .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.state-dashboard .modal-content {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+}
+
+.state-dashboard .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.state-dashboard .modal-header h2 {
+  color: #fff;
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.state-dashboard .modal-close-btn {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.state-dashboard .modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.state-dashboard .modal-body {
+  padding: 25px;
+}
+
+.state-dashboard .modal-footer {
+  padding: 20px 25px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.state-dashboard .btn-secondary {
+  padding: 10px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.state-dashboard .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Responsive Design for State Dashboard */
+@media (max-width: 1200px) {
+  .state-dashboard .info-cards,
+  .state-dashboard .feature-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1024px) {
+  .state-dashboard .dashboard-sidebar {
+    width: 220px;
+  }
+
+  .state-dashboard .dashboard-main {
+    margin-left: 220px;
+  }
+
+  .state-dashboard .dashboard-content {
+    padding: 24px;
+  }
+
+  .state-dashboard .info-cards,
+  .state-dashboard .feature-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .state-dashboard .status-folders {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .state-dashboard {
+    flex-direction: column;
+  }
+
+  .state-dashboard .dashboard-sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .state-dashboard .sidebar-header {
+    padding: 15px 20px 15px 20px;
+  }
+
+  .state-dashboard .sidebar-nav {
+    display: flex;
+    overflow-x: auto;
+    padding: 8px 12px;
+    gap: 4px;
+  }
+
+  .state-dashboard .nav-item {
+    padding: 10px 14px;
+    white-space: nowrap;
+    border-radius: 6px;
+  }
+
+  .state-dashboard .nav-item.active {
+    border-right: none;
+    background: rgba(16, 185, 129, 0.2);
+  }
+
+  .state-dashboard .sidebar-footer {
+    display: none;
+  }
+
+  .state-dashboard .dashboard-main {
+    margin-left: 0;
+  }
+
+  .state-dashboard .dashboard-content {
+    padding: 20px;
+  }
+
+  .state-dashboard .info-cards,
+  .state-dashboard .feature-cards,
+  .state-dashboard .status-folders {
+    grid-template-columns: 1fr;
+  }
+
+  .state-dashboard .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .state-dashboard .section-header {
+    flex-wrap: wrap;
+  }
+
+  .state-dashboard .section-header h2 {
+    order: -1;
+    width: 100%;
+    margin-bottom: 12px;
+  }
+}
+
+/* State Login Page Styles */
+.state-login-page {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+.state-login-card {
+  border-color: #10b981 !important;
+}
+
+.state-badge {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+}
+
+.state-login-btn {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+}
+
+.state-login-btn:hover {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+}
+
 .footer-column {
   display: flex;
   flex-direction: column;
@@ -8339,3 +10203,456 @@ button.utility-link {
     font-size: 14px !important;
   }
 }
+
+
+/* ============================================ */
+/* State Users Management - Professional Design */
+/* ============================================ */
+
+.state-users-management {
+  padding: 30px;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+.state-users-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.state-users-header .header-content h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px 0;
+}
+
+.state-users-header .header-content p {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.state-users-header .create-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.state-users-header .create-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+/* Stats Cards */
+.state-users-stats {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.state-users-stats .stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 30px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  min-width: 140px;
+}
+
+.state-users-stats .stat-card.active {
+  border-left: 4px solid #10b981;
+}
+
+.state-users-stats .stat-card.inactive {
+  border-left: 4px solid #94a3b8;
+}
+
+.state-users-stats .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.state-users-stats .stat-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* Users Grid */
+.state-users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.state-users-grid .empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  background: #fff;
+  border-radius: 12px;
+  border: 2px dashed #e2e8f0;
+}
+
+.state-users-grid .empty-state .empty-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.state-users-grid .empty-state h3 {
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.state-users-grid .empty-state p {
+  color: #94a3b8;
+}
+
+/* State User Card */
+.state-user-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.state-user-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.state-user-card.disabled {
+  opacity: 0.7;
+}
+
+.state-user-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f2942 100%);
+}
+
+.state-user-card .state-avatar {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.state-user-card .state-info {
+  flex: 1;
+}
+
+.state-user-card .state-info h3 {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 2px 0;
+}
+
+.state-user-card .state-info .username {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+}
+
+.state-user-card .status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.state-user-card .status-badge.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.state-user-card .status-badge.disabled {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.state-user-card .card-body {
+  padding: 20px;
+}
+
+.state-user-card .info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.state-user-card .info-row:last-child {
+  border-bottom: none;
+}
+
+.state-user-card .info-row .label {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.state-user-card .info-row .value {
+  color: #1e293b;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.state-user-card .card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.state-user-card .card-actions button {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-user-card .btn-edit {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.state-user-card .btn-edit:hover {
+  background: #2563eb;
+}
+
+.state-user-card .btn-toggle.disable {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.state-user-card .btn-toggle.disable:hover {
+  background: #d97706;
+}
+
+.state-user-card .btn-toggle.enable {
+  background: #10b981;
+  color: #fff;
+}
+
+.state-user-card .btn-toggle.enable:hover {
+  background: #059669;
+}
+
+.state-user-card .btn-delete {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.state-user-card .btn-delete:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* State User Modal */
+.state-user-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.state-user-modal .modal-header {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  padding: 24px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.state-user-modal .modal-header.edit {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.state-user-modal .modal-header h2 {
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.state-user-modal .modal-header .close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.state-user-modal .modal-header .close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.state-user-modal .modal-body {
+  padding: 28px;
+}
+
+.state-user-modal .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.state-user-modal .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.state-user-modal .form-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.state-user-modal .form-group label .required {
+  color: #dc2626;
+}
+
+.state-user-modal .form-group input,
+.state-user-modal .form-group select {
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #1e293b;
+  transition: all 0.2s ease;
+  background: #fff;
+}
+
+.state-user-modal .form-group input:focus,
+.state-user-modal .form-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.state-user-modal .form-group input::placeholder {
+  color: #9ca3af;
+}
+
+.state-user-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 28px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+}
+
+.state-user-modal .btn-cancel {
+  background: #fff;
+  color: #475569;
+  border: 1px solid #d1d5db;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-user-modal .btn-cancel:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.state-user-modal .btn-submit {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.state-user-modal .btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.state-user-modal .btn-submit.edit {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.state-user-modal .btn-submit.edit:hover {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .state-users-management {
+    padding: 20px;
+  }
+
+  .state-users-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .state-users-stats {
+    flex-wrap: wrap;
+  }
+
+  .state-users-stats .stat-card {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .state-users-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .state-user-modal .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+

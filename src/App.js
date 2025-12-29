@@ -15,6 +15,8 @@ import AssessmentSystem from './components/AssessmentSystem';
 import TournamentSoftwareRegistration from './components/TournamentSoftwareRegistration';
 import TournamentSoftwareLogin from './components/TournamentSoftwareLogin';
 import TournamentSoftwareDashboard from './components/TournamentSoftwareDashboard';
+import StateLogin from './components/StateLogin';
+import StateDashboard from './components/StateDashboard';
 import mpaLogo from './assets/images/mpa.png';
 import ref1Image from './assets/images/ref1.png';
 import safeSportCodePDF from './assets/documents/safesportcode.pdf';
@@ -33,6 +35,8 @@ function App() {
   const [showApplyDropdown, setShowApplyDropdown] = useState(false);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [tournamentSoftwareUserData, setTournamentSoftwareUserData] = useState(null);
+  const [isStateLoggedIn, setIsStateLoggedIn] = useState(false);
+  const [stateUserData, setStateUserData] = useState(null);
 
   // Assessment submissions are now saved directly to database
   // AdminDashboard loads them from the database via API
@@ -422,6 +426,10 @@ function App() {
         return <TournamentSoftwareRegistration setCurrentPage={setCurrentPage} setUserData={setTournamentSoftwareUserData} />;
       case 'software-dashboard':
         return <TournamentSoftwareDashboard setCurrentPage={setCurrentPage} userData={tournamentSoftwareUserData} />;
+      case 'state-login':
+        return <StateLogin setCurrentPage={setCurrentPage} setIsStateLoggedIn={setIsStateLoggedIn} setStateUserData={setStateUserData} />;
+      case 'state-dashboard':
+        return isStateLoggedIn ? <StateDashboard setCurrentPage={setCurrentPage} userData={stateUserData} setIsStateLoggedIn={setIsStateLoggedIn} /> : <StateLogin setCurrentPage={setCurrentPage} setIsStateLoggedIn={setIsStateLoggedIn} setStateUserData={setStateUserData} />;
       case 'about':
         return (
           <div className="page-content">
@@ -705,11 +713,11 @@ function App() {
 
   return (
     <div className="App">
-      {currentPage !== 'login' && !showAssessmentModal && <Header currentPage={currentPage} setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
+      {currentPage !== 'login' && currentPage !== 'state-dashboard' && !showAssessmentModal && <Header currentPage={currentPage} setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
       <main className="App-main">
         {renderPage()}
       </main>
-      {currentPage !== 'login' && !showAssessmentModal && <Footer setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
+      {currentPage !== 'login' && currentPage !== 'state-dashboard' && !showAssessmentModal && <Footer setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
 
       <OrganizationLoginModal 
         isOpen={showLoginModal}

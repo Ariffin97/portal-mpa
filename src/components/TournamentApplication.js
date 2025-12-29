@@ -1950,6 +1950,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 <option value="National">National</option>
                 <option value="International">International</option>
               </select>
+              <small className="form-note">Note: For State level events, the application will also be sent to the respective affiliate state association for approval.</small>
             </div>
             
             <div className="form-group">
@@ -1965,9 +1966,13 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 <option value="Open">Open</option>
                 <option value="Closed">Closed</option>
               </select>
+              <small className="form-note">
+                <strong>Open Event:</strong> Participation is open to all eligible players who meet the tournament requirements.<br/>
+                <strong>Closed Event:</strong> Participation is restricted to players who meet specific eligibility, membership, or invitation requirements.
+              </small>
             </div>
           </div>
-          
+
           <div className="form-row">
             <div className="form-group" style={{ flex: '2' }}>
               <label htmlFor="category">Category *</label>
@@ -2762,6 +2767,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       <option value="National">National</option>
                       <option value="International">International</option>
                     </select>
+                    <small className="form-note">Note: For State level events, the application will also be sent to the respective affiliate state association for approval.</small>
                   </div>
 
                   <div className="form-group">
@@ -2777,6 +2783,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       <option value="Open">Open</option>
                       <option value="Closed">Closed</option>
                     </select>
+                    <small className="form-note">
+                      <strong>Open Event:</strong> Participation is open to all eligible players who meet the tournament requirements.<br/>
+                      <strong>Closed Event:</strong> Participation is restricted to players who meet specific eligibility, membership, or invitation requirements.
+                    </small>
                   </div>
                 </div>
 

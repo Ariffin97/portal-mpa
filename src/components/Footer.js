@@ -27,9 +27,14 @@ const Footer = ({ setCurrentPage, isLoggedIn, setIsLoggedIn }) => {
                     Logout
                   </button>
                 ) : (
-                  <button className="footer-admin-btn" onClick={() => setCurrentPage('login')}>
-                    Admin Login
-                  </button>
+                  <>
+                    <button className="footer-admin-btn" onClick={() => setCurrentPage('login')}>
+                      Admin Login
+                    </button>
+                    <button className="footer-admin-btn footer-state-btn" onClick={() => setCurrentPage('state-login')}>
+                      State Login
+                    </button>
+                  </>
                 )}
               </div>
             )}
