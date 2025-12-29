@@ -250,6 +250,129 @@ button.utility-link {
   background-color: rgba(0, 255, 255, 0.1);
 }
 
+.mobile-menu-divider {
+  height: 1px;
+  background: rgba(0, 255, 255, 0.3);
+  margin: 8px 0;
+}
+
+/* Mobile Quick Menu in Content Section */
+.mobile-quick-menu {
+  display: none;
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  margin: 20px auto;
+}
+
+@media (max-width: 768px) {
+  .mobile-quick-menu {
+    display: block;
+  }
+
+  .hero-actions {
+    display: none !important;
+  }
+}
+
+.mobile-quick-menu-toggle {
+  width: 100%;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #00d4ff, #0099cc);
+  border: none;
+  border-radius: 10px;
+  color: #003d4f;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.mobile-quick-menu-toggle:hover {
+  background: linear-gradient(135deg, #33e1ff, #00b8e6);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4);
+}
+
+.mobile-quick-menu-toggle .dropdown-arrow {
+  transition: transform 0.3s ease;
+}
+
+.mobile-quick-menu-toggle .dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.mobile-quick-menu-dropdown {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: rgba(0, 30, 60, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 100;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mobile-quick-menu-item {
+  width: 100%;
+  padding: 15px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(0, 212, 255, 0.15);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-quick-menu-item:last-child {
+  border-bottom: none;
+}
+
+.mobile-quick-menu-item:hover {
+  background: rgba(0, 212, 255, 0.15);
+  color: #00d4ff;
+}
+
+.notice-menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notice-badge-mobile {
+  background: #dc3545;
+  color: white;
+  border-radius: 50%;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
 
 @keyframes fadeIn {
   to { opacity: 1; }
@@ -4240,13 +4363,17 @@ button.utility-link {
     align-self: flex-start;
   }
 
-  /* Hide full name, show short "MPA" */
+  /* Hide MPA logo and text on mobile */
+  .footer-logo {
+    display: none;
+  }
+
   .footer-org-name-full {
     display: none;
   }
 
   .footer-org-name-short {
-    display: inline;
+    display: none;
   }
 
   /* Hide Fenix Digital partner section on mobile */
@@ -4319,25 +4446,7 @@ button.utility-link {
     gap: 0.75rem;
   }
 
-  .footer-logo {
-    width: 32px;
-    height: 32px;
-  }
-
-  /* Hide full name, show short "MPA" */
-  .footer-org-name-full {
-    display: none;
-  }
-
-  .footer-org-name-short {
-    display: inline;
-    font-size: 0.85rem;
-  }
-
-  /* Hide Fenix Digital partner section on mobile */
-  .footer-partner {
-    display: none;
-  }
+  /* MPA logo and text already hidden from 768px media query */
 
   .footer-admin-btn {
     font-size: 0.75rem;
@@ -8172,49 +8281,259 @@ button.utility-link {
   font-size: 0.8rem;
 }
 
-/* Responsive Design */
+/* Responsive Design for Admin Login - Clean & Professional */
 @media (max-width: 768px) {
+  .digital-login-page {
+    padding: 20px;
+    align-items: center;
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  }
+
+  /* Hide background animations on mobile for clean look */
+  .login-background,
+  .login-grid-pattern,
+  .login-particles,
+  .particle {
+    display: none;
+  }
+
   .login-container-digital {
-    max-width: 95%;
-    padding: 10px;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .login-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border: none;
+    overflow: hidden;
   }
 
   .login-header-digital {
-    padding: 25px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 30px 24px;
+    border-radius: 0;
   }
 
-  .login-form-container {
-    padding: 30px 20px;
+  .logo-section {
+    flex-direction: row;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .login-logo {
+    width: 70px;
+    height: 70px;
+  }
+
+  .brand-info {
+    text-align: left;
   }
 
   .brand-info h1 {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
+    color: #fff;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .brand-info p {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 4px 0 0 0;
+  }
+
+  .login-form-container {
+    padding: 28px 24px;
+    background: #fff;
   }
 
   .access-header {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
+    align-items: stretch;
+    gap: 0;
+    margin-bottom: 24px;
   }
 
-  /* Reduce background animation intensity on mobile */
-  .login-grid-pattern {
-    background-size: 40px 40px;
-    opacity: 0.3;
+  .access-info {
+    text-align: left;
   }
 
-  .particle {
-    animation-duration: 10s; /* Slower animation on mobile */
+  .access-info h2 {
+    font-size: 1.25rem;
+    color: #1a1a2e;
+    margin: 0 0 6px 0;
+    font-weight: 600;
   }
 
-  /* Hide some particles on mobile for better performance */
-  .particle:nth-child(4),
-  .particle:nth-child(5) {
+  .login-description {
+    font-size: 0.875rem;
+    color: #666;
+    margin: 0;
+  }
+
+  .security-badge {
     display: none;
   }
-  
-  .security-badge {
-    align-self: flex-end;
+
+  .digital-login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .input-group {
+    margin-bottom: 0;
+    position: relative;
+  }
+
+  .input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.1rem;
+    z-index: 1;
+    opacity: 0.6;
+  }
+
+  .digital-input {
+    width: 100%;
+    padding: 16px 16px 16px 48px;
+    font-size: 1rem;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    background: #f8f9fa;
+    color: #333;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+  }
+
+  .digital-input:focus {
+    border-color: #667eea;
+    background: #fff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .digital-input::placeholder {
+    color: #999;
+  }
+
+  .input-border {
+    display: none;
+  }
+
+  .error-alert {
+    background: #fff5f5;
+    border: 1px solid #feb2b2;
+    color: #c53030;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .error-icon {
+    font-size: 1rem;
+  }
+
+  .digital-login-btn {
+    width: 100%;
+    padding: 16px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+  }
+
+  .digital-login-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+
+  .digital-login-btn:active {
+    transform: translateY(0);
+  }
+
+  .digital-login-btn.loading {
+    opacity: 0.8;
+    cursor: not-allowed;
+  }
+
+  .btn-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .login-actions {
+    margin-top: 20px;
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+  }
+
+  .back-btn-digital {
+    background: none;
+    border: none;
+    color: #667eea;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 8px 16px;
+    transition: color 0.2s ease;
+  }
+
+  .back-btn-digital:hover {
+    color: #764ba2;
+  }
+}
+
+@media (max-width: 480px) {
+  .digital-login-page {
+    padding: 15px;
+  }
+
+  .login-header-digital {
+    padding: 24px 20px;
+  }
+
+  .login-logo {
+    width: 60px;
+    height: 60px;
+  }
+
+  .brand-info h1 {
+    font-size: 1.25rem;
+  }
+
+  .login-form-container {
+    padding: 24px 20px;
+  }
+
+  .access-info h2 {
+    font-size: 1.15rem;
+  }
+
+  .digital-input {
+    padding: 14px 14px 14px 44px;
+    font-size: 0.95rem;
+  }
+
+  .digital-login-btn {
+    padding: 14px 20px;
+    font-size: 0.95rem;
   }
 }
 
@@ -9278,66 +9597,1262 @@ button.utility-link {
 
 /* ===== RESPONSIVE FIXES FOR ADMIN DASHBOARD ===== */
 /* iPad and Tablet View */
-@media (min-width: 481px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1024px) {
   .dashboard-sidebar {
-    width: 320px !important; /* Increased width for iPad */
-    min-width: 320px !important;
-    flex-shrink: 0 !important;
+    width: 220px !important;
+    min-width: 220px !important;
+  }
+
+  .sidebar-nav-item {
+    padding: 12px 15px;
+    font-size: 14px;
+  }
+
+  .dashboard-content {
+    padding: 15px;
+    padding-top: 70px;
   }
 }
 
-@media (max-width: 480px) {
-  /* Hide sidebar on mobile or make it collapsible */
+/* Mobile Nav Dropdown - Hidden on Desktop */
+.mobile-nav-dropdown {
+  display: none;
+}
+
+/* Mobile Status Folders - Hidden on Desktop */
+.mobile-status-folders {
+  display: none;
+}
+
+/* Mobile View - Professional Admin Dashboard */
+@media (max-width: 768px) {
+  .admin-dashboard {
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* Sidebar becomes compact dropdown on mobile */
   .dashboard-sidebar {
-    width: 60px !important; /* Collapsed width */
-    min-width: 60px !important;
-    flex-shrink: 0 !important;
-    padding-left: 5px;
-    padding-right: 5px;
-    padding-top: 20px;
-    padding-bottom: 10px;
-    transform: translateX(-100%); /* Hide completely on very small screens */
-    transition: transform 0.3s ease;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: 0 !important;
+    background: #1e293b;
+    border-right: none;
+    border-bottom: 1px solid #334155;
+    display: block;
   }
 
-  .dashboard-sidebar.open {
-    transform: translateX(0); /* Show when opened */
+  /* Hide desktop sidebar nav on mobile */
+  .desktop-sidebar-nav {
+    display: none !important;
   }
 
-  /* Adjust margins for mobile */
-  .App-main {
-    margin-top: 42px;
-    margin-bottom: 70px;
+  /* Show mobile dropdown */
+  .mobile-nav-dropdown {
+    display: block;
+    position: relative;
+    width: 100%;
   }
 
-  /* Notice portal adjustments for small screens */
-  .notice-item {
-    padding: 12px;
+  .mobile-nav-toggle {
+    width: 100%;
+    padding: 14px 20px;
+    background: #1e293b;
+    border: none;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    border-bottom: 1px solid #334155;
   }
 
-  .notice-badge {
-    font-size: 0.65rem;
-    padding: 3px 10px;
+  .mobile-nav-toggle:hover {
+    background: #334155;
   }
 
-  .notice-item h3 {
+  .mobile-nav-arrow {
+    font-size: 12px;
+    transition: transform 0.2s ease;
+  }
+
+  .mobile-nav-arrow.open {
+    transform: rotate(180deg);
+  }
+
+  .mobile-nav-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
+    max-height: 60vh;
+    overflow-y: auto;
+    z-index: 1001;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .mobile-nav-item {
+    width: 100%;
+    padding: 14px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #334155;
+    color: #cbd5e1;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-nav-item:last-child {
+    border-bottom: none;
+  }
+
+  .mobile-nav-item:hover {
+    background: #334155;
+    color: #fff;
+  }
+
+  .mobile-nav-item.active {
+    background: #3b82f6;
+    color: #fff;
+  }
+
+  /* Main content area */
+  .dashboard-content {
+    flex: 1;
+    padding: 15px;
+    padding-top: 65px;
+    padding-bottom: 30px;
+    margin-left: 0 !important;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Dashboard header */
+  .dashboard-header {
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+
+  .dashboard-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .dashboard-subtitle {
+    font-size: 0.9rem;
+  }
+
+  /* Stats cards */
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .stat-number {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  /* Applications section */
+  .applications-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    padding-left: 0.75rem;
+  }
+
+  /* Tables - horizontal scroll wrapper */
+  .applications-table-container,
+  .data-table-container,
+  table {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .applications-table,
+  .data-table {
+    min-width: 600px;
+    font-size: 0.85rem;
+  }
+
+  .applications-table th,
+  .applications-table td,
+  .data-table th,
+  .data-table td {
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+
+  .applications-table th,
+  .data-table th {
     font-size: 0.8rem;
   }
 
-  .notice-item p {
-    font-size: 0.7rem;
+  /* Action buttons in tables */
+  .view-btn,
+  .approve-btn,
+  .reject-btn,
+  .more-info-btn,
+  .delete-btn-table,
+  .suspend-btn-table,
+  .unsuspend-btn-table {
+    padding: 6px 10px;
+    font-size: 11px;
+    margin: 2px;
+  }
+
+  /* Status badges */
+  .status-badge,
+  .status-pending,
+  .status-approved,
+  .status-rejected {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  /* Status select dropdown */
+  .status-select-table {
+    padding: 6px 8px;
+    font-size: 12px;
+    min-width: 120px;
+  }
+
+  /* Cards and sections */
+  .dashboard-card,
+  .section-card {
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .card-header,
+  .section-header {
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+
+  /* Forms */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+
+  /* Modals */
+  .modal-content,
+  .modal-container {
+    width: 95% !important;
+    max-width: 95% !important;
+    margin: 10px auto;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    padding: 15px;
+  }
+
+  .modal-header h2,
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .modal-body {
+    padding: 15px;
+  }
+
+  .modal-footer {
+    padding: 12px 15px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .modal-footer button {
+    flex: 1;
+    min-width: 100px;
+    padding: 10px 15px;
+    font-size: 0.9rem;
+  }
+
+  /* Buttons */
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  /* Detail view */
+  .detail-section {
+    padding: 1rem;
+  }
+
+  .detail-row {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 0;
+  }
+
+  .detail-label {
+    font-size: 0.8rem;
+    color: #64748b;
+  }
+
+  .detail-value {
+    font-size: 0.95rem;
+  }
+
+  /* Organization cards */
+  .organization-card {
+    padding: 1rem;
+  }
+
+  .organization-id-badge,
+  .organization-id-detail {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+
+  /* Assessment section */
+  .assessment-card {
+    padding: 1rem;
+  }
+
+  .assessment-question {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  /* Admin user cards */
+  .admin-user-card,
+  .state-user-card {
+    padding: 1rem;
+  }
+
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  /* Notice management */
+  .notice-form {
+    padding: 1rem;
+  }
+
+  .notice-form input,
+  .notice-form textarea,
+  .notice-form select {
+    font-size: 0.95rem;
+  }
+
+  /* Quick actions */
+  .quick-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .quick-action-btn {
+    flex: 1;
+    min-width: calc(50% - 4px);
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+
+  /* Filter section */
+  .filter-section,
+  .status-filter {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-btn,
+  .status-filter-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Pagination */
+  .pagination {
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+  }
+
+  .pagination button {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  /* Hide desktop status columns on mobile */
+  .desktop-status-columns {
+    display: none !important;
+  }
+
+  /* Mobile Status Folders - Horizontal Bars with Dropdowns */
+  .mobile-status-folders {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .mobile-status-folder {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-folder-toggle {
+    width: 100%;
+    padding: 14px 16px;
+    background: #fff;
+    border: none;
+    border-left: 4px solid #6b7280;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+
+  .mobile-folder-toggle:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  .mobile-folder-toggle.expanded {
+    background: #f8fafc;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .mobile-folder-toggle .folder-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    flex: 1;
+  }
+
+  .mobile-folder-toggle .folder-count {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 12px;
+    min-width: 32px;
+    text-align: center;
+    margin-right: 12px;
+  }
+
+  .mobile-folder-toggle .folder-arrow {
+    font-size: 12px;
+    color: #6b7280;
+    transition: transform 0.2s ease;
+  }
+
+  .mobile-folder-toggle .folder-arrow.open {
+    transform: rotate(180deg);
+  }
+
+  .mobile-folder-content {
+    background: #fff;
+    border-radius: 0 0 8px 8px;
+    margin-top: -4px;
+    padding-top: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    max-height: 250px;
+    overflow-y: auto;
+  }
+
+  .mobile-folder-item {
+    width: 100%;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .mobile-folder-item:last-child {
+    border-bottom: none;
+  }
+
+  .mobile-folder-item:hover {
+    background: #f8fafc;
+  }
+
+  .mobile-folder-item .item-number {
+    font-size: 10px;
+    font-weight: 500;
+    color: #9ca3af;
+    min-width: 18px;
+  }
+
+  .mobile-folder-item .item-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    letter-spacing: 0.01em;
+  }
+
+  .mobile-folder-empty {
+    padding: 14px 16px;
+    text-align: center;
+    font-size: 11px;
+    color: #9ca3af;
+  }
+
+  /* Tournament Updates Card - Mobile */
+  .tournament-updates-card {
+    margin: 12px 0 !important;
+    margin-bottom: 80px !important;
+  }
+
+  .tournament-updates-card .updates-card-body {
+    padding: 12px !important;
+  }
+
+  .tournament-updates-card .updates-header-content {
+    margin-bottom: 12px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tournament-updates-card .updates-title h3 {
+    font-size: 13px !important;
+  }
+
+  .tournament-updates-card .updates-count {
+    font-size: 10px !important;
+    padding: 3px 6px !important;
+  }
+
+  .tournament-updates-card .refresh-updates-btn-header {
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+  }
+
+  .tournament-updates-card .updates-scrollable-list {
+    max-height: 300px !important;
+    padding: 8px !important;
+  }
+
+  .tournament-updates-card .update-list-item {
+    padding: 10px 4px !important;
+  }
+
+  .tournament-updates-card .tournament-name-badge {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+  }
+
+  .tournament-updates-card .update-timestamp {
+    font-size: 10px !important;
+  }
+
+  .tournament-updates-card .update-description-card {
+    font-size: 11px !important;
+    margin: 6px 0 !important;
+  }
+
+  .tournament-updates-card .update-details-card {
+    font-size: 10px !important;
+    gap: 8px !important;
+  }
+
+  .tournament-updates-card .organizer-badge,
+  .tournament-updates-card .venue-badge,
+  .tournament-updates-card .date-badge {
+    font-size: 10px !important;
+  }
+
+  .tournament-updates-card .status-change-badge {
+    font-size: 10px !important;
+    padding: 3px 8px !important;
+  }
+
+  /* Calendar Container - Mobile */
+  .calendar-container {
+    grid-template-columns: 1fr !important;
+    padding: 15px !important;
+    gap: 20px !important;
+    min-height: auto !important;
+    margin-bottom: 80px !important;
+  }
+
+  .calendar-grid {
+    width: 100%;
+  }
+
+  .calendar-header {
+    margin-bottom: 15px !important;
+    padding-bottom: 10px !important;
+  }
+
+  .calendar-header h3 {
+    font-size: 16px !important;
+  }
+
+  .calendar-header button {
+    padding: 6px 10px !important;
+    font-size: 14px !important;
+  }
+
+  .calendar-month {
+    font-size: 12px !important;
+  }
+
+  .calendar-month > div {
+    padding: 8px 4px !important;
+    min-height: 45px !important;
+  }
+
+  .selected-date-details {
+    border-top: 1px solid #dee2e6;
+    padding-top: 15px;
+  }
+
+  .selected-date-details h4 {
+    font-size: 14px !important;
+  }
+
+  .selected-date-details .tournaments-list {
+    max-height: 250px !important;
+  }
+
+  .selected-date-details .tournaments-list > div {
+    padding: 10px !important;
+  }
+
+  .selected-date-details .tournaments-list h5 {
+    font-size: 13px !important;
+  }
+
+  .selected-date-details .tournaments-list p {
+    font-size: 11px !important;
+  }
+
+  /* Form sections - Mobile */
+  .form-section:last-child {
+    margin-bottom: 20px;
+  }
+
+  .form-actions {
+    margin-bottom: 80px !important;
+    padding-bottom: 20px;
+  }
+
+  .consent-section {
     margin-bottom: 15px;
   }
 
-  .notice-actions {
-    margin-top: 15px;
+  /* General content bottom spacing for mobile */
+  .create-tournament-form,
+  .edit-tournament-form,
+  .application-detail-view {
+    padding-bottom: 80px !important;
+  }
+
+  /* Applications Management - Mobile */
+  .applications-management .dashboard-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .applications-management .dashboard-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .status-filter-buttons {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .status-filter-btn {
+    padding: 8px 10px !important;
+    font-size: 11px !important;
+    min-width: unset !important;
+    border-radius: 6px !important;
+  }
+
+  .status-filter-btn .filter-icon {
+    font-size: 12px;
+    margin-right: 4px;
+  }
+
+  /* Applications Table - Mobile Card View */
+  .applications-table-container {
+    margin-bottom: 100px;
+  }
+
+  .applications-table {
+    display: block;
+    width: 100%;
+  }
+
+  .applications-table thead {
+    display: none;
+  }
+
+  .applications-table tbody {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
   }
 
-  .notice-btn-primary,
-  .notice-btn-secondary {
-    padding: 10px;
-    font-size: 0.7rem;
+  .applications-table tr {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  .applications-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0 !important;
+    border: none !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+    font-size: 11px !important;
+    background: transparent !important;
+  }
+
+  .applications-table td:last-child {
+    border-bottom: none !important;
+    padding-top: 10px !important;
+    justify-content: flex-start;
+  }
+
+  .applications-table td:first-child {
+    display: none;
+  }
+
+  .applications-table td:nth-child(2)::before {
+    content: "Tournament";
+    font-weight: 600;
+    color: #9ca3af;
+    font-size: 9px;
+    text-transform: uppercase;
+    min-width: 75px;
+  }
+
+  .applications-table td:nth-child(3)::before {
+    content: "ID";
+    font-weight: 600;
+    color: #9ca3af;
+    font-size: 9px;
+    text-transform: uppercase;
+    min-width: 75px;
+  }
+
+  .applications-table td:nth-child(4)::before {
+    content: "Status";
+    font-weight: 600;
+    color: #9ca3af;
+    font-size: 9px;
+    text-transform: uppercase;
+    min-width: 75px;
+  }
+
+  .applications-table td:nth-child(2) {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 12px !important;
+    border-bottom: none !important;
+    padding-bottom: 2px !important;
+  }
+
+  .applications-table td:nth-child(2) .clickable-link,
+  .applications-table td:nth-child(3) .clickable-link {
+    flex: 1;
+    color: #3b82f6;
+  }
+
+  .applications-table .table-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .applications-table .table-actions > * {
+    flex: none;
+  }
+
+  .applications-table .view-btn-table {
+    padding: 6px 16px !important;
+    font-size: 10px !important;
+    border-radius: 4px !important;
+    background: #3b82f6 !important;
+    color: #fff !important;
+    border: none !important;
+  }
+
+  .applications-table .delete-btn-table {
+    padding: 6px 16px !important;
+    font-size: 10px !important;
+    border-radius: 4px !important;
+    background: #ef4444 !important;
+    color: #fff !important;
+    border: none !important;
+  }
+
+  .applications-table .edit-btn-table {
+    padding: 6px 16px !important;
+    font-size: 10px !important;
+    border-radius: 4px !important;
+  }
+
+  .applications-table .status-badge-table {
+    padding: 3px 8px !important;
+    font-size: 9px !important;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  .applications-table .sanctioned-badge {
+    font-size: 9px !important;
+    padding: 3px 6px;
+  }
+
+  /* Hide state approval badges on mobile to reduce clutter */
+  .applications-table .state-approval-badge {
+    display: none !important;
+  }
+
+  /* Style status dropdown on mobile */
+  .applications-table .status-select-table {
+    padding: 4px 8px !important;
+    font-size: 9px !important;
+    border-radius: 4px !important;
+    min-width: 90px;
+    max-width: 100px;
+  }
+
+  /* Make action buttons row cleaner */
+  .applications-table td:last-child {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Registered Organizations - Mobile */
+  .registered-organizations-view {
+    padding-bottom: 80px;
+  }
+
+  .org-stats-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .org-stats-row {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .org-total-count {
+    font-size: 1rem !important;
+    width: 100%;
+    margin-bottom: 8px !important;
+  }
+
+  .org-divider {
+    display: none !important;
+  }
+
+  .org-active-count,
+  .org-suspended-count {
+    font-size: 0.75rem !important;
+    background: #f3f4f6;
+    padding: 4px 10px;
+    border-radius: 12px;
+  }
+
+  /* Organization Cards Grid */
+  .org-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .org-card {
+    padding: 14px !important;
+    border-radius: 10px !important;
+  }
+
+  .org-card h3 {
+    font-size: 14px !important;
+  }
+
+  .org-card p {
+    font-size: 11px !important;
+  }
+
+  /* Organization Action Buttons */
+  .org-card-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .org-btn {
+    padding: 8px 12px !important;
+    font-size: 10px !important;
+    border-radius: 5px !important;
+    flex: none !important;
+    min-width: auto !important;
+  }
+
+  /* Tournament Software - Mobile */
+  .tournament-software-view {
+    padding-bottom: 80px;
+  }
+
+  .tournament-software-view h3 {
+    font-size: 1rem !important;
+  }
+
+  .software-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .software-card {
+    padding: 14px !important;
+    border-radius: 10px !important;
+  }
+
+  .software-card h4 {
+    font-size: 14px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .software-card > div:first-child p {
+    font-size: 11px !important;
+  }
+
+  .software-card span[style*="borderRadius: '999px'"],
+  .software-card span[style*="border-radius"] {
+    font-size: 9px !important;
+    padding: 3px 8px !important;
+  }
+
+  .software-details-grid {
+    gap: 6px !important;
+  }
+
+  .software-detail-row {
+    grid-template-columns: 100px 1fr !important;
+    gap: 8px !important;
+  }
+
+  .software-card span,
+  .software-card a {
+    font-size: 11px !important;
+  }
+
+  .software-label {
+    font-size: 10px !important;
+  }
+
+  .software-delete-btn {
+    margin-top: 12px !important;
+    padding: 10px !important;
+    font-size: 11px !important;
+    width: auto !important;
+  }
+
+  /* State Users Management - Mobile */
+  .state-users-management {
+    padding-bottom: 80px;
+  }
+
+  .state-users-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .state-users-header h1 {
+    font-size: 1.3rem !important;
+  }
+
+  .state-users-header p {
+    font-size: 0.8rem !important;
+  }
+
+  .state-users-header .create-btn {
+    width: 100%;
+    padding: 10px 16px !important;
+    font-size: 12px !important;
+  }
+
+  .state-users-stats {
+    gap: 8px !important;
+  }
+
+  .state-users-stats .stat-card {
+    padding: 12px 10px !important;
+    min-width: 80px;
+  }
+
+  .state-users-stats .stat-value {
+    font-size: 1.5rem !important;
+  }
+
+  .state-users-stats .stat-label {
+    font-size: 9px !important;
+  }
+
+  .state-users-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .state-user-card {
+    padding: 0 !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+  }
+
+  .state-user-card .card-header {
+    padding: 12px !important;
+  }
+
+  .state-user-card .state-avatar {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 16px !important;
+  }
+
+  .state-user-card .state-info h3 {
+    font-size: 14px !important;
+  }
+
+  .state-user-card .state-info .username {
+    font-size: 11px !important;
+  }
+
+  .state-user-card .status-badge {
+    font-size: 9px !important;
+    padding: 3px 8px !important;
+  }
+
+  .state-user-card .card-body {
+    padding: 12px !important;
+  }
+
+  .state-user-card .info-row {
+    padding: 8px 0 !important;
+  }
+
+  .state-user-card .info-row .label {
+    font-size: 10px !important;
+  }
+
+  .state-user-card .info-row .value {
+    font-size: 12px !important;
+  }
+
+  .state-user-card .card-actions {
+    padding: 12px !important;
+    gap: 8px !important;
+  }
+
+  .state-user-card .card-actions button {
+    padding: 8px 12px !important;
+    font-size: 10px !important;
+    flex: 1;
+  }
+}
+
+/* Extra small mobile screens */
+@media (max-width: 480px) {
+  .dashboard-content {
+    padding: 12px;
+    padding-top: 60px;
+  }
+
+  .dashboard-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+  }
+
+  .stat-number {
+    font-size: 1.3rem;
+    margin-bottom: 0;
+    order: 2;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    order: 1;
+  }
+
+  .mobile-nav-toggle {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
+  .mobile-nav-item {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+
+  .modal-content,
+  .modal-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  .quick-action-btn {
+    min-width: 100%;
+  }
+
+  /* Mobile Status Folders - Extra Small Screens */
+  .mobile-status-folders {
+    gap: 8px;
+  }
+
+  .mobile-folder-toggle {
+    padding: 12px 14px;
+  }
+
+  .mobile-folder-toggle .folder-label {
+    font-size: 13px;
+  }
+
+  .mobile-folder-toggle .folder-count {
+    font-size: 12px;
+    padding: 3px 10px;
+    margin-right: 10px;
+  }
+
+  .mobile-folder-item {
+    padding: 9px 14px;
+  }
+
+  .mobile-folder-item .item-number {
+    font-size: 9px;
+  }
+
+  .mobile-folder-item .item-title {
+    font-size: 10px;
+  }
+
+  /* Tournament Updates Card - Extra Small Screens */
+  .tournament-updates-card .updates-card-body {
+    padding: 10px !important;
+  }
+
+  .tournament-updates-card .updates-title h3 {
+    font-size: 12px !important;
+  }
+
+  .tournament-updates-card .tournament-name-badge {
+    font-size: 11px !important;
+  }
+
+  .tournament-updates-card .update-description-card {
+    font-size: 10px !important;
+  }
+
+  .tournament-updates-card .update-details-card {
+    font-size: 9px !important;
+  }
+
+  /* Applications Management - Extra Small */
+  .status-filter-buttons {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px !important;
+  }
+
+  .status-filter-btn {
+    padding: 6px 8px !important;
+    font-size: 10px !important;
+  }
+
+  .applications-table tr {
+    padding: 12px;
+  }
+
+  .applications-table td {
+    font-size: 11px !important;
+  }
+
+  .applications-table td:nth-child(2) {
+    font-size: 12px !important;
+  }
+
+  .applications-table .view-btn-table,
+  .applications-table .edit-btn-table,
+  .applications-table .delete-btn-table {
+    padding: 6px 12px !important;
+    font-size: 10px !important;
   }
 }
 
@@ -9816,6 +11331,13 @@ button.utility-link {
 .notice-portal-footer a:hover {
   color: #33e1ff;
   text-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
+}
+
+/* Hide notice portal on mobile */
+@media (max-width: 768px) {
+  .notice-portal {
+    display: none !important;
+  }
 }
 
 /* Optimization Notice - In Hero Section */

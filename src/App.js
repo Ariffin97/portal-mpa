@@ -33,6 +33,7 @@ function App() {
   const [isNoticePortalExpanded, setIsNoticePortalExpanded] = useState(false);
   const [showImportantNotice, setShowImportantNotice] = useState(false);
   const [showApplyDropdown, setShowApplyDropdown] = useState(false);
+  const [showMobileQuickMenu, setShowMobileQuickMenu] = useState(false);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
   const [tournamentSoftwareUserData, setTournamentSoftwareUserData] = useState(null);
   const [isStateLoggedIn, setIsStateLoggedIn] = useState(false);
@@ -498,6 +499,66 @@ function App() {
                   Your gateway to competitive pickleball in Malaysia. Organizer login and guide,
                   take assessments to test your knowledge, track your applications, and join our growing community of players.
                 </p>
+
+                {/* Mobile Quick Menu */}
+                <div className="mobile-quick-menu">
+                  <button
+                    className="mobile-quick-menu-toggle"
+                    onClick={() => setShowMobileQuickMenu(!showMobileQuickMenu)}
+                  >
+                    Quick Menu
+                    <span className={`dropdown-arrow ${showMobileQuickMenu ? 'open' : ''}`}>▼</span>
+                  </button>
+                  {showMobileQuickMenu && (
+                    <div className="mobile-quick-menu-dropdown">
+                      <button
+                        className="mobile-quick-menu-item"
+                        onClick={() => {
+                          setShowAssessmentModal(true);
+                          setShowMobileQuickMenu(false);
+                        }}
+                      >
+                        Assessment Login
+                      </button>
+                      <button
+                        className="mobile-quick-menu-item"
+                        onClick={() => {
+                          setCurrentPage('software-login');
+                          setShowMobileQuickMenu(false);
+                        }}
+                      >
+                        Tournament Software Login
+                      </button>
+                      <button
+                        className="mobile-quick-menu-item"
+                        onClick={() => {
+                          setShowLoginModal(true);
+                          setShowMobileQuickMenu(false);
+                        }}
+                      >
+                        Organizer Login
+                      </button>
+                      <button
+                        className="mobile-quick-menu-item"
+                        onClick={() => {
+                          setShowTournamentGuidelines(true);
+                          setShowMobileQuickMenu(false);
+                        }}
+                      >
+                        Tournament Guidelines
+                      </button>
+                      <button
+                        className="mobile-quick-menu-item"
+                        onClick={() => {
+                          setCurrentPage('status');
+                          setShowMobileQuickMenu(false);
+                        }}
+                      >
+                        Check Application Status
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <div className="hero-actions">
                   <div className="hero-actions-column">

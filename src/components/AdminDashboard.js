@@ -216,6 +216,12 @@ const AdminDashboard = ({ setCurrentPage }) => {
   // Sidebar Sub-menu state
   const [createTournamentExpanded, setCreateTournamentExpanded] = useState(false);
 
+  // Mobile menu dropdown state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Mobile status folder dropdown state
+  const [expandedStatusFolder, setExpandedStatusFolder] = useState(null);
+
   // Load saved assessment forms and submissions on component mount
   useEffect(() => {
     const loadAssessmentForms = async () => {
@@ -4060,19 +4066,19 @@ const AdminDashboard = ({ setCurrentPage }) => {
   const renderRegisteredOrganizations = () => (
     <div className="registered-organizations-view">
 
-      <div style={{
+      <div className="org-stats-header" style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '1.5rem',
         padding: '0 0.5rem'
       }}>
-        <div style={{
+        <div className="org-stats-row" style={{
           display: 'flex',
           alignItems: 'center',
           gap: '1rem'
         }}>
-          <h3 style={{
+          <h3 className="org-total-count" style={{
             fontSize: '1.25rem',
             fontWeight: '600',
             color: '#374151',
@@ -4080,19 +4086,19 @@ const AdminDashboard = ({ setCurrentPage }) => {
           }}>
             Total Organizations: {registeredOrganizations.length}
           </h3>
-          <div style={{
+          <div className="org-divider" style={{
             height: '1px',
             width: '60px',
             backgroundColor: '#e5e7eb'
           }}></div>
-          <span style={{
+          <span className="org-active-count" style={{
             fontSize: '0.875rem',
             color: '#6b7280',
             fontWeight: '500'
           }}>
             Active: {registeredOrganizations.filter(org => org.status !== 'suspended').length}
           </span>
-          <span style={{
+          <span className="org-suspended-count" style={{
             fontSize: '0.875rem',
             color: '#ef4444',
             fontWeight: '500'
@@ -4128,13 +4134,13 @@ const AdminDashboard = ({ setCurrentPage }) => {
           </p>
         </div>
       ) : (
-        <div style={{
+        <div className="org-cards-grid" style={{
           display: 'grid',
           gap: '1.5rem',
           gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))'
         }}>
           {registeredOrganizations.map((org, index) => (
-            <div key={org._id} style={{
+            <div key={org._id} className="org-card" style={{
               backgroundColor: 'white',
               border: '1px solid #e5e7eb',
               borderRadius: '12px',
@@ -4271,7 +4277,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
                 </p>
               </div>
 
-              <div style={{
+              <div className="org-card-actions" style={{
                 display: 'flex',
                 gap: '0.5rem',
                 flexWrap: 'wrap',
@@ -4279,6 +4285,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
                 borderTop: '1px solid #f3f4f6'
               }}>
                 <button
+                  className="org-btn org-btn-view"
                   onClick={() => showApplicationDetails(org)}
                   style={{
                     backgroundColor: '#3b82f6',
@@ -4298,6 +4305,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
                   View Details
                 </button>
                 <button
+                  className="org-btn org-btn-message"
                   onClick={() => handleSendMessageToOrganiser(org.email, org.organizationName)}
                   style={{
                     backgroundColor: '#06b6d4',
@@ -4318,6 +4326,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
                 </button>
                 {org.status === 'suspended' ? (
                   <button
+                    className="org-btn org-btn-unsuspend"
                     onClick={() => handleUnsuspendOrganization(org._id, org.organizationName)}
                     style={{
                       backgroundColor: '#10b981',
@@ -4338,6 +4347,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
                   </button>
                 ) : (
                   <button
+                    className="org-btn org-btn-suspend"
                     onClick={() => handleSuspendOrganization(org._id, org.organizationName)}
                     style={{
                       backgroundColor: '#f59e0b',
@@ -4358,6 +4368,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
                   </button>
                 )}
                 <button
+                  className="org-btn org-btn-remove"
                   onClick={() => handleDeleteOrganization(org._id, org.organizationName, org.organizationId)}
                   style={{
                     backgroundColor: '#ef4444',
@@ -4435,13 +4446,13 @@ const AdminDashboard = ({ setCurrentPage }) => {
           </p>
         </div>
       ) : (
-        <div style={{
+        <div className="software-cards-grid" style={{
           display: 'grid',
           gap: '1.5rem',
           gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))'
         }}>
           {tournamentSoftware.map((software) => (
-            <div key={software._id} style={{
+            <div key={software._id} className="software-card" style={{
               backgroundColor: 'white',
               border: '1px solid #e5e7eb',
               borderRadius: '12px',
@@ -4486,17 +4497,17 @@ const AdminDashboard = ({ setCurrentPage }) => {
                 </span>
               </div>
 
-              <div style={{
+              <div className="software-details-grid" style={{
                 display: 'grid',
                 gap: '0.75rem',
                 marginBottom: '1rem'
               }}>
-                <div style={{
+                <div className="software-detail-row" style={{
                   display: 'grid',
                   gridTemplateColumns: '140px 1fr',
                   gap: '0.5rem'
                 }}>
-                  <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>Platform:</span>
+                  <span className="software-label" style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>Platform:</span>
                   <span style={{ fontSize: '0.875rem', color: '#111827' }}>
                     {[software.platform?.web && 'Web', software.platform?.mobile && 'Mobile'].filter(Boolean).join(', ') || 'N/A'}
                   </span>
@@ -4630,6 +4641,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
               {/* Delete Button */}
               <button
+                className="software-delete-btn"
                 onClick={() => handleDeleteTournamentSoftware(software._id, software.softwareName, software.companyName)}
                 style={{
                   marginTop: '1rem',
@@ -6426,10 +6438,145 @@ const AdminDashboard = ({ setCurrentPage }) => {
     );
   };
 
+  // Helper function to get display name for current view
+  const getViewDisplayName = (view) => {
+    const viewNames = {
+      'dashboard': 'Dashboard',
+      'calendar': 'Calendar',
+      'create-tournament': 'Create Tournament',
+      'edit-tournament': 'Edit Tournament',
+      'applications': 'Application Management',
+      'registered-organizations': 'Registered Organizations',
+      'tournament-software': 'Tournament Software',
+      'analytics': 'Analytics',
+      'notice-management': 'Notice Management',
+      'assessment-management': 'Assessment Management',
+      'assessment-list': 'Assessment Results',
+      'assessment-statistics': 'Assessment Statistics',
+      'saved-forms': 'Saved Forms',
+      'state-users': 'State Users',
+      'admin_management': 'Admin Management',
+      'settings': 'Settings'
+    };
+    return viewNames[view] || 'Dashboard';
+  };
+
   return (
     <div className="admin-dashboard">
       <div className="dashboard-sidebar">
-        <div className="sidebar-nav">
+        {/* Mobile Menu Dropdown */}
+        <div className="mobile-nav-dropdown">
+          <button
+            className="mobile-nav-toggle"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            <span>{getViewDisplayName(currentView)}</span>
+            <span className={`mobile-nav-arrow ${mobileMenuOpen ? 'open' : ''}`}>▼</span>
+          </button>
+          {mobileMenuOpen && (
+            <div className="mobile-nav-menu">
+              {hasAccessTo('dashboard') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('dashboard'); setMobileMenuOpen(false); }}
+                >
+                  Dashboard
+                </button>
+              )}
+              {hasAccessTo('calendar') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'calendar' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('calendar'); setMobileMenuOpen(false); }}
+                >
+                  Calendar
+                </button>
+              )}
+              {hasAccessTo('tournaments') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'create-tournament' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('create-tournament'); setMobileMenuOpen(false); }}
+                >
+                  Create Tournament
+                </button>
+              )}
+              {hasAccessTo('applications') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'applications' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('applications'); setMobileMenuOpen(false); }}
+                >
+                  Application Management
+                </button>
+              )}
+              {hasAccessTo('organizations') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'registered-organizations' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('registered-organizations'); setMobileMenuOpen(false); }}
+                >
+                  Registered Organizations
+                </button>
+              )}
+              {hasAccessTo('tournament-software') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'tournament-software' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('tournament-software'); setMobileMenuOpen(false); }}
+                >
+                  Tournament Software
+                </button>
+              )}
+              {hasAccessTo('analytics') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'analytics' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('analytics'); setMobileMenuOpen(false); }}
+                >
+                  Analytics
+                </button>
+              )}
+              {hasAccessTo('notices') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'notice-management' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('notice-management'); setMobileMenuOpen(false); }}
+                >
+                  Notice Management
+                </button>
+              )}
+              {hasAccessTo('assessment') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'assessment-management' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('assessment-management'); setMobileMenuOpen(false); }}
+                >
+                  Assessment Management
+                </button>
+              )}
+              {hasAccessTo('state-users') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'state-users' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('state-users'); setMobileMenuOpen(false); }}
+                >
+                  State Users
+                </button>
+              )}
+              {hasAccessTo('admin_management') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'admin_management' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('admin_management'); setMobileMenuOpen(false); }}
+                >
+                  Admin Management
+                </button>
+              )}
+              {hasAccessTo('settings') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'settings' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('settings'); setMobileMenuOpen(false); }}
+                >
+                  Settings
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Sidebar Nav */}
+        <div className="sidebar-nav desktop-sidebar-nav">
           {hasAccessTo('dashboard') && (
             <button
               className={`sidebar-nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
@@ -6880,111 +7027,158 @@ Settings
                 <p>Applications will appear here once users submit tournament applications.</p>
               </div>
             ) : (
-              <div className="status-columns-container">
-                {/* Pending Review Column */}
-                <div className="status-column">
-                  <h3 className="status-column-header pending">
-                    Pending Review ({applications.filter(app => app.status === 'Pending Review').length})
-                  </h3>
-                  <div className="status-column-content">
-                    {applications.filter(app => app.status === 'Pending Review').length > 0 ? (
-                      <div className="tournament-list">
-                        {applications.filter(app => app.status === 'Pending Review').map((app, index) => (
-                          <div 
-                            key={app.applicationId || app.id} 
-                            className="tournament-item"
-                            onClick={() => showApplicationDetails(app)}
-                            title="Click to view details"
-                          >
-                            <span className="tournament-number">{index + 1}.</span>
-                            {app.eventTitle || 'No Event Title'}
+              <>
+                {/* Mobile Status Folders - Horizontal with Dropdowns */}
+                <div className="mobile-status-folders">
+                  {[
+                    { key: 'Pending Review', label: 'Pending', color: '#f59e0b' },
+                    { key: 'Under Review', label: 'Review', color: '#3b82f6' },
+                    { key: 'Approved', label: 'Approved', color: '#10b981' },
+                    { key: 'Rejected', label: 'Rejected', color: '#ef4444' }
+                  ].map(status => {
+                    const statusApps = applications.filter(app => app.status === status.key);
+                    const isExpanded = expandedStatusFolder === status.key;
+                    return (
+                      <div key={status.key} className="mobile-status-folder">
+                        <button
+                          className={`mobile-folder-toggle ${isExpanded ? 'expanded' : ''}`}
+                          onClick={() => setExpandedStatusFolder(isExpanded ? null : status.key)}
+                          style={{ borderLeftColor: status.color }}
+                        >
+                          <span className="folder-label">{status.label}</span>
+                          <span className="folder-count" style={{ backgroundColor: status.color }}>{statusApps.length}</span>
+                          <span className={`folder-arrow ${isExpanded ? 'open' : ''}`}>▼</span>
+                        </button>
+                        {isExpanded && (
+                          <div className="mobile-folder-content">
+                            {statusApps.length > 0 ? (
+                              statusApps.map((app, index) => (
+                                <div
+                                  key={app.applicationId || app.id}
+                                  className="mobile-folder-item"
+                                  onClick={() => showApplicationDetails(app)}
+                                >
+                                  <span className="item-number">{index + 1}.</span>
+                                  <span className="item-title">{app.eventTitle || 'No Event Title'}</span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="mobile-folder-empty">No applications</div>
+                            )}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    ) : (
-                      <div className="empty-column">No pending applications</div>
-                    )}
-                  </div>
+                    );
+                  })}
                 </div>
 
-                {/* Under Review Column */}
-                <div className="status-column">
-                  <h3 className="status-column-header under-review">
-                    Under Review ({applications.filter(app => app.status === 'Under Review').length})
-                  </h3>
-                  <div className="status-column-content">
-                    {applications.filter(app => app.status === 'Under Review').length > 0 ? (
-                      <div className="tournament-list">
-                        {applications.filter(app => app.status === 'Under Review').map((app, index) => (
-                          <div 
-                            key={app.applicationId || app.id} 
-                            className="tournament-item"
-                            onClick={() => showApplicationDetails(app)}
-                            title="Click to view details"
-                          >
-                            <span className="tournament-number">{index + 1}.</span>
-                            {app.eventTitle || 'No Event Title'}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="empty-column">No applications under review</div>
-                    )}
+                {/* Desktop Status Columns */}
+                <div className="status-columns-container desktop-status-columns">
+                  {/* Pending Review Column */}
+                  <div className="status-column">
+                    <h3 className="status-column-header pending">
+                      Pending Review ({applications.filter(app => app.status === 'Pending Review').length})
+                    </h3>
+                    <div className="status-column-content">
+                      {applications.filter(app => app.status === 'Pending Review').length > 0 ? (
+                        <div className="tournament-list">
+                          {applications.filter(app => app.status === 'Pending Review').map((app, index) => (
+                            <div
+                              key={app.applicationId || app.id}
+                              className="tournament-item"
+                              onClick={() => showApplicationDetails(app)}
+                              title="Click to view details"
+                            >
+                              <span className="tournament-number">{index + 1}.</span>
+                              {app.eventTitle || 'No Event Title'}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="empty-column">No pending applications</div>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Approved Column */}
-                <div className="status-column">
-                  <h3 className="status-column-header approved">
-                    Approved ({applications.filter(app => app.status === 'Approved').length})
-                  </h3>
-                  <div className="status-column-content">
-                    {applications.filter(app => app.status === 'Approved').length > 0 ? (
-                      <div className="tournament-list">
-                        {applications.filter(app => app.status === 'Approved').map((app, index) => (
-                          <div 
-                            key={app.applicationId || app.id} 
-                            className="tournament-item"
-                            onClick={() => showApplicationDetails(app)}
-                            title="Click to view details"
-                          >
-                            <span className="tournament-number">{index + 1}.</span>
-                            {app.eventTitle || 'No Event Title'}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="empty-column">No approved applications</div>
-                    )}
+                  {/* Under Review Column */}
+                  <div className="status-column">
+                    <h3 className="status-column-header under-review">
+                      Under Review ({applications.filter(app => app.status === 'Under Review').length})
+                    </h3>
+                    <div className="status-column-content">
+                      {applications.filter(app => app.status === 'Under Review').length > 0 ? (
+                        <div className="tournament-list">
+                          {applications.filter(app => app.status === 'Under Review').map((app, index) => (
+                            <div
+                              key={app.applicationId || app.id}
+                              className="tournament-item"
+                              onClick={() => showApplicationDetails(app)}
+                              title="Click to view details"
+                            >
+                              <span className="tournament-number">{index + 1}.</span>
+                              {app.eventTitle || 'No Event Title'}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="empty-column">No applications under review</div>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Rejected Column */}
-                <div className="status-column rejected">
-                  <h3 className="status-column-header rejected">
-                    Rejected ({applications.filter(app => app.status === 'Rejected').length})
-                  </h3>
-                  <div className="status-column-content">
-                    {applications.filter(app => app.status === 'Rejected').length > 0 ? (
-                      <div className="tournament-list">
-                        {applications.filter(app => app.status === 'Rejected').map((app, index) => (
-                          <div 
-                            key={app.applicationId || app.id} 
-                            className="tournament-item"
-                            onClick={() => showApplicationDetails(app)}
-                            title="Click to view details"
-                          >
-                            <span className="tournament-number">{index + 1}.</span>
-                            {app.eventTitle || 'No Event Title'}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="empty-column">No rejected applications</div>
-                    )}
+                  {/* Approved Column */}
+                  <div className="status-column">
+                    <h3 className="status-column-header approved">
+                      Approved ({applications.filter(app => app.status === 'Approved').length})
+                    </h3>
+                    <div className="status-column-content">
+                      {applications.filter(app => app.status === 'Approved').length > 0 ? (
+                        <div className="tournament-list">
+                          {applications.filter(app => app.status === 'Approved').map((app, index) => (
+                            <div
+                              key={app.applicationId || app.id}
+                              className="tournament-item"
+                              onClick={() => showApplicationDetails(app)}
+                              title="Click to view details"
+                            >
+                              <span className="tournament-number">{index + 1}.</span>
+                              {app.eventTitle || 'No Event Title'}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="empty-column">No approved applications</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Rejected Column */}
+                  <div className="status-column rejected">
+                    <h3 className="status-column-header rejected">
+                      Rejected ({applications.filter(app => app.status === 'Rejected').length})
+                    </h3>
+                    <div className="status-column-content">
+                      {applications.filter(app => app.status === 'Rejected').length > 0 ? (
+                        <div className="tournament-list">
+                          {applications.filter(app => app.status === 'Rejected').map((app, index) => (
+                            <div
+                              key={app.applicationId || app.id}
+                              className="tournament-item"
+                              onClick={() => showApplicationDetails(app)}
+                              title="Click to view details"
+                            >
+                              <span className="tournament-number">{index + 1}.</span>
+                              {app.eventTitle || 'No Event Title'}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="empty-column">No rejected applications</div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
 
             {/* Tournament Updates Card Section */}
