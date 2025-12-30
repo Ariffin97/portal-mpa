@@ -38,6 +38,20 @@ function App() {
   const [tournamentSoftwareUserData, setTournamentSoftwareUserData] = useState(null);
   const [isStateLoggedIn, setIsStateLoggedIn] = useState(false);
   const [stateUserData, setStateUserData] = useState(null);
+  const [approvedTournaments, setApprovedTournaments] = useState([]);
+
+  // Fetch approved tournaments for poster carousel
+  useEffect(() => {
+    const fetchApprovedTournaments = async () => {
+      try {
+        const response = await apiService.getApprovedTournaments();
+        setApprovedTournaments(response);
+      } catch (error) {
+        console.error('Error fetching approved tournaments:', error);
+      }
+    };
+    fetchApprovedTournaments();
+  }, []);
 
   // Assessment submissions are now saved directly to database
   // AdminDashboard loads them from the database via API
@@ -490,6 +504,14 @@ function App() {
           <div className="home-content">
             {/* Hero Section */}
             <section className="hero-banner">
+              {/* Floating Decorative Elements */}
+              <div className="floating-elements">
+                <div className="floating-shape shape-1"></div>
+                <div className="floating-shape shape-2"></div>
+                <div className="floating-shape shape-3"></div>
+                <div className="floating-shape shape-4"></div>
+                <div className="floating-shape shape-5"></div>
+              </div>
               <div className="hero-content">
                 <img src={mpaLogo} alt="MPA Logo" className="hero-logo" />
                 <div className="hero-portal-text">Portal</div>
@@ -651,119 +673,78 @@ function App() {
                         Check Application Status
                       </button>
                     </div>
-
-                    {/* Optimization Notice */}
-                    <div className="optimization-notice">
-                      <p>
-                        For optimal functionality, please use a laptop or desktop.
-                      </p>
-                    </div>
-
                   </div>
                 </div>
+
+                {/* Optimization Notice */}
+                <div className="optimization-notice">
+                  <p>
+                    For optimal functionality, please use a laptop or desktop.
+                  </p>
+                </div>
+
               </div>
-            </section>
 
-            {/* Collapsible Notice Portal */}
-            <section className={`notice-portal ${isNoticePortalExpanded ? 'expanded' : 'collapsed'}`}>
-              {!isNoticePortalExpanded ? (
-                // Collapsed state - just the button
-                <button 
-                  className="notice-portal-toggle"
-                  onClick={() => setIsNoticePortalExpanded(true)}
-                  title="View Notices"
-                >
-                  <span className="notice-icon">I</span>
-                  {getActiveNotices().length > 0 && (
-                    <span className="notice-count">{getActiveNotices().length}</span>
-                  )}
-                </button>
-              ) : (
-                // Expanded state - full portal
-                <>
-                  <div className="notice-portal-header">
-                    <div className="notice-header-content">
-                      <h2>📢 Notice Portal</h2>
-                      <p>Important announcements and updates from Malaysia Pickleball Association</p>
-                    </div>
-                    <button 
-                      className="notice-portal-close"
-                      onClick={() => setIsNoticePortalExpanded(false)}
-                      title="Collapse"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="notice-board">
-                {getActiveNotices().length === 0 ? (
-                  <div className="notice-item info">
-                    <div className="notice-badge">📢 INFO</div>
-                    <div className="notice-date">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                    <h3>No Active Notices</h3>
-                    <p>There are currently no active notices. Check back later for important announcements and updates.</p>
-                  </div>
-                ) : (
-                  getActiveNotices().map((notice) => {
-                    const getBadgeIcon = (type) => {
-                      switch(type) {
-                        case 'urgent': return '🚨 URGENT';
-                        case 'important': return '⚠️ IMPORTANT';
-                        case 'info': return 'ℹ️ INFO';
-                        case 'general': return '📋 GENERAL';
-                        default: return '📢 NOTICE';
-                      }
-                    };
-
-                    const formatDate = (dateString) => {
-                      const date = new Date(dateString);
-                      return date.toLocaleDateString('en-GB', { 
-                        day: '2-digit', 
-                        month: 'short', 
-                        year: 'numeric' 
-                      });
-                    };
-
-                    return (
-                      <div key={notice.id} className={`notice-item ${notice.type}`}>
-                        <div className="notice-badge">{getBadgeIcon(notice.type)}</div>
-                        <div className="notice-date">{formatDate(notice.date)}</div>
-                        <h3>{notice.title}</h3>
-                        <p>{notice.content}</p>
-                        {notice.actions && notice.actions.length > 0 && (
-                          <div className="notice-actions">
-                            {notice.actions.map((action, index) => (
-                              <button 
-                                key={index}
-                                className={`notice-btn-${action.type}`}
-                                onClick={() => {
-                                  // Handle different action types
-                                  if (action.action === 'showLoginModal') {
-                                    setShowLoginModal(true);
-                                  } else if (action.action === 'goToStatus') {
-                                    setCurrentPage('status');
-                                  } else if (action.action === 'showTournamentGuidelines') {
-                                    setShowTournamentGuidelines(true);
-                                  } else if (action.action === 'downloadSafeSportCode') {
-                                    window.open(safeSportCodePDF, '_blank');
-                                  }
-                                }}
-                              >
-                                {action.text}
-                              </button>
-                            ))}
+              {/* Tournament Poster Carousel - Left Side (Top to Bottom) */}
+              {approvedTournaments.length > 0 && (
+                <div className="poster-carousel poster-carousel-left">
+                  <div className="poster-carousel-track track-reverse">
+                    {/* Double the posters for seamless loop */}
+                    {[...approvedTournaments, ...approvedTournaments].map((tournament, index) => (
+                      <div key={`left-${tournament._id}-${index}`} className="poster-item">
+                        {tournament.tournamentPoster?.cloudinaryUrl ? (
+                          <img
+                            src={tournament.tournamentPoster.cloudinaryUrl}
+                            alt={tournament.eventTitle}
+                            title={tournament.eventTitle}
+                          />
+                        ) : (
+                          <div className="poster-placeholder">
+                            <div className="poster-placeholder-content">
+                              <span className="poster-placeholder-icon">🏸</span>
+                              <span className="poster-placeholder-title">{tournament.eventTitle}</span>
+                              <span className="poster-placeholder-date">
+                                {tournament.eventStartDateFormatted}
+                              </span>
+                              <span className="poster-placeholder-venue">{tournament.venue}</span>
+                            </div>
                           </div>
                         )}
                       </div>
-                    );
-                  })
-                )}
-
-
-
+                    ))}
                   </div>
-                  <div className="notice-portal-footer">
+                </div>
+              )}
+
+              {/* Tournament Poster Carousel - Right Side (Bottom to Top) */}
+              {approvedTournaments.length > 0 && (
+                <div className="poster-carousel poster-carousel-right">
+                  <div className="poster-carousel-track">
+                    {/* Double the posters for seamless loop */}
+                    {[...approvedTournaments, ...approvedTournaments].map((tournament, index) => (
+                      <div key={`right-${tournament._id}-${index}`} className="poster-item">
+                        {tournament.tournamentPoster?.cloudinaryUrl ? (
+                          <img
+                            src={tournament.tournamentPoster.cloudinaryUrl}
+                            alt={tournament.eventTitle}
+                            title={tournament.eventTitle}
+                          />
+                        ) : (
+                          <div className="poster-placeholder">
+                            <div className="poster-placeholder-content">
+                              <span className="poster-placeholder-icon">🏸</span>
+                              <span className="poster-placeholder-title">{tournament.eventTitle}</span>
+                              <span className="poster-placeholder-date">
+                                {tournament.eventStartDateFormatted}
+                              </span>
+                              <span className="poster-placeholder-venue">{tournament.venue}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                </>
+                </div>
               )}
             </section>
 

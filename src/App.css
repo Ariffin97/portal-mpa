@@ -1682,9 +1682,12 @@ button.utility-link {
 /* Hero Banner - Digital Portal Style */
 .hero-banner {
   background:
-    radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(0, 255, 127, 0.1) 0%, transparent 50%),
-    linear-gradient(135deg, #0a0e27 0%, #1a1f3a  30%, #162447 70%, #0f3460 100%);
+    radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(0, 255, 127, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(0, 100, 200, 0.1) 0%, transparent 60%),
+    linear-gradient(135deg, #0a0e27 0%, #1a1f3a 25%, #162447 50%, #1a3a5c 75%, #0f3460 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 15s ease infinite;
   color: var(--white);
   flex: 1;
   display: flex;
@@ -1695,6 +1698,15 @@ button.utility-link {
   /* Content padding to avoid fixed header */
   padding-top: 48px;
   overflow: hidden;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .hero-banner::before {
@@ -1729,10 +1741,342 @@ button.utility-link {
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(circle at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.2) 100%),
     linear-gradient(45deg, rgba(0, 255, 255, 0.05) 0%, transparent 100%);
   pointer-events: none;
+}
+
+/* ===== FLOATING DECORATIVE ELEMENTS ===== */
+.floating-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.floating-shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.15;
+  animation: floatShape 20s ease-in-out infinite;
+}
+
+.shape-1 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(0, 255, 255, 0.4) 0%, transparent 70%);
+  top: 10%;
+  left: -5%;
+  animation-delay: 0s;
+}
+
+.shape-2 {
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(0, 255, 127, 0.4) 0%, transparent 70%);
+  top: 60%;
+  right: -3%;
+  animation-delay: -5s;
+}
+
+.shape-3 {
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(0, 200, 255, 0.3) 0%, transparent 70%);
+  bottom: 20%;
+  left: 10%;
+  animation-delay: -10s;
+}
+
+.shape-4 {
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
+  top: 30%;
+  right: 15%;
+  animation-delay: -15s;
+}
+
+.shape-5 {
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(0, 255, 200, 0.2) 0%, transparent 70%);
+  bottom: 10%;
+  right: 20%;
+  animation-delay: -7s;
+}
+
+@keyframes floatShape {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(30px, -30px) scale(1.1);
+  }
+  50% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  75% {
+    transform: translate(15px, 15px) scale(1.05);
+  }
+}
+
+/* ===== LOGO CONTAINER WITH ANIMATED RINGS ===== */
+.logo-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 1rem;
+}
+
+.logo-container .hero-logo {
+  position: relative;
+  z-index: 2;
+}
+
+.logo-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  border: 2px solid rgba(0, 255, 255, 0.3);
+  border-radius: 50%;
+  animation: ringPulse 3s ease-in-out infinite, ringRotate 20s linear infinite;
+}
+
+.logo-ring.ring-2 {
+  width: 230px;
+  height: 230px;
+  border: 1px solid rgba(0, 255, 127, 0.2);
+  animation: ringPulse 3s ease-in-out infinite 1.5s, ringRotateReverse 25s linear infinite;
+}
+
+@keyframes ringPulse {
+  0%, 100% {
+    opacity: 0.3;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
+  }
+}
+
+@keyframes ringRotate {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes ringRotateReverse {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(-360deg);
+  }
+}
+
+/* ===== GLASSMORPHISM ACTIONS CARD ===== */
+.actions-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 2rem;
+  margin: 1rem auto 0;
+  max-width: 700px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: cardFadeIn 0.8s ease-out 0.3s both;
+}
+
+.card-glow {
+  position: absolute;
+  top: -1px;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.6), rgba(0, 255, 127, 0.6), transparent);
+  border-radius: 2px;
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ===== BUTTON ICONS ===== */
+.btn-icon {
+  margin-right: 8px;
+  font-size: 1.1em;
+}
+
+/* ===== TOURNAMENT POSTER CAROUSEL ===== */
+.poster-carousel {
+  position: fixed;
+  top: 80px;
+  bottom: 80px;
+  width: 160px;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.poster-carousel-left {
+  left: 20px;
+}
+
+.poster-carousel-right {
+  right: 20px;
+}
+
+.poster-carousel-track {
+  display: flex;
+  flex-direction: column;
+  animation: scrollPosters 30s linear infinite;
+}
+
+.poster-item {
+  flex-shrink: 0;
+  padding: 10px;
+}
+
+.poster-item img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.poster-item img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(0, 255, 255, 0.3);
+}
+
+/* Placeholder for tournaments without posters */
+.poster-placeholder {
+  width: 100%;
+  aspect-ratio: 3/4;
+  background: linear-gradient(135deg, rgba(0, 255, 127, 0.2), rgba(0, 255, 255, 0.2));
+  border-radius: 8px;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.poster-placeholder:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(0, 255, 255, 0.3);
+}
+
+.poster-placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 15px;
+  gap: 8px;
+}
+
+.poster-placeholder-icon {
+  font-size: 2.5rem;
+}
+
+.poster-placeholder-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.poster-placeholder-date {
+  font-size: 0.7rem;
+  color: rgba(0, 255, 255, 0.9);
+}
+
+.poster-placeholder-venue {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+@keyframes scrollPosters {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes scrollPostersReverse {
+  0% {
+    transform: translateY(-50%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.track-reverse {
+  animation: scrollPostersReverse 30s linear infinite;
+}
+
+/* Pause animation on hover */
+.poster-carousel:hover .poster-carousel-track {
+  animation-play-state: paused;
+}
+
+/* Hide carousel on smaller screens */
+@media (max-width: 1200px) {
+  .poster-carousel {
+    width: 130px;
+  }
+  .poster-carousel-left {
+    left: 10px;
+  }
+  .poster-carousel-right {
+    right: 10px;
+  }
+}
+
+@media (max-width: 992px) {
+  .poster-carousel {
+    display: none;
+  }
 }
 
 .hero-content {
@@ -1750,6 +2094,7 @@ button.utility-link {
   width: 180px;
   height: 180px;
   object-fit: contain;
+  margin-top: -40px;
   margin-bottom: 0.5rem;
   filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.5)) drop-shadow(0 0 40px rgba(0, 255, 127, 0.3));
 }
@@ -1805,17 +2150,61 @@ button.utility-link {
     0 0 40px rgba(0, 255, 255, 0.2);
   font-family: 'Courier New', monospace;
   text-transform: uppercase;
-  letter-spacing: 4px;
+  letter-spacing: 8px;
+  animation: portalTextGlow 2s ease-in-out infinite alternate;
+  position: relative;
+}
+
+.hero-portal-text::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00ffff, transparent);
+  animation: underlineGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes portalTextGlow {
+  0% {
+    text-shadow:
+      0 0 10px rgba(0, 255, 255, 0.8),
+      0 0 20px rgba(0, 255, 255, 0.6),
+      0 0 30px rgba(0, 255, 255, 0.4);
+    letter-spacing: 8px;
+  }
+  100% {
+    text-shadow:
+      0 0 15px rgba(0, 255, 255, 1),
+      0 0 30px rgba(0, 255, 255, 0.8),
+      0 0 45px rgba(0, 255, 255, 0.6),
+      0 0 60px rgba(0, 255, 255, 0.4);
+    letter-spacing: 10px;
+  }
+}
+
+@keyframes underlineGlow {
+  0% {
+    opacity: 0.5;
+    width: 60%;
+  }
+  100% {
+    opacity: 1;
+    width: 80%;
+  }
 }
 
 
 .hero-title {
   font-size: 3.2rem;
   font-weight: 700;
+  margin-top: 1.5rem;
   margin-bottom: 0.5rem;
   line-height: 1.1;
   color: #ffffff;
-  text-shadow: 
+  text-shadow:
     0 0 10px rgba(0, 255, 127, 0.6),
     0 0 20px rgba(0, 255, 127, 0.4),
     2px 2px 4px rgba(0,0,0,0.3);
@@ -1850,7 +2239,7 @@ button.utility-link {
   display: flex;
   gap: 1.5rem;
   justify-content: center;
-  margin-bottom: 4rem;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
 }
 
@@ -11343,11 +11732,18 @@ button.utility-link {
 /* Optimization Notice - In Hero Section */
 .optimization-notice {
   text-align: center;
-  margin: 15px auto 0;
+  margin: 1.5rem auto 0;
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: inline-block;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .optimization-notice p {
-  color: #ff4444;
+  color: rgba(255, 200, 100, 0.9);
   font-size: 0.85rem;
   margin: 0;
   font-weight: 400;
