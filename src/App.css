@@ -1948,7 +1948,7 @@ button.utility-link {
   position: fixed;
   top: 80px;
   bottom: 80px;
-  width: 160px;
+  width: 220px;
   overflow: hidden;
   z-index: 100;
 }
@@ -1964,7 +1964,7 @@ button.utility-link {
 .poster-carousel-track {
   display: flex;
   flex-direction: column;
-  animation: scrollPosters 30s linear infinite;
+  animation: scrollPosters 50s linear infinite;
 }
 
 .poster-item {
@@ -2052,7 +2052,7 @@ button.utility-link {
 }
 
 .track-reverse {
-  animation: scrollPostersReverse 30s linear infinite;
+  animation: scrollPostersReverse 50s linear infinite;
 }
 
 /* Pause animation on hover */
@@ -2063,7 +2063,7 @@ button.utility-link {
 /* Hide carousel on smaller screens */
 @media (max-width: 1200px) {
   .poster-carousel {
-    width: 130px;
+    width: 180px;
   }
   .poster-carousel-left {
     left: 10px;

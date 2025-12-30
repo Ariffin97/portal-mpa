@@ -45,7 +45,9 @@ function App() {
     const fetchApprovedTournaments = async () => {
       try {
         const response = await apiService.getApprovedTournaments();
-        setApprovedTournaments(response);
+        // Only show tournaments that have posters uploaded
+        const tournamentsWithPosters = response.filter(t => t.tournamentPoster?.cloudinaryUrl);
+        setApprovedTournaments(tournamentsWithPosters);
       } catch (error) {
         console.error('Error fetching approved tournaments:', error);
       }
