@@ -2240,6 +2240,46 @@ const tournamentSoftwareSchema = new mongoose.Schema({
 
 const TournamentSoftware = mongoose.model('TournamentSoftware', tournamentSoftwareSchema);
 
+// Tournament Software File Schema
+const tournamentSoftwareFileSchema = new mongoose.Schema({
+  fileName: {
+    type: String,
+    required: true
+  },
+  originalName: {
+    type: String,
+    required: true
+  },
+  mimeType: {
+    type: String,
+    required: true
+  },
+  size: {
+    type: Number,
+    required: true
+  },
+  data: {
+    type: String, // Base64 encoded file data
+    required: true
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  uploadedBy: {
+    type: String,
+    default: 'admin'
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, {
+  timestamps: true
+});
+
+const TournamentSoftwareFile = mongoose.model('TournamentSoftwareFile', tournamentSoftwareFileSchema);
+
 // Software Managed Tournament Schema
 const softwareManagedTournamentSchema = new mongoose.Schema({
   tournamentSoftwareId: {
@@ -8476,6 +8516,122 @@ app.post('/api/tournament-software/share-players', async (req, res) => {
     res.status(500).json({ error: 'Failed to share players to MPA' });
   }
 });
+
+// ==================== TOURNAMENT SOFTWARE FILES API ====================
+
+// Upload tournament software file
+const uploadTournamentSoftwareFile = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  }
+});
+
+app.post('/api/tournament-software-files', uploadTournamentSoftwareFile.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const { description } = req.body;
+
+    // Convert file buffer to Base64
+    const fileBase64 = req.file.buffer.toString('base64');
+
+    const newFile = new TournamentSoftwareFile({
+      fileName: req.file.originalname,
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+      data: fileBase64,
+      description: description || '',
+      uploadedBy: 'admin'
+    });
+
+    await newFile.save();
+
+    res.json({
+      success: true,
+      message: 'File uploaded successfully',
+      file: {
+        _id: newFile._id,
+        fileName: newFile.fileName,
+        originalName: newFile.originalName,
+        mimeType: newFile.mimeType,
+        size: newFile.size,
+        description: newFile.description,
+        uploadedAt: newFile.uploadedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('Error uploading tournament software file:', error);
+    res.status(500).json({ success: false, message: 'Failed to upload file' });
+  }
+});
+
+// Get all tournament software files
+app.get('/api/tournament-software-files', async (req, res) => {
+  try {
+    const files = await TournamentSoftwareFile.find()
+      .select('-data') // Exclude file data for list view
+      .sort({ uploadedAt: -1 });
+
+    res.json({
+      success: true,
+      files
+    });
+
+  } catch (error) {
+    console.error('Error fetching tournament software files:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch files' });
+  }
+});
+
+// Download tournament software file
+app.get('/api/tournament-software-files/:id/download', async (req, res) => {
+  try {
+    const file = await TournamentSoftwareFile.findById(req.params.id);
+
+    if (!file) {
+      return res.status(404).json({ success: false, message: 'File not found' });
+    }
+
+    const fileBuffer = Buffer.from(file.data, 'base64');
+
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}"`);
+    res.setHeader('Content-Length', fileBuffer.length);
+
+    res.send(fileBuffer);
+
+  } catch (error) {
+    console.error('Error downloading tournament software file:', error);
+    res.status(500).json({ success: false, message: 'Failed to download file' });
+  }
+});
+
+// Delete tournament software file
+app.delete('/api/tournament-software-files/:id', async (req, res) => {
+  try {
+    const file = await TournamentSoftwareFile.findByIdAndDelete(req.params.id);
+
+    if (!file) {
+      return res.status(404).json({ success: false, message: 'File not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'File deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting tournament software file:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete file' });
+  }
+});
+
+// ==================== END TOURNAMENT SOFTWARE FILES API ====================
 
 // Get all unregistered players for admin dashboard
 app.get('/api/admin/unregistered-players', async (req, res) => {

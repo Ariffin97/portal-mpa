@@ -18,6 +18,8 @@ const AdminDashboard = ({ setCurrentPage }) => {
   const [approvedTournaments, setApprovedTournaments] = useState([]);
   const [registeredOrganizations, setRegisteredOrganizations] = useState([]);
   const [tournamentSoftware, setTournamentSoftware] = useState([]);
+  const [tournamentSoftwareFiles, setTournamentSoftwareFiles] = useState([]);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showRejectionModal, setShowRejectionModal] = useState(false);
@@ -616,6 +618,9 @@ const AdminDashboard = ({ setCurrentPage }) => {
   useEffect(() => {
     if (currentView === 'assessment-statistics') {
       loadAssessmentResults();
+    }
+    if (currentView === 'tournament-software-file') {
+      loadTournamentSoftwareFiles();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView]);
@@ -4668,6 +4673,429 @@ const AdminDashboard = ({ setCurrentPage }) => {
     </div>
   );
 
+  // Load tournament software files
+  const loadTournamentSoftwareFiles = async () => {
+    try {
+      const response = await apiService.getTournamentSoftwareFiles();
+      if (response.success) {
+        setTournamentSoftwareFiles(response.files);
+      }
+    } catch (error) {
+      console.error('Error loading tournament software files:', error);
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('description', '');
+
+      const response = await apiService.uploadTournamentSoftwareFile(formData);
+      if (response.success) {
+        await loadTournamentSoftwareFiles();
+        alert('File uploaded successfully!');
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Failed to upload file. Please try again.');
+    } finally {
+      setUploadingFile(false);
+      e.target.value = ''; // Reset file input
+    }
+  };
+
+  // Handle file delete
+  const handleDeleteFile = async (fileId, fileName) => {
+    if (!window.confirm(`Are you sure you want to delete "${fileName}"?`)) return;
+
+    try {
+      const response = await apiService.deleteTournamentSoftwareFile(fileId);
+      if (response.success) {
+        await loadTournamentSoftwareFiles();
+        alert('File deleted successfully!');
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      alert('Failed to delete file. Please try again.');
+    }
+  };
+
+  // Format file size
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Get file icon based on mime type
+  const getFileIcon = (mimeType, fileName) => {
+    if (mimeType?.includes('pdf')) return '📄';
+    if (mimeType?.includes('image')) return '🖼️';
+    if (mimeType?.includes('word') || fileName?.endsWith('.doc') || fileName?.endsWith('.docx')) return '📝';
+    if (mimeType?.includes('excel') || mimeType?.includes('spreadsheet') || fileName?.endsWith('.xls') || fileName?.endsWith('.xlsx')) return '📊';
+    if (mimeType?.includes('powerpoint') || mimeType?.includes('presentation') || fileName?.endsWith('.ppt') || fileName?.endsWith('.pptx')) return '📽️';
+    if (mimeType?.includes('zip') || mimeType?.includes('rar') || mimeType?.includes('archive')) return '🗜️';
+    if (mimeType?.includes('video')) return '🎬';
+    if (mimeType?.includes('audio')) return '🎵';
+    return '📁';
+  };
+
+  const renderTournamentSoftwareFile = () => (
+    <div className="tournament-software-file-view" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      {/* Header Card */}
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        padding: '1.5rem 2rem',
+        marginBottom: '1.5rem',
+        borderLeft: '4px solid #3b82f6'
+      }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <h2 style={{
+              fontSize: '1.5rem',
+              fontWeight: '700',
+              color: '#1f2937',
+              margin: '0 0 0.25rem 0'
+            }}>
+              File Management
+            </h2>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#6b7280',
+              margin: '0'
+            }}>
+              Upload and manage tournament software related files
+            </p>
+          </div>
+          <div style={{
+            backgroundColor: '#eff6ff',
+            padding: '0.75rem 1.25rem',
+            borderRadius: '8px'
+          }}>
+            <span style={{ fontSize: '0.875rem', color: '#3b82f6', fontWeight: '600' }}>
+              {tournamentSoftwareFiles.length} {tournamentSoftwareFiles.length === 1 ? 'File' : 'Files'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Upload Card */}
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        padding: '2rem',
+        marginBottom: '1.5rem'
+      }}>
+        <h3 style={{
+          fontSize: '1rem',
+          fontWeight: '600',
+          color: '#374151',
+          marginBottom: '1rem'
+        }}>
+          Upload New File
+        </h3>
+        <div style={{
+          backgroundColor: '#fafafa',
+          border: '2px dashed #d1d5db',
+          borderRadius: '12px',
+          padding: '2.5rem',
+          textAlign: 'center',
+          transition: 'all 0.2s ease',
+          cursor: 'pointer'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#3b82f6';
+          e.currentTarget.style.backgroundColor = '#f0f9ff';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#d1d5db';
+          e.currentTarget.style.backgroundColor = '#fafafa';
+        }}
+        onClick={() => document.getElementById('file-upload').click()}
+        >
+          <input
+            type="file"
+            id="file-upload"
+            style={{ display: 'none' }}
+            onChange={handleFileUpload}
+            disabled={uploadingFile}
+          />
+          <div style={{
+            width: '60px',
+            height: '60px',
+            backgroundColor: '#e0e7ff',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1rem auto'
+          }}>
+            <span style={{ fontSize: '1.75rem' }}>📤</span>
+          </div>
+          <p style={{
+            fontSize: '1rem',
+            fontWeight: '600',
+            color: '#374151',
+            margin: '0 0 0.5rem 0'
+          }}>
+            {uploadingFile ? 'Uploading...' : 'Click to upload'}
+          </p>
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#9ca3af',
+            margin: '0'
+          }}>
+            PDF, DOC, XLS, Images, and more (Max 50MB)
+          </p>
+        </div>
+      </div>
+
+      {/* Files Table Card */}
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          padding: '1.25rem 1.5rem',
+          borderBottom: '1px solid #e5e7eb',
+          backgroundColor: '#f9fafb'
+        }}>
+          <h3 style={{
+            fontSize: '1rem',
+            fontWeight: '600',
+            color: '#374151',
+            margin: '0'
+          }}>
+            Uploaded Files
+          </h3>
+        </div>
+
+        {tournamentSoftwareFiles.length === 0 ? (
+          <div style={{
+            padding: '4rem 2rem',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              backgroundColor: '#f3f4f6',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1rem auto'
+            }}>
+              <span style={{ fontSize: '2rem', opacity: '0.5' }}>📂</span>
+            </div>
+            <h4 style={{
+              fontSize: '1rem',
+              fontWeight: '600',
+              color: '#6b7280',
+              margin: '0 0 0.5rem 0'
+            }}>
+              No files uploaded yet
+            </h4>
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#9ca3af',
+              margin: '0'
+            }}>
+              Upload your first file using the upload area above
+            </p>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse'
+            }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f9fafb' }}>
+                  <th style={{
+                    padding: '0.875rem 1.5rem',
+                    textAlign: 'left',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: '#6b7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>File Name</th>
+                  <th style={{
+                    padding: '0.875rem 1rem',
+                    textAlign: 'left',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: '#6b7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>Size</th>
+                  <th style={{
+                    padding: '0.875rem 1rem',
+                    textAlign: 'left',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: '#6b7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>Uploaded</th>
+                  <th style={{
+                    padding: '0.875rem 1.5rem',
+                    textAlign: 'right',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: '#6b7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tournamentSoftwareFiles.map((file, index) => (
+                  <tr
+                    key={file._id}
+                    style={{
+                      borderBottom: index < tournamentSoftwareFiles.length - 1 ? '1px solid #e5e7eb' : 'none',
+                      transition: 'background-color 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                  >
+                    <td style={{ padding: '1rem 1.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          backgroundColor: '#f3f4f6',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <span style={{ fontSize: '1.25rem' }}>{getFileIcon(file.mimeType, file.fileName)}</span>
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{
+                            fontSize: '0.875rem',
+                            fontWeight: '600',
+                            color: '#111827',
+                            margin: '0',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {file.fileName}
+                          </p>
+                          <p style={{
+                            fontSize: '0.75rem',
+                            color: '#9ca3af',
+                            margin: '0'
+                          }}>
+                            {file.mimeType?.split('/')[1]?.toUpperCase() || 'FILE'}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <span style={{
+                        fontSize: '0.875rem',
+                        color: '#6b7280'
+                      }}>
+                        {formatFileSize(file.size)}
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <span style={{
+                        fontSize: '0.875rem',
+                        color: '#6b7280'
+                      }}>
+                        {new Date(file.uploadedAt).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                        <a
+                          href={apiService.getTournamentSoftwareFileDownloadUrl(file._id)}
+                          download
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#ecfdf5',
+                            color: '#059669',
+                            borderRadius: '6px',
+                            textDecoration: 'none',
+                            fontSize: '0.813rem',
+                            fontWeight: '500',
+                            border: '1px solid #a7f3d0',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#059669';
+                            e.currentTarget.style.color = 'white';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#ecfdf5';
+                            e.currentTarget.style.color = '#059669';
+                          }}
+                        >
+                          Download
+                        </a>
+                        <button
+                          onClick={() => handleDeleteFile(file._id, file.fileName)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: '#fef2f2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '0.813rem',
+                            fontWeight: '500',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#dc2626';
+                            e.currentTarget.style.color = 'white';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#fef2f2';
+                            e.currentTarget.style.color = '#dc2626';
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   // State Users Management Functions
   const loadStateUsers = async () => {
     try {
@@ -6752,6 +7180,24 @@ const AdminDashboard = ({ setCurrentPage }) => {
             Tournament Software
           </button>
 
+          <button
+            className={`sidebar-nav-item ${currentView === 'tournament-software-file' ? 'active' : ''}`}
+            onClick={() => setCurrentView('tournament-software-file')}
+            style={{
+              fontSize: '16px',
+              fontWeight: '500',
+              padding: '12px 20px',
+              color: '#fff',
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              textAlign: 'left',
+              cursor: 'pointer'
+            }}
+          >
+            File
+          </button>
+
           {hasAccessTo('analytics') && (
             <button
               className={`sidebar-nav-item ${currentView === 'analytics' ? 'active' : ''}`}
@@ -7744,7 +8190,7 @@ Settings
                 className={`status-filter-btn ${selectedStatusFilter === 'Rejected' ? 'active' : ''}`}
                 onClick={() => setSelectedStatusFilter('Rejected')}
               >
-                ❌ Rejected ({applications.filter(app => app.status === 'Rejected').length})
+                Rejected ({applications.filter(app => app.status === 'Rejected').length})
               </button>
               <button 
                 className={`status-filter-btn ${selectedStatusFilter === 'All' ? 'active' : ''}`}
@@ -9339,6 +9785,7 @@ Settings
         {currentView === 'analytics' && renderAnalytics()}
         {currentView === 'registered-organizations' && renderRegisteredOrganizations()}
         {currentView === 'tournament-software' && renderTournamentSoftware()}
+        {currentView === 'tournament-software-file' && renderTournamentSoftwareFile()}
         {currentView === 'notice-management' && renderNoticeManagement()}
         {currentView === 'assessment-management' && renderAssessmentManagement()}
         {currentView === 'assessment-list' && renderAssessmentList()}

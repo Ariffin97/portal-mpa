@@ -7190,15 +7190,6 @@ button.utility-link {
   border-left-color: #dc2626;
 }
 
-.status-column.rejected .tournament-item::before {
-  content: "❌";
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 0.8rem;
-  opacity: 0.6;
-}
 
 .status-column.rejected .tournament-number {
   color: #ef4444;

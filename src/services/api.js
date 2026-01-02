@@ -407,6 +407,28 @@ class ApiService {
       method: 'DELETE',
     });
   }
+
+  // Tournament Software Files APIs
+  async uploadTournamentSoftwareFile(formData) {
+    return this.makeRequest('/tournament-software-files', {
+      method: 'POST',
+      body: formData
+    });
+  }
+
+  async getTournamentSoftwareFiles() {
+    return this.makeRequest('/tournament-software-files');
+  }
+
+  async deleteTournamentSoftwareFile(fileId) {
+    return this.makeRequest(`/tournament-software-files/${fileId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  getTournamentSoftwareFileDownloadUrl(fileId) {
+    return `${this.baseURL}/tournament-software-files/${fileId}/download`;
+  }
 }
 
 const apiService = new ApiService();
