@@ -4688,6 +4688,15 @@ app.patch('/api/applications/:id/status', async (req, res) => {
       }
 
       // Generate and send Support Letter with attachments
+      // Skip support letter for District/Divisional/State level tournaments (handled by state associations)
+      const stateLevelTournaments = ['district', 'divisional', 'state'];
+      const isStateLevelTournament = stateLevelTournaments.includes(application.classification?.toLowerCase());
+
+      if (isStateLevelTournament) {
+        console.log('📋 Skipping support letter for state-level tournament:', application.classification);
+      }
+
+      if (!isStateLevelTournament) {
       try {
         const SUPPORT_LETTER_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw6im3bFlI8X-KBnz-7HFKSyXfIk8DK1i0KIieyGVEs-T44NnTrAv8V-rbt7g6B5giW/exec';
 
@@ -4906,6 +4915,7 @@ app.patch('/api/applications/:id/status', async (req, res) => {
         console.error('❌ Support Letter webhook failed:', supportLetterError.message);
         // Don't fail the approval if support letter webhook fails
       }
+      } // End of if (!isStateLevelTournament)
     }
 
 
@@ -5039,6 +5049,15 @@ app.post('/api/applications/:id/approve', async (req, res) => {
     }
 
     // Send Support Letter data to Google Apps Script
+    // Skip support letter for District/Divisional/State level tournaments (handled by state associations)
+    const stateLevelTournaments = ['district', 'divisional', 'state'];
+    const isStateLevelTournament = stateLevelTournaments.includes(t.classification?.toLowerCase());
+
+    if (isStateLevelTournament) {
+      console.log('📋 Skipping support letter for state-level tournament:', t.classification);
+    }
+
+    if (!isStateLevelTournament) {
     try {
       const SUPPORT_LETTER_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw6im3bFlI8X-KBnz-7HFKSyXfIk8DK1i0KIieyGVEs-T44NnTrAv8V-rbt7g6B5giW/exec';
 
@@ -5270,6 +5289,7 @@ app.post('/api/applications/:id/approve', async (req, res) => {
       console.error('❌ Support Letter webhook failed:', supportLetterError.message);
       // Don't fail the approval if support letter webhook fails
     }
+    } // End of if (!isStateLevelTournament)
 
     return res.json({
       ok: true,
