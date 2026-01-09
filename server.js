@@ -4793,12 +4793,14 @@ app.patch('/api/applications/:id/status', async (req, res) => {
           if (org) {
             if (org.addressLine1) {
               // Filter out null, undefined, and empty strings then join with comma
+              // Also strip trailing commas from each part to avoid double commas
               const addressParts = [];
-              if (org.addressLine1 && org.addressLine1.trim()) addressParts.push(org.addressLine1.trim());
-              if (org.addressLine2 && org.addressLine2.trim()) addressParts.push(org.addressLine2.trim());
-              if (org.city && org.city.trim()) addressParts.push(org.city.trim());
-              if (org.postcode && org.postcode.trim()) addressParts.push(org.postcode.trim());
-              if (org.state && org.state.trim()) addressParts.push(org.state.trim());
+              const cleanPart = (part) => part ? part.trim().replace(/,+$/, '').trim() : '';
+              if (org.addressLine1 && cleanPart(org.addressLine1)) addressParts.push(cleanPart(org.addressLine1));
+              if (org.addressLine2 && cleanPart(org.addressLine2)) addressParts.push(cleanPart(org.addressLine2));
+              if (org.city && cleanPart(org.city)) addressParts.push(cleanPart(org.city));
+              if (org.postcode && cleanPart(org.postcode)) addressParts.push(cleanPart(org.postcode));
+              if (org.state && cleanPart(org.state)) addressParts.push(cleanPart(org.state));
               companyAddress = addressParts.join(', ');
             }
             if (org.registrationNo) {
@@ -4866,6 +4868,9 @@ app.patch('/api/applications/:id/status', async (req, res) => {
 
         // If the Google Apps Script returns PDF base64, send email with attachment
         if (supportLetterResult && supportLetterResult.ok && supportLetterResult.pdfBase64 && application.email) {
+          // Use the same reference number that was sent to the support letter webhook
+          const refNumber = application.approvalRef || application.applicationId;
+
           // Save PDF to application record using updateOne to avoid validation issues
           await TournamentApplication.updateOne(
             { _id: application._id },
@@ -4873,7 +4878,7 @@ app.patch('/api/applications/:id/status', async (req, res) => {
               $set: {
                 supportLetterPdf: {
                   data: supportLetterResult.pdfBase64,
-                  fileName: supportLetterResult.fileName || `${application.approvalRef || application.applicationId} - Support Letter.pdf`,
+                  fileName: supportLetterResult.fileName || `${refNumber} - Support Letter.pdf`,
                   generatedAt: new Date()
                 }
               }
@@ -4882,10 +4887,15 @@ app.patch('/api/applications/:id/status', async (req, res) => {
           console.log('💾 Support Letter PDF saved to database');
 
           // Send email with PDF attachments (Support Letter + Safe Sport Code + Guidelines)
-          const supportLetterEmailTemplate = emailTemplates.supportLetterGenerated(application, null);
+          // Include the reference number in the application data for the email template
+          const applicationDataWithRef = {
+            ...application.toObject ? application.toObject() : application,
+            approvalRef: refNumber
+          };
+          const supportLetterEmailTemplate = emailTemplates.supportLetterGenerated(applicationDataWithRef, null);
           const attachments = [
             {
-              filename: supportLetterResult.fileName || `${application.approvalRef || application.applicationId} - Support Letter.pdf`,
+              filename: supportLetterResult.fileName || `${refNumber} - Support Letter.pdf`,
               content: supportLetterResult.pdfBase64,
               encoding: 'base64',
               contentType: 'application/pdf'
@@ -5159,12 +5169,14 @@ app.post('/api/applications/:id/approve', async (req, res) => {
         if (org) {
           if (org.addressLine1) {
             // Filter out null, undefined, and empty strings then join with comma
+            // Also strip trailing commas from each part to avoid double commas
             const addressParts = [];
-            if (org.addressLine1 && org.addressLine1.trim()) addressParts.push(org.addressLine1.trim());
-            if (org.addressLine2 && org.addressLine2.trim()) addressParts.push(org.addressLine2.trim());
-            if (org.city && org.city.trim()) addressParts.push(org.city.trim());
-            if (org.postcode && org.postcode.trim()) addressParts.push(org.postcode.trim());
-            if (org.state && org.state.trim()) addressParts.push(org.state.trim());
+            const cleanPart = (part) => part ? part.trim().replace(/,+$/, '').trim() : '';
+            if (org.addressLine1 && cleanPart(org.addressLine1)) addressParts.push(cleanPart(org.addressLine1));
+            if (org.addressLine2 && cleanPart(org.addressLine2)) addressParts.push(cleanPart(org.addressLine2));
+            if (org.city && cleanPart(org.city)) addressParts.push(cleanPart(org.city));
+            if (org.postcode && cleanPart(org.postcode)) addressParts.push(cleanPart(org.postcode));
+            if (org.state && cleanPart(org.state)) addressParts.push(cleanPart(org.state));
             companyAddress = addressParts.join(', ');
           }
           if (org.registrationNo) {
