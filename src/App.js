@@ -686,68 +686,6 @@ function App() {
                 </div>
 
               </div>
-
-              {/* Tournament Poster Carousel - Left Side (Top to Bottom) */}
-              {approvedTournaments.length > 0 && (
-                <div className="poster-carousel poster-carousel-left">
-                  <div className="poster-carousel-track track-reverse">
-                    {/* Double the posters for seamless loop */}
-                    {[...approvedTournaments, ...approvedTournaments].map((tournament, index) => (
-                      <div key={`left-${tournament._id}-${index}`} className="poster-item">
-                        {tournament.tournamentPoster?.cloudinaryUrl ? (
-                          <img
-                            src={tournament.tournamentPoster.cloudinaryUrl}
-                            alt={tournament.eventTitle}
-                            title={tournament.eventTitle}
-                          />
-                        ) : (
-                          <div className="poster-placeholder">
-                            <div className="poster-placeholder-content">
-                              <span className="poster-placeholder-icon">🏸</span>
-                              <span className="poster-placeholder-title">{tournament.eventTitle}</span>
-                              <span className="poster-placeholder-date">
-                                {tournament.eventStartDateFormatted}
-                              </span>
-                              <span className="poster-placeholder-venue">{tournament.venue}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Tournament Poster Carousel - Right Side (Bottom to Top) */}
-              {approvedTournaments.length > 0 && (
-                <div className="poster-carousel poster-carousel-right">
-                  <div className="poster-carousel-track">
-                    {/* Double the posters for seamless loop */}
-                    {[...approvedTournaments, ...approvedTournaments].map((tournament, index) => (
-                      <div key={`right-${tournament._id}-${index}`} className="poster-item">
-                        {tournament.tournamentPoster?.cloudinaryUrl ? (
-                          <img
-                            src={tournament.tournamentPoster.cloudinaryUrl}
-                            alt={tournament.eventTitle}
-                            title={tournament.eventTitle}
-                          />
-                        ) : (
-                          <div className="poster-placeholder">
-                            <div className="poster-placeholder-content">
-                              <span className="poster-placeholder-icon">🏸</span>
-                              <span className="poster-placeholder-title">{tournament.eventTitle}</span>
-                              <span className="poster-placeholder-date">
-                                {tournament.eventStartDateFormatted}
-                              </span>
-                              <span className="poster-placeholder-venue">{tournament.venue}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </section>
 
           </div>

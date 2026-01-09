@@ -72,6 +72,15 @@ const TournamentApplication = ({ setCurrentPage }) => {
     expectedParticipants: '',
     tournamentSoftware: [],
     tournamentSoftwareOther: '',
+
+    // Emergency Plan
+    hospitalName: '',
+    hospitalDistance: '',
+    numberOfMedics: '',
+    emergencyTransportType: '',
+    emergencyTransportQuantity: '',
+    standbyVehicleType: '',
+
     eventSummary: '',
 
     // Tournament Settings
@@ -829,10 +838,24 @@ const TournamentApplication = ({ setCurrentPage }) => {
       yPosition = addInfoRow('Level of Event', dataToUse.classification, yPosition);
       yPosition = addInfoRow('Type of Event', dataToUse.eventType, yPosition);
       
+      // Helper function to check if new page is needed
+      const checkNewPage = (requiredSpace = 30) => {
+        const pageHeight = 280; // A4 height minus margins
+        if (yPosition + requiredSpace > pageHeight) {
+          doc.addPage();
+          addWatermark();
+          yPosition = 25;
+          return true;
+        }
+        return false;
+      };
+
       // Display categories
       if (dataToUse.categories && dataToUse.categories.length > 0) {
         yPosition = addSectionHeader('TOURNAMENT CATEGORIES & ENTRY FEES', yPosition);
         dataToUse.categories.forEach((category, index) => {
+          // Check if we need a new page before adding category (each category takes ~25mm)
+          checkNewPage(30);
           yPosition = addInfoRow(`Category ${index + 1}`, category.category, yPosition);
           yPosition = addInfoRow('Malaysian Entry Fee (RM)', category.malaysianEntryFee.toFixed(2), yPosition);
           yPosition = addInfoRow('International Entry Fee (RM)', category.internationalEntryFee.toFixed(2), yPosition);
@@ -841,6 +864,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
       } else if (savedCategories && savedCategories.length > 0) {
         yPosition = addSectionHeader('TOURNAMENT CATEGORIES & ENTRY FEES', yPosition);
         savedCategories.forEach((category, index) => {
+          // Check if we need a new page before adding category
+          checkNewPage(30);
           yPosition = addInfoRow(`Category ${index + 1}`, category.category, yPosition);
           yPosition = addInfoRow('Malaysian Entry Fee (RM)', category.malaysianEntryFee.toFixed(2), yPosition);
           yPosition = addInfoRow('International Entry Fee (RM)', category.internationalEntryFee.toFixed(2), yPosition);
@@ -848,7 +873,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
         });
       }
       
-      yPosition = addInfoRow('Expected Participants', dataToUse.expectedParticipants, yPosition, true);
+      checkNewPage(20);
+      yPosition = addInfoRow('Maximum Participant', dataToUse.expectedParticipants, yPosition, true);
 
       // Tournament Software
       let softwareNames = [];
@@ -869,8 +895,26 @@ const TournamentApplication = ({ setCurrentPage }) => {
       yPosition = addInfoRow('Tournament Software', softwareDisplay, yPosition, true);
       yPosition += 10;
 
+      // EMERGENCY PLAN Section
+      checkNewPage(50);
+      yPosition = addSectionHeader('EMERGENCY PLAN', yPosition);
+      yPosition = addInfoRow('Hospital Name', dataToUse.hospitalName || 'Not provided', yPosition);
+      yPosition = addInfoRow('Distance to Hospital', dataToUse.hospitalDistance ? `${dataToUse.hospitalDistance}` : 'Not provided', yPosition);
+      yPosition = addInfoRow('Number of Medics', dataToUse.numberOfMedics || 'Not provided', yPosition);
+
+      // Emergency Transport Type
+      let transportDisplay = 'Not specified';
+      if (dataToUse.emergencyTransportType === 'ambulance') {
+        transportDisplay = `Ambulance (Quantity: ${dataToUse.emergencyTransportQuantity || 'Not specified'})`;
+      } else if (dataToUse.emergencyTransportType === 'standby_vehicle') {
+        transportDisplay = `Standby/Support Emergency Vehicle (Type: ${dataToUse.standbyVehicleType || 'Not specified'})`;
+      }
+      yPosition = addInfoRow('Emergency Transport', transportDisplay, yPosition);
+      yPosition += 10;
+
       // EVENT SUMMARY Section
       if (dataToUse.eventSummary && dataToUse.eventSummary.trim()) {
+        checkNewPage(40);
         yPosition = addSectionHeader('EVENT SUMMARY', yPosition);
         
         doc.setTextColor(0, 0, 0);
@@ -881,13 +925,9 @@ const TournamentApplication = ({ setCurrentPage }) => {
         yPosition += splitSummary.length * 5 + 10;
       }
       
-      // Check if we need a new page
-      if (yPosition > 200) {
-        doc.addPage();
-        addWatermark(); // Add watermark to new page
-        yPosition = 25;
-      }
-      
+      // Check if we need a new page for consent section
+      checkNewPage(80);
+
       // CONSENT & AGREEMENT Section
       yPosition = addSectionHeader('CONSENT & AGREEMENT', yPosition);
       
@@ -1005,7 +1045,39 @@ const TournamentApplication = ({ setCurrentPage }) => {
       setIsSubmitting(false);
       return;
     }
-    
+
+    // Validate Emergency Plan fields
+    if (!formData.hospitalName || !formData.hospitalName.trim()) {
+      alert('Please enter the hospital name in the Emergency Plan section.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formData.hospitalDistance || !formData.hospitalDistance.trim()) {
+      alert('Please enter the distance to hospital in the Emergency Plan section.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formData.numberOfMedics || formData.numberOfMedics === '') {
+      alert('Please enter the number of medics in the Emergency Plan section.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formData.emergencyTransportType) {
+      alert('Please select an emergency transport type in the Emergency Plan section.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (formData.emergencyTransportType === 'ambulance' && (!formData.emergencyTransportQuantity || formData.emergencyTransportQuantity === '')) {
+      alert('Please enter the number of ambulances in the Emergency Plan section.');
+      setIsSubmitting(false);
+      return;
+    }
+    if (formData.emergencyTransportType === 'standby_vehicle' && (!formData.standbyVehicleType || !formData.standbyVehicleType.trim())) {
+      alert('Please enter the type of vehicle in the Emergency Plan section.');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       // Create FormData for file upload
       const submissionFormData = new FormData();
@@ -1031,6 +1103,15 @@ const TournamentApplication = ({ setCurrentPage }) => {
       submissionFormData.append('expectedParticipants', parseInt(formData.expectedParticipants));
       submissionFormData.append('tournamentSoftware', JSON.stringify(formData.tournamentSoftware));
       submissionFormData.append('tournamentSoftwareOther', formData.tournamentSoftwareOther || '');
+
+      // Emergency Plan fields
+      submissionFormData.append('hospitalName', formData.hospitalName);
+      submissionFormData.append('hospitalDistance', formData.hospitalDistance);
+      submissionFormData.append('numberOfMedics', formData.numberOfMedics);
+      submissionFormData.append('emergencyTransportType', formData.emergencyTransportType);
+      submissionFormData.append('emergencyTransportQuantity', formData.emergencyTransportQuantity || '');
+      submissionFormData.append('standbyVehicleType', formData.standbyVehicleType || '');
+
       submissionFormData.append('eventSummary', formData.eventSummary);
       submissionFormData.append('scoringFormat', formData.scoringFormat);
       submissionFormData.append('dataConsent', formData.dataConsent);
@@ -1088,6 +1169,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
         expectedParticipants: '',
         tournamentSoftware: '',
         tournamentSoftwareOther: '',
+        hospitalName: '',
+        hospitalDistance: '',
+        numberOfMedics: '',
+        emergencyTransportType: '',
+        emergencyTransportQuantity: '',
+        standbyVehicleType: '',
         eventSummary: '',
         scoringFormat: 'traditional',
         dataConsent: false,
@@ -1984,6 +2071,9 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 value={formData.category}
                 onChange={handleInputChange}
               />
+              <small className="form-note" style={{ color: '#c62828', display: 'block', marginTop: '5px' }}>
+                Note: Organisers are required to declare all competition categories planned for this tournament.
+              </small>
             </div>
             
             <div className="form-group">
@@ -2158,7 +2248,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
           )}
           
           <div className="form-group">
-            <label htmlFor="expectedParticipants">Expected No. of Participants *</label>
+            <label htmlFor="expectedParticipants">Maximum Participant *</label>
             <input
               type="number"
               id="expectedParticipants"
@@ -2254,6 +2344,119 @@ const TournamentApplication = ({ setCurrentPage }) => {
               />
             </div>
           )}
+
+          {/* Emergency Plan Section */}
+          <div className="form-subsection" style={{ marginTop: '20px', marginBottom: '20px', padding: '15px', backgroundColor: '#fff5f5', borderRadius: '8px', border: '1px solid #ffcdd2' }}>
+            <h4 style={{ marginBottom: '15px', color: '#c62828' }}>
+              Emergency Plan
+            </h4>
+
+            <div className="form-group">
+              <label htmlFor="hospitalName">Hospital Name *</label>
+              <input
+                type="text"
+                id="hospitalName"
+                name="hospitalName"
+                value={formData.hospitalName}
+                onChange={handleInputChange}
+                placeholder="Enter nearest hospital name"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="hospitalDistance">Distance to Hospital (km) *</label>
+              <input
+                type="text"
+                id="hospitalDistance"
+                name="hospitalDistance"
+                value={formData.hospitalDistance}
+                onChange={handleInputChange}
+                placeholder="e.g., 5 km"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="numberOfMedics">Number of Medics *</label>
+              <input
+                type="number"
+                id="numberOfMedics"
+                name="numberOfMedics"
+                value={formData.numberOfMedics}
+                onChange={handleInputChange}
+                placeholder="0"
+                min="0"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Emergency Transport Type *</label>
+              <div className="radio-group" style={{ marginTop: '8px' }}>
+                <div className="radio-option" style={{ marginBottom: '8px' }}>
+                  <input
+                    type="radio"
+                    id="transportAmbulance"
+                    name="emergencyTransportType"
+                    value="ambulance"
+                    checked={formData.emergencyTransportType === 'ambulance'}
+                    onChange={handleInputChange}
+                    required
+                    style={{ width: 'auto', marginRight: '8px' }}
+                  />
+                  <label htmlFor="transportAmbulance" style={{ display: 'inline', fontWeight: 'normal' }}>Ambulance</label>
+                </div>
+                <div className="radio-option">
+                  <input
+                    type="radio"
+                    id="transportStandby"
+                    name="emergencyTransportType"
+                    value="standby_vehicle"
+                    checked={formData.emergencyTransportType === 'standby_vehicle'}
+                    onChange={handleInputChange}
+                    required
+                    style={{ width: 'auto', marginRight: '8px' }}
+                  />
+                  <label htmlFor="transportStandby" style={{ display: 'inline', fontWeight: 'normal' }}>Standby/Support Emergency Vehicle</label>
+                </div>
+              </div>
+            </div>
+
+            {formData.emergencyTransportType === 'ambulance' && (
+              <div className="form-group">
+                <label htmlFor="emergencyTransportQuantity">Number of Ambulances *</label>
+                <input
+                  type="number"
+                  id="emergencyTransportQuantity"
+                  name="emergencyTransportQuantity"
+                  value={formData.emergencyTransportQuantity}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  min="1"
+                  required
+                />
+              </div>
+            )}
+
+            {formData.emergencyTransportType === 'standby_vehicle' && (
+              <div className="form-group">
+                <label htmlFor="standbyVehicleType">Type of Vehicle *</label>
+                <input
+                  type="text"
+                  id="standbyVehicleType"
+                  name="standbyVehicleType"
+                  value={formData.standbyVehicleType}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Van, SUV"
+                  required
+                />
+                <small className="form-note" style={{ color: '#c62828', display: 'block', marginTop: '5px' }}>
+                  Note: Only SUV or van–type vehicles are permitted. The distance to the hospital must not exceed 5 km. If the distance is more than 5 km, the use of an ambulance is mandatory.
+                </small>
+              </div>
+            )}
+          </div>
 
           <div className="form-group">
             <label htmlFor="eventSummary">Brief Summary/Purpose of Event *</label>
@@ -2800,6 +3003,9 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     onChange={handleEditInputChange}
                     placeholder="e.g., Men's Singles, Women's Doubles, Mixed Doubles"
                   />
+                  <small className="form-note" style={{ color: '#c62828', display: 'block', marginTop: '5px' }}>
+                    Note: Organisers are required to declare all competition categories planned for this tournament.
+                  </small>
                 </div>
 
                 <div className="form-row">
@@ -2835,7 +3041,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="edit-expectedParticipants">Expected No. of Participants *</label>
+                  <label htmlFor="edit-expectedParticipants">Maximum Participant *</label>
                   <input
                     type="number"
                     id="edit-expectedParticipants"
@@ -2931,6 +3137,119 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     />
                   </div>
                 )}
+
+                {/* Emergency Plan Section */}
+                <div className="form-subsection" style={{ marginTop: '20px', marginBottom: '20px', padding: '15px', backgroundColor: '#fff5f5', borderRadius: '8px', border: '1px solid #ffcdd2' }}>
+                  <h4 style={{ marginBottom: '15px', color: '#c62828' }}>
+                    Emergency Plan
+                  </h4>
+
+                  <div className="form-group">
+                    <label htmlFor="edit-hospitalName">Hospital Name *</label>
+                    <input
+                      type="text"
+                      id="edit-hospitalName"
+                      name="hospitalName"
+                      value={editFormData.hospitalName || ''}
+                      onChange={handleEditInputChange}
+                      placeholder="Enter nearest hospital name"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="edit-hospitalDistance">Distance to Hospital (km) *</label>
+                    <input
+                      type="text"
+                      id="edit-hospitalDistance"
+                      name="hospitalDistance"
+                      value={editFormData.hospitalDistance || ''}
+                      onChange={handleEditInputChange}
+                      placeholder="e.g., 5 km"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="edit-numberOfMedics">Number of Medics *</label>
+                    <input
+                      type="number"
+                      id="edit-numberOfMedics"
+                      name="numberOfMedics"
+                      value={editFormData.numberOfMedics || ''}
+                      onChange={handleEditInputChange}
+                      placeholder="0"
+                      min="0"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Emergency Transport Type *</label>
+                    <div className="radio-group" style={{ marginTop: '8px' }}>
+                      <div className="radio-option" style={{ marginBottom: '8px' }}>
+                        <input
+                          type="radio"
+                          id="edit-transportAmbulance"
+                          name="emergencyTransportType"
+                          value="ambulance"
+                          checked={editFormData.emergencyTransportType === 'ambulance'}
+                          onChange={handleEditInputChange}
+                          required
+                          style={{ width: 'auto', marginRight: '8px' }}
+                        />
+                        <label htmlFor="edit-transportAmbulance" style={{ display: 'inline', fontWeight: 'normal' }}>Ambulance</label>
+                      </div>
+                      <div className="radio-option">
+                        <input
+                          type="radio"
+                          id="edit-transportStandby"
+                          name="emergencyTransportType"
+                          value="standby_vehicle"
+                          checked={editFormData.emergencyTransportType === 'standby_vehicle'}
+                          onChange={handleEditInputChange}
+                          required
+                          style={{ width: 'auto', marginRight: '8px' }}
+                        />
+                        <label htmlFor="edit-transportStandby" style={{ display: 'inline', fontWeight: 'normal' }}>Standby/Support Emergency Vehicle</label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {editFormData.emergencyTransportType === 'ambulance' && (
+                    <div className="form-group">
+                      <label htmlFor="edit-emergencyTransportQuantity">Number of Ambulances *</label>
+                      <input
+                        type="number"
+                        id="edit-emergencyTransportQuantity"
+                        name="emergencyTransportQuantity"
+                        value={editFormData.emergencyTransportQuantity || ''}
+                        onChange={handleEditInputChange}
+                        placeholder="0"
+                        min="1"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  {editFormData.emergencyTransportType === 'standby_vehicle' && (
+                    <div className="form-group">
+                      <label htmlFor="edit-standbyVehicleType">Type of Vehicle *</label>
+                      <input
+                        type="text"
+                        id="edit-standbyVehicleType"
+                        name="standbyVehicleType"
+                        value={editFormData.standbyVehicleType || ''}
+                        onChange={handleEditInputChange}
+                        placeholder="e.g., Van, SUV"
+                        required
+                      />
+                      <small className="form-note" style={{ color: '#c62828', display: 'block', marginTop: '5px' }}>
+                        Note: Only SUV or van–type vehicles are permitted. The distance to the hospital must not exceed 5 km. If the distance is more than 5 km, the use of an ambulance is mandatory.
+                      </small>
+                    </div>
+                  )}
+                </div>
 
                 <div className="form-group">
                   <label htmlFor="edit-eventSummary">Brief Summary/Purpose of Event *</label>

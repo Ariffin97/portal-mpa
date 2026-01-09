@@ -146,6 +146,12 @@ const AdminDashboard = ({ setCurrentPage }) => {
     malaysianEntryFee: '',
     internationalEntryFee: '',
     expectedParticipants: '',
+    hospitalName: '',
+    hospitalDistance: '',
+    numberOfMedics: '',
+    emergencyTransportType: '',
+    emergencyTransportQuantity: '',
+    standbyVehicleType: '',
     eventSummary: '',
     scoringFormat: 'traditional',
     tournamentSoftware: [],
@@ -2440,7 +2446,39 @@ const AdminDashboard = ({ setCurrentPage }) => {
       setIsCreatingTournament(false);
       return;
     }
-    
+
+    // Validate Emergency Plan fields
+    if (!tournamentFormData.hospitalName || !tournamentFormData.hospitalName.trim()) {
+      alert('Please enter the hospital name in the Emergency Plan section.');
+      setIsCreatingTournament(false);
+      return;
+    }
+    if (!tournamentFormData.hospitalDistance || !tournamentFormData.hospitalDistance.trim()) {
+      alert('Please enter the distance to hospital in the Emergency Plan section.');
+      setIsCreatingTournament(false);
+      return;
+    }
+    if (!tournamentFormData.numberOfMedics || tournamentFormData.numberOfMedics === '') {
+      alert('Please enter the number of medics in the Emergency Plan section.');
+      setIsCreatingTournament(false);
+      return;
+    }
+    if (!tournamentFormData.emergencyTransportType) {
+      alert('Please select an emergency transport type in the Emergency Plan section.');
+      setIsCreatingTournament(false);
+      return;
+    }
+    if (tournamentFormData.emergencyTransportType === 'ambulance' && (!tournamentFormData.emergencyTransportQuantity || tournamentFormData.emergencyTransportQuantity === '')) {
+      alert('Please enter the number of ambulances in the Emergency Plan section.');
+      setIsCreatingTournament(false);
+      return;
+    }
+    if (tournamentFormData.emergencyTransportType === 'standby_vehicle' && (!tournamentFormData.standbyVehicleType || !tournamentFormData.standbyVehicleType.trim())) {
+      alert('Please enter the type of vehicle in the Emergency Plan section.');
+      setIsCreatingTournament(false);
+      return;
+    }
+
     try {
       // Create FormData for file upload
       const submissionFormData = new FormData();
@@ -2464,6 +2502,15 @@ const AdminDashboard = ({ setCurrentPage }) => {
       submissionFormData.append('eventType', tournamentFormData.eventType);
       submissionFormData.append('categories', JSON.stringify(savedTournamentCategories));
       submissionFormData.append('expectedParticipants', parseInt(tournamentFormData.expectedParticipants));
+
+      // Emergency Plan fields
+      submissionFormData.append('hospitalName', tournamentFormData.hospitalName);
+      submissionFormData.append('hospitalDistance', tournamentFormData.hospitalDistance);
+      submissionFormData.append('numberOfMedics', tournamentFormData.numberOfMedics);
+      submissionFormData.append('emergencyTransportType', tournamentFormData.emergencyTransportType);
+      submissionFormData.append('emergencyTransportQuantity', tournamentFormData.emergencyTransportQuantity || '');
+      submissionFormData.append('standbyVehicleType', tournamentFormData.standbyVehicleType || '');
+
       submissionFormData.append('eventSummary', tournamentFormData.eventSummary);
       submissionFormData.append('scoringFormat', tournamentFormData.scoringFormat);
       submissionFormData.append('tournamentSoftware', JSON.stringify(tournamentFormData.tournamentSoftware || []));
@@ -2521,6 +2568,12 @@ const AdminDashboard = ({ setCurrentPage }) => {
         malaysianEntryFee: '',
         internationalEntryFee: '',
         expectedParticipants: '',
+        hospitalName: '',
+        hospitalDistance: '',
+        numberOfMedics: '',
+        emergencyTransportType: '',
+        emergencyTransportQuantity: '',
+        standbyVehicleType: '',
         eventSummary: '',
         scoringFormat: 'traditional',
         tournamentSoftware: [],
@@ -4086,46 +4139,21 @@ const AdminDashboard = ({ setCurrentPage }) => {
   const renderRegisteredOrganizations = () => (
     <div className="registered-organizations-view">
 
-      <div className="org-stats-header" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1.5rem',
-        padding: '0 0.5rem'
+      {/* Page Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%)',
+        borderRadius: '16px',
+        padding: '2rem',
+        marginBottom: '2rem',
+        color: 'white',
+        boxShadow: '0 4px 20px rgba(30, 58, 95, 0.3)'
       }}>
-        <div className="org-stats-row" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem'
-        }}>
-          <h3 className="org-total-count" style={{
-            fontSize: '1.25rem',
-            fontWeight: '600',
-            color: '#374151',
-            margin: '0'
-          }}>
-            Total Organizations: {registeredOrganizations.length}
-          </h3>
-          <div className="org-divider" style={{
-            height: '1px',
-            width: '60px',
-            backgroundColor: '#e5e7eb'
-          }}></div>
-          <span className="org-active-count" style={{
-            fontSize: '0.875rem',
-            color: '#6b7280',
-            fontWeight: '500'
-          }}>
-            Active: {registeredOrganizations.filter(org => org.status !== 'suspended').length}
-          </span>
-          <span className="org-suspended-count" style={{
-            fontSize: '0.875rem',
-            color: '#ef4444',
-            fontWeight: '500'
-          }}>
-            Suspended: {registeredOrganizations.filter(org => org.status === 'suspended').length}
-          </span>
-        </div>
+        <h2 style={{ margin: 0, fontSize: '1.75rem', fontWeight: '700', marginBottom: '0.5rem' }}>
+          Registered Organizations
+        </h2>
+        <p style={{ margin: 0, opacity: 0.9, fontSize: '1rem' }}>
+          Manage and monitor all registered tournament organizers
+        </p>
       </div>
 
       {registeredOrganizations.length === 0 ? (
@@ -4157,190 +4185,226 @@ const AdminDashboard = ({ setCurrentPage }) => {
         <div className="org-cards-grid" style={{
           display: 'grid',
           gap: '1.5rem',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))'
+          gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))'
         }}>
           {registeredOrganizations.map((org, index) => (
             <div key={org._id} className="org-card" style={{
               backgroundColor: 'white',
-              border: '1px solid #e5e7eb',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              transition: 'all 0.2s ease',
-              cursor: 'pointer'
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer',
+              border: '1px solid #e5e7eb'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+              e.currentTarget.style.transform = 'translateY(-4px)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+              e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.08)';
               e.currentTarget.style.transform = 'translateY(0px)';
             }}>
+              {/* Card Header with gradient */}
               <div style={{
+                background: org.status === 'suspended'
+                  ? 'linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)'
+                  : 'linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%)',
+                padding: '1.25rem 1.5rem',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '1rem'
+                alignItems: 'center'
               }}>
-                <div style={{ flex: '1' }}>
+                <div>
                   <h3 style={{
-                    fontSize: '1.25rem',
+                    fontSize: '1.125rem',
                     fontWeight: '700',
-                    color: '#111827',
-                    margin: '0 0 0.25rem 0',
-                    lineHeight: '1.4'
+                    color: org.status === 'suspended' ? '#991b1b' : 'white',
+                    margin: '0',
+                    lineHeight: '1.3'
                   }}>
                     {org.organizationName}
                   </h3>
                   <p style={{
-                    fontSize: '0.875rem',
-                    color: '#6b7280',
-                    margin: '0',
+                    fontSize: '0.8rem',
+                    color: org.status === 'suspended' ? '#b91c1c' : 'rgba(255,255,255,0.8)',
+                    margin: '0.125rem 0 0 0',
                     fontWeight: '500'
                   }}>
                     ID: {org.organizationId}
                   </p>
                 </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
+                <span style={{
+                  backgroundColor: org.status === 'suspended' ? '#dc2626' : '#10b981',
+                  color: 'white',
+                  padding: '0.375rem 0.875rem',
+                  borderRadius: '9999px',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                 }}>
-                  <span style={{
-                    backgroundColor: org.status === 'suspended' ? '#fef2f2' : '#f0fdf4',
-                    color: org.status === 'suspended' ? '#dc2626' : '#16a34a',
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '9999px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.025em',
-                    border: `1px solid ${org.status === 'suspended' ? '#fecaca' : '#bbf7d0'}`
-                  }}>
-                    {org.status === 'suspended' ? 'Suspended' : 'Active'}
-                  </span>
-                </div>
+                  {org.status === 'suspended' ? 'Suspended' : 'Active'}
+                </span>
               </div>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1rem',
-                marginBottom: '1rem'
-              }}>
-                <div>
+              {/* Card Body */}
+              <div style={{ padding: '1.5rem' }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '1.25rem',
+                  marginBottom: '1.25rem'
+                }}>
+                  <div style={{
+                    backgroundColor: '#f8fafc',
+                    padding: '1rem',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <p style={{
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      margin: '0 0 0.5rem 0'
+                    }}>
+                      Applicant
+                    </p>
+                    <p style={{
+                      fontSize: '0.9rem',
+                      color: '#1e293b',
+                      margin: '0',
+                      fontWeight: '600'
+                    }}>
+                      {org.applicantFullName}
+                    </p>
+                  </div>
+                  <div style={{
+                    backgroundColor: '#f8fafc',
+                    padding: '1rem',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <p style={{
+                      fontSize: '0.7rem',
+                      fontWeight: '600',
+                      color: '#64748b',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      margin: '0 0 0.5rem 0'
+                    }}>
+                      Documents
+                    </p>
+                    <span style={{
+                      fontSize: '0.875rem',
+                      color: org.documents && org.documents.length > 0 ? '#16a34a' : '#ea580c',
+                      fontWeight: '600',
+                      backgroundColor: org.documents && org.documents.length > 0 ? '#dcfce7' : '#ffedd5',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '6px',
+                      display: 'inline-block'
+                    }}>
+                      {org.documents && org.documents.length > 0 ?
+                        `${org.documents.length} Files` : 'No Files'
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{
+                  backgroundColor: '#f8fafc',
+                  padding: '1rem',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0',
+                  marginBottom: '1.25rem'
+                }}>
                   <p style={{
-                    fontSize: '0.75rem',
+                    fontSize: '0.7rem',
                     fontWeight: '600',
-                    color: '#6b7280',
+                    color: '#64748b',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
-                    margin: '0 0 0.25rem 0'
+                    margin: '0 0 0.5rem 0'
                   }}>
-                    Applicant
+                    Contact Email
                   </p>
                   <p style={{
-                    fontSize: '0.875rem',
-                    color: '#374151',
+                    fontSize: '0.9rem',
+                    color: '#1e293b',
                     margin: '0',
                     fontWeight: '500'
                   }}>
-                    {org.applicantFullName}
+                    {org.email}
                   </p>
                 </div>
-                <div>
-                  <p style={{
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    color: '#6b7280',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    margin: '0 0 0.25rem 0'
-                  }}>
-                    Documents
-                  </p>
-                  <span style={{
-                    fontSize: '0.875rem',
-                    color: org.documents && org.documents.length > 0 ? '#16a34a' : '#ea580c',
-                    fontWeight: '600',
-                    backgroundColor: org.documents && org.documents.length > 0 ? '#f0fdf4' : '#fff7ed',
-                    padding: '0.125rem 0.5rem',
-                    borderRadius: '6px',
-                    border: `1px solid ${org.documents && org.documents.length > 0 ? '#bbf7d0' : '#fed7aa'}`
-                  }}>
-                    {org.documents && org.documents.length > 0 ?
-                      `${org.documents.length} Files` : 'No Files'
-                    }
-                  </span>
-                </div>
-              </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <p style={{
-                  fontSize: '0.75rem',
-                  fontWeight: '600',
-                  color: '#6b7280',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  margin: '0 0 0.25rem 0'
+                <div className="org-card-actions" style={{
+                  display: 'flex',
+                  gap: '0.75rem',
+                  flexWrap: 'wrap'
                 }}>
-                  Contact Email
-                </p>
-                <p style={{
-                  fontSize: '0.875rem',
-                  color: '#374151',
-                  margin: '0',
-                  fontWeight: '500'
-                }}>
-                  {org.email}
-                </p>
-              </div>
-
-              <div className="org-card-actions" style={{
-                display: 'flex',
-                gap: '0.5rem',
-                flexWrap: 'wrap',
-                paddingTop: '1rem',
-                borderTop: '1px solid #f3f4f6'
-              }}>
                 <button
                   className="org-btn org-btn-view"
                   onClick={() => showApplicationDetails(org)}
                   style={{
-                    backgroundColor: '#3b82f6',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                     color: 'white',
                     border: 'none',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
+                    padding: '0.625rem 1.25rem',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
                     cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                    flex: '1'
+                    transition: 'all 0.2s',
+                    flex: '1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(59, 130, 246, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.3)';
+                  }}
                 >
-                  View Details
+                  View
                 </button>
                 <button
                   className="org-btn org-btn-message"
                   onClick={() => handleSendMessageToOrganiser(org.email, org.organizationName)}
                   style={{
-                    backgroundColor: '#06b6d4',
+                    background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
                     color: 'white',
                     border: 'none',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
+                    padding: '0.625rem 1.25rem',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
                     cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                    flex: '1'
+                    transition: 'all 0.2s',
+                    flex: '1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 2px 4px rgba(6, 182, 212, 0.3)'
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#0891b2'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#06b6d4'}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(6, 182, 212, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 4px rgba(6, 182, 212, 0.3)';
+                  }}
                 >
                   Message
                 </button>
@@ -4349,19 +4413,30 @@ const AdminDashboard = ({ setCurrentPage }) => {
                     className="org-btn org-btn-unsuspend"
                     onClick={() => handleUnsuspendOrganization(org._id, org.organizationName)}
                     style={{
-                      backgroundColor: '#10b981',
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                       color: 'white',
                       border: 'none',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
+                      padding: '0.625rem 1.25rem',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
                       cursor: 'pointer',
-                      transition: 'background-color 0.2s',
-                      flex: '1'
+                      transition: 'all 0.2s',
+                      flex: '1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
                     }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#10b981'}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'translateY(-1px)';
+                      e.target.style.boxShadow = '0 4px 8px rgba(16, 185, 129, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
+                    }}
                   >
                     Unsuspend
                   </button>
@@ -4370,19 +4445,30 @@ const AdminDashboard = ({ setCurrentPage }) => {
                     className="org-btn org-btn-suspend"
                     onClick={() => handleSuspendOrganization(org._id, org.organizationName)}
                     style={{
-                      backgroundColor: '#f59e0b',
+                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                       color: 'white',
                       border: 'none',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
+                      padding: '0.625rem 1.25rem',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      fontWeight: '600',
                       cursor: 'pointer',
-                      transition: 'background-color 0.2s',
-                      flex: '1'
+                      transition: 'all 0.2s',
+                      flex: '1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)'
                     }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#d97706'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#f59e0b'}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'translateY(-1px)';
+                      e.target.style.boxShadow = '0 4px 8px rgba(245, 158, 11, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 2px 4px rgba(245, 158, 11, 0.3)';
+                    }}
                   >
                     Suspend
                   </button>
@@ -4391,22 +4477,34 @@ const AdminDashboard = ({ setCurrentPage }) => {
                   className="org-btn org-btn-remove"
                   onClick={() => handleDeleteOrganization(org._id, org.organizationName, org.organizationId)}
                   style={{
-                    backgroundColor: '#ef4444',
+                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                     color: 'white',
                     border: 'none',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
+                    padding: '0.625rem 1.25rem',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
                     cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                    minWidth: '80px'
+                    transition: 'all 0.2s',
+                    minWidth: '80px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
                   }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+                  onMouseEnter={(e) => {
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.3)';
+                  }}
                 >
                   Remove
                 </button>
+                </div>
               </div>
             </div>
           ))}
@@ -7436,29 +7534,6 @@ Settings
               <p className="dashboard-subtitle">Manage tournament applications by status</p>
             </div>
 
-            <div className="dashboard-stats">
-              <div className="stat-card">
-                <div className="stat-number">{applications.length}</div>
-                <div className="stat-label">Total Applications</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{applications.filter(app => app.status === 'Pending Review').length}</div>
-                <div className="stat-label">Pending Review</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{applications.filter(app => app.status === 'Under Review').length}</div>
-                <div className="stat-label">Under Review</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{applications.filter(app => app.status === 'Approved').length}</div>
-                <div className="stat-label">Approved</div>
-              </div>
-              <div className="stat-card">
-                <div className="stat-number">{applications.filter(app => app.status === 'Rejected').length}</div>
-                <div className="stat-label">Rejected</div>
-              </div>
-            </div>
-
             {error && (
               <div className="error-message" style={{ 
                 color: '#d32f2f', 
@@ -8839,8 +8914,11 @@ Settings
                         onChange={handleTournamentInputChange}
                         placeholder="e.g., Men's Singles, Women's Doubles, Mixed Doubles"
                       />
+                      <small className="form-note" style={{ color: '#c62828', display: 'block', marginTop: '5px' }}>
+                        Note: Organisers are required to declare all competition categories planned for this tournament.
+                      </small>
                     </div>
-                    
+
                     <div className="form-group">
                       <label htmlFor="malaysianEntryFee">Malaysian Entry Fee (RM) per player *</label>
                       <input
@@ -8994,7 +9072,7 @@ Settings
                 
                 <div className="form-section">
                   <div className="form-group">
-                    <label htmlFor="expectedParticipants">Expected No. of Participants *</label>
+                    <label htmlFor="expectedParticipants">Maximum Participant *</label>
                     <input
                       type="number"
                       id="expectedParticipants"
@@ -9005,7 +9083,120 @@ Settings
                       required
                     />
                   </div>
-                  
+
+                  {/* Emergency Plan Section */}
+                  <div className="form-subsection" style={{ marginTop: '20px', marginBottom: '20px', padding: '15px', backgroundColor: '#fff5f5', borderRadius: '8px', border: '1px solid #ffcdd2' }}>
+                    <h4 style={{ marginBottom: '15px', color: '#c62828' }}>
+                      Emergency Plan
+                    </h4>
+
+                    <div className="form-group">
+                      <label htmlFor="hospitalName">Hospital Name *</label>
+                      <input
+                        type="text"
+                        id="hospitalName"
+                        name="hospitalName"
+                        value={tournamentFormData.hospitalName}
+                        onChange={handleTournamentInputChange}
+                        placeholder="Enter nearest hospital name"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="hospitalDistance">Distance to Hospital (km) *</label>
+                      <input
+                        type="text"
+                        id="hospitalDistance"
+                        name="hospitalDistance"
+                        value={tournamentFormData.hospitalDistance}
+                        onChange={handleTournamentInputChange}
+                        placeholder="e.g., 5 km"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="numberOfMedics">Number of Medics *</label>
+                      <input
+                        type="number"
+                        id="numberOfMedics"
+                        name="numberOfMedics"
+                        value={tournamentFormData.numberOfMedics}
+                        onChange={handleTournamentInputChange}
+                        placeholder="0"
+                        min="0"
+                        required
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label>Emergency Transport Type *</label>
+                      <div className="radio-group" style={{ marginTop: '8px' }}>
+                        <div className="radio-option" style={{ marginBottom: '8px' }}>
+                          <input
+                            type="radio"
+                            id="admin-transportAmbulance"
+                            name="emergencyTransportType"
+                            value="ambulance"
+                            checked={tournamentFormData.emergencyTransportType === 'ambulance'}
+                            onChange={handleTournamentInputChange}
+                            required
+                            style={{ width: 'auto', marginRight: '8px' }}
+                          />
+                          <label htmlFor="admin-transportAmbulance" style={{ display: 'inline', fontWeight: 'normal' }}>Ambulance</label>
+                        </div>
+                        <div className="radio-option">
+                          <input
+                            type="radio"
+                            id="admin-transportStandby"
+                            name="emergencyTransportType"
+                            value="standby_vehicle"
+                            checked={tournamentFormData.emergencyTransportType === 'standby_vehicle'}
+                            onChange={handleTournamentInputChange}
+                            required
+                            style={{ width: 'auto', marginRight: '8px' }}
+                          />
+                          <label htmlFor="admin-transportStandby" style={{ display: 'inline', fontWeight: 'normal' }}>Standby/Support Emergency Vehicle</label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {tournamentFormData.emergencyTransportType === 'ambulance' && (
+                      <div className="form-group">
+                        <label htmlFor="emergencyTransportQuantity">Number of Ambulances *</label>
+                        <input
+                          type="number"
+                          id="emergencyTransportQuantity"
+                          name="emergencyTransportQuantity"
+                          value={tournamentFormData.emergencyTransportQuantity}
+                          onChange={handleTournamentInputChange}
+                          placeholder="0"
+                          min="1"
+                          required
+                        />
+                      </div>
+                    )}
+
+                    {tournamentFormData.emergencyTransportType === 'standby_vehicle' && (
+                      <div className="form-group">
+                        <label htmlFor="standbyVehicleType">Type of Vehicle *</label>
+                        <input
+                          type="text"
+                          id="standbyVehicleType"
+                          name="standbyVehicleType"
+                          value={tournamentFormData.standbyVehicleType}
+                          onChange={handleTournamentInputChange}
+                          placeholder="e.g., Van, SUV"
+                          required
+                        />
+                        <small className="form-note" style={{ color: '#c62828', display: 'block', marginTop: '5px' }}>
+                          Note: Only SUV or van–type vehicles are permitted. The distance to the hospital must not exceed 5 km. If the distance is more than 5 km, the use of an ambulance is mandatory.
+                        </small>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="form-group">
                     <label htmlFor="eventSummary">Brief Summary/Purpose of Event *</label>
                     <textarea
@@ -9476,7 +9667,7 @@ Settings
                       </div>
                       
                       <div className="form-group">
-                        <label htmlFor="edit-expectedParticipants">Expected No. of Participants *</label>
+                        <label htmlFor="edit-expectedParticipants">Maximum Participant *</label>
                         <input
                           type="number"
                           id="edit-expectedParticipants"
@@ -9572,6 +9763,119 @@ Settings
                           />
                         </div>
                       )}
+
+                      {/* Emergency Plan Section */}
+                      <div className="form-subsection" style={{ marginTop: '20px', marginBottom: '20px', padding: '15px', backgroundColor: '#fff5f5', borderRadius: '8px', border: '1px solid #ffcdd2' }}>
+                        <h4 style={{ marginBottom: '15px', color: '#c62828' }}>
+                          Emergency Plan
+                        </h4>
+
+                        <div className="form-group">
+                          <label htmlFor="edit-hospitalName">Hospital Name *</label>
+                          <input
+                            type="text"
+                            id="edit-hospitalName"
+                            name="hospitalName"
+                            value={editFormData.hospitalName || ''}
+                            onChange={handleEditInputChange}
+                            placeholder="Enter nearest hospital name"
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="edit-hospitalDistance">Distance to Hospital (km) *</label>
+                          <input
+                            type="text"
+                            id="edit-hospitalDistance"
+                            name="hospitalDistance"
+                            value={editFormData.hospitalDistance || ''}
+                            onChange={handleEditInputChange}
+                            placeholder="e.g., 5 km"
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="edit-numberOfMedics">Number of Medics *</label>
+                          <input
+                            type="number"
+                            id="edit-numberOfMedics"
+                            name="numberOfMedics"
+                            value={editFormData.numberOfMedics || ''}
+                            onChange={handleEditInputChange}
+                            placeholder="0"
+                            min="0"
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Emergency Transport Type *</label>
+                          <div className="radio-group" style={{ marginTop: '8px' }}>
+                            <div className="radio-option" style={{ marginBottom: '8px' }}>
+                              <input
+                                type="radio"
+                                id="edit-admin-transportAmbulance"
+                                name="emergencyTransportType"
+                                value="ambulance"
+                                checked={editFormData.emergencyTransportType === 'ambulance'}
+                                onChange={handleEditInputChange}
+                                required
+                                style={{ width: 'auto', marginRight: '8px' }}
+                              />
+                              <label htmlFor="edit-admin-transportAmbulance" style={{ display: 'inline', fontWeight: 'normal' }}>Ambulance</label>
+                            </div>
+                            <div className="radio-option">
+                              <input
+                                type="radio"
+                                id="edit-admin-transportStandby"
+                                name="emergencyTransportType"
+                                value="standby_vehicle"
+                                checked={editFormData.emergencyTransportType === 'standby_vehicle'}
+                                onChange={handleEditInputChange}
+                                required
+                                style={{ width: 'auto', marginRight: '8px' }}
+                              />
+                              <label htmlFor="edit-admin-transportStandby" style={{ display: 'inline', fontWeight: 'normal' }}>Standby/Support Emergency Vehicle</label>
+                            </div>
+                          </div>
+                        </div>
+
+                        {editFormData.emergencyTransportType === 'ambulance' && (
+                          <div className="form-group">
+                            <label htmlFor="edit-emergencyTransportQuantity">Number of Ambulances *</label>
+                            <input
+                              type="number"
+                              id="edit-emergencyTransportQuantity"
+                              name="emergencyTransportQuantity"
+                              value={editFormData.emergencyTransportQuantity || ''}
+                              onChange={handleEditInputChange}
+                              placeholder="0"
+                              min="1"
+                              required
+                            />
+                          </div>
+                        )}
+
+                        {editFormData.emergencyTransportType === 'standby_vehicle' && (
+                          <div className="form-group">
+                            <label htmlFor="edit-standbyVehicleType">Type of Vehicle *</label>
+                            <input
+                              type="text"
+                              id="edit-standbyVehicleType"
+                              name="standbyVehicleType"
+                              value={editFormData.standbyVehicleType || ''}
+                              onChange={handleEditInputChange}
+                              placeholder="e.g., Van, SUV"
+                              required
+                            />
+                            <small className="form-note" style={{ color: '#c62828', display: 'block', marginTop: '5px' }}>
+                              Note: Only SUV or van–type vehicles are permitted. The distance to the hospital must not exceed 5 km. If the distance is more than 5 km, the use of an ambulance is mandatory.
+                            </small>
+                          </div>
+                        )}
+                      </div>
 
                       <div className="form-group">
                         <label htmlFor="edit-eventSummary">Brief Summary/Purpose of Event *</label>

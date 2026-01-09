@@ -922,7 +922,7 @@ const generateApplicationPDF = async (applicationData) => {
       { label: 'Venue', value: applicationData.venue },
       { label: 'Level of Event', value: applicationData.classification },
       { label: 'Type of Event', value: applicationData.eventType },
-      { label: 'Expected Participants', value: applicationData.expectedParticipants?.toString() },
+      { label: 'Maximum Participant', value: applicationData.expectedParticipants?.toString() },
       { label: 'Tournament Software', value:
         Array.isArray(applicationData.tournamentSoftware)
           ? applicationData.tournamentSoftware.map(s => s === 'Other' ? (applicationData.tournamentSoftwareOther || 'Other') : s).join(', ')
@@ -1021,6 +1021,20 @@ const generateApplicationPDF = async (applicationData) => {
 
       yPosition -= 15;
     }
+
+    // EMERGENCY PLAN Section
+    const emergencyTransportDisplay = applicationData.emergencyTransportType === 'ambulance'
+      ? `Ambulance (Quantity: ${applicationData.emergencyTransportQuantity || 'Not specified'})`
+      : applicationData.emergencyTransportType === 'standby_vehicle'
+        ? `Standby/Support Emergency Vehicle (Type: ${applicationData.standbyVehicleType || 'Not specified'})`
+        : 'Not specified';
+
+    addSectionContent('EMERGENCY PLAN', [
+      { label: 'Hospital Name', value: applicationData.hospitalName || 'Not provided' },
+      { label: 'Distance to Hospital', value: applicationData.hospitalDistance ? `${applicationData.hospitalDistance}` : 'Not provided' },
+      { label: 'Number of Medics', value: applicationData.numberOfMedics?.toString() || 'Not provided' },
+      { label: 'Emergency Transport', value: emergencyTransportDisplay }
+    ]);
 
     // CONSENT STATEMENTS
     checkNewPage(100);
