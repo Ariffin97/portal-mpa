@@ -8268,13 +8268,7 @@ Settings
                 onClick={() => setSelectedStatusFilter('ApprovedTournaments')}
                 title="Sanctioned tournaments ready for event organization"
               >
-                Approved Tournaments ({currentYearApprovedTournaments.length})
-              </button>
-              <button
-                className={`status-filter-btn ${selectedStatusFilter === 'Approved' ? 'active' : ''}`}
-                onClick={() => setSelectedStatusFilter('Approved')}
-              >
-                Approved ({currentYearApplications.filter(app => app.status === 'Approved').length})
+                Approved Tournaments ({currentYearApplications.filter(app => app.status === 'Approved').length})
               </button>
               <button
                 className={`status-filter-btn ${selectedStatusFilter === 'Rejected' ? 'active' : ''}`}
@@ -8333,13 +8327,14 @@ Settings
                         <th>No.</th>
                         <th>Tournament Name</th>
                         <th>ID Number</th>
-                        <th>{selectedStatusFilter === 'ApprovedTournaments' ? 'Event Date' : selectedStatusFilter === 'History2025' ? 'Year' : 'Status'}</th>
+                        <th>Date</th>
+                        <th>{selectedStatusFilter === 'History2025' ? 'Year' : 'Status'}</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(selectedStatusFilter === 'ApprovedTournaments'
-                        ? currentYearApprovedTournaments
+                        ? currentYearApplications.filter(app => app.status === 'Approved')
                         : selectedStatusFilter === 'History2025'
                           ? history2025Applications
                           : currentYearApplications.filter(app => selectedStatusFilter === 'All' || app.status === selectedStatusFilter)
@@ -8358,8 +8353,8 @@ Settings
                                 </span>
                               </td>
                               <td>
-                                <span 
-                                  className="clickable-link" 
+                                <span
+                                  className="clickable-link"
                                   onClick={() => showApplicationDetails(app)}
                                   title="Click to view details"
                                 >
@@ -8367,27 +8362,50 @@ Settings
                                 </span>
                               </td>
                               <td>
-                                {selectedStatusFilter === 'ApprovedTournaments' ? (
-                                  <span>
-                                    {app.eventStartDate ? new Date(app.eventStartDate).toLocaleDateString('en-MY', {
-                                      year: 'numeric',
-                                      month: 'short',
-                                      day: 'numeric'
-                                    }) : 'Date TBA'}
-                                    {app.eventEndDate && app.eventStartDate !== app.eventEndDate && (
-                                      <> - {new Date(app.eventEndDate).toLocaleDateString('en-MY', {
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric'
-                                      })}</>
-                                    )}
-                                  </span>
-                                ) : selectedStatusFilter === 'History2025' ? (
+                                {(() => {
+                                  if (!app.eventStartDate) return 'Date TBA';
+                                  const startDate = new Date(app.eventStartDate);
+                                  const endDate = app.eventEndDate ? new Date(app.eventEndDate) : null;
+                                  const today = new Date();
+                                  const daysUntilEvent = Math.ceil((startDate - today) / (1000 * 60 * 60 * 24));
+                                  const isUrgent = app.status === 'Under Review' && daysUntilEvent <= 5 && daysUntilEvent >= 0;
+
+                                  let dateText;
+                                  if (!endDate || app.eventStartDate === app.eventEndDate) {
+                                    dateText = startDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+                                  } else {
+                                    const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear();
+                                    if (sameMonth) {
+                                      dateText = `${startDate.getDate()} - ${endDate.getDate()} ${startDate.toLocaleDateString('en-MY', { month: 'short', year: 'numeric' })}`;
+                                    } else {
+                                      dateText = `${startDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' })} - ${endDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                                    }
+                                  }
+
+                                  return <span style={{ color: isUrgent ? '#dc2626' : 'inherit', fontWeight: isUrgent ? '600' : 'normal' }}>{dateText}</span>;
+                                })()}
+                              </td>
+                              <td>
+                                {selectedStatusFilter === 'History2025' ? (
                                   <span
                                     className="status-badge-table"
                                     style={{ backgroundColor: '#6b7280' }}
                                   >
                                     2025 - {app.status}
+                                  </span>
+                                ) : selectedStatusFilter === 'ApprovedTournaments' && requiresStateApproval(app) && isStateRegistered(app.state) ? (
+                                  <span
+                                    style={{
+                                      backgroundColor: '#d1fae5',
+                                      color: '#065f46',
+                                      padding: '4px 10px',
+                                      borderRadius: '4px',
+                                      fontSize: '11px',
+                                      fontWeight: '600'
+                                    }}
+                                    title={`${app.classification} level - Approved by ${app.state} State Association`}
+                                  >
+                                    {app.state}: Approved
                                   </span>
                                 ) : (
                                   <span
@@ -8407,11 +8425,8 @@ Settings
                                         className="view-btn-table"
                                         title="View Tournament Details"
                                       >
-                                        View Details
+                                        View
                                       </button>
-                                      <span className="sanctioned-badge" title="Officially sanctioned tournament">
-                                        Sanctioned
-                                      </span>
                                     </>
                                   ) : selectedStatusFilter === 'History2025' ? (
                                     <>
