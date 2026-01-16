@@ -6508,8 +6508,12 @@ button.utility-link {
   border-right: 1px solid #34495e;
   padding-top: 80px; /* Space for fixed header plus extra padding */
   padding-bottom: 20px;
-  min-height: 100vh; /* Full height from top */
-  position: relative;
+  height: 100vh; /* Full height */
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow-y: auto;
+  z-index: 100;
 }
 
 .sidebar-nav {
@@ -6968,6 +6972,7 @@ button.utility-link {
   padding: 20px;
   padding-top: 80px; /* Space for fixed header plus extra padding */
   padding-bottom: 100px; /* Extra space to prevent footer overlap */
+  margin-left: 250px; /* Space for fixed sidebar */
 }
 
 .dashboard-header {
@@ -9991,6 +9996,7 @@ button.utility-link {
   .dashboard-content {
     padding: 15px;
     padding-top: 70px;
+    margin-left: 220px !important; /* Space for fixed sidebar */
   }
 }
 
