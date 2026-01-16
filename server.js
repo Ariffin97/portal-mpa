@@ -157,6 +157,20 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+// Sarawak State Association Email Transporter (for Sarawak state approval emails only)
+const sarawakTransporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.SARAWAK_EMAIL_USER,
+    pass: process.env.SARAWAK_EMAIL_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
 // Email Templates
 const emailTemplates = {
   applicationSubmitted: (applicationData) => ({
@@ -438,6 +452,10 @@ const emailTemplates = {
             <tr>
               <td style="padding: 8px 0; color: #666; font-weight: bold;">Expected Participants:</td>
               <td style="padding: 8px 0;">${applicationData.expectedParticipants || 'Not provided'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #666; font-weight: bold;">Sponsorships:</td>
+              <td style="padding: 8px 0;">${applicationData.sponsorships || 'None'}</td>
             </tr>
             <tr>
               <td style="padding: 8px 0; color: #666; font-weight: bold;">Tournament Software:</td>
@@ -923,6 +941,7 @@ const generateApplicationPDF = async (applicationData) => {
       { label: 'Level of Event', value: applicationData.classification },
       { label: 'Type of Event', value: applicationData.eventType },
       { label: 'Maximum Participant', value: applicationData.expectedParticipants?.toString() },
+      { label: 'Sponsorships', value: applicationData.sponsorships || 'None' },
       { label: 'Tournament Software', value:
         Array.isArray(applicationData.tournamentSoftware)
           ? applicationData.tournamentSoftware.map(s => s === 'Other' ? (applicationData.tournamentSoftwareOther || 'Other') : s).join(', ')
@@ -1105,7 +1124,31 @@ const generateApplicationPDF = async (applicationData) => {
       color: applicationData.termsConsent ? rgb(0, 0.6, 0) : rgb(0.8, 0, 0)
     });
     yPosition -= 30;
-    
+
+    // No Alcohol & Gambling Declaration
+    page.drawText('3. No Alcohol & Gambling Declaration', {
+      x: 60,
+      y: yPosition,
+      size: 12,
+      font: helveticaBoldFont,
+      color: rgb(0, 0, 0)
+    });
+    yPosition -= 18;
+
+    const noAlcoholGamblingText = `I confirm that this tournament will not involve, sell, promote, or allow any alcohol or gambling activities whatsoever. I understand that any violation of this policy may result in immediate disqualification and other appropriate actions by Malaysia Pickleball Association (MPA).`;
+
+    yPosition = addWrappedText(noAlcoholGamblingText, 70, yPosition, width - 130, { size: 11 });
+
+    const noAlcoholGamblingStatus = `Status: ${applicationData.noAlcoholGamblingConsent ? 'AGREED AND CONFIRMED' : 'NOT CONFIRMED'}`;
+    page.drawText(noAlcoholGamblingStatus, {
+      x: 70,
+      y: yPosition,
+      size: 11,
+      font: helveticaBoldFont,
+      color: applicationData.noAlcoholGamblingConsent ? rgb(0, 0.6, 0) : rgb(0.8, 0, 0)
+    });
+    yPosition -= 30;
+
     // Add footer to all pages
     const pages = pdfDoc.getPages();
     pages.forEach((currentPage) => {
@@ -1153,6 +1196,36 @@ const sendEmail = async (to, template, attachments = []) => {
     return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error('❌ Error sending email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Send email from Sarawak State Association account (for Sarawak state approvals only)
+const sendSarawakEmail = async (to, template, attachments = []) => {
+  try {
+    console.log('📧 [SARAWAK] Preparing to send email to:', to);
+    console.log('📧 [SARAWAK] From:', process.env.SARAWAK_EMAIL_USER);
+
+    if (attachments.length > 0) {
+      attachments.forEach((attachment, index) => {
+        console.log(`📎 Attachment ${index + 1}: ${attachment.filename} (${attachment.content ? attachment.content.length : 0} bytes)`);
+      });
+    }
+
+    const mailOptions = {
+      from: `"Sarawak Pickleball Association" <${process.env.SARAWAK_EMAIL_USER}>`,
+      to: to,
+      subject: template.subject,
+      html: template.html,
+      attachments: attachments
+    };
+
+    console.log('📧 [SARAWAK] Sending email...');
+    const result = await sarawakTransporter.sendMail(mailOptions);
+    console.log('✅ [SARAWAK] Email sent successfully:', result.messageId);
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error('❌ [SARAWAK] Error sending email:', error);
     return { success: false, error: error.message };
   }
 };
@@ -1237,6 +1310,11 @@ const tournamentApplicationSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  sponsorships: {
+    type: String,
+    required: false,
+    default: ''
+  },
   tournamentSoftware: {
     type: [String],
     required: true,
@@ -1286,6 +1364,11 @@ const tournamentApplicationSchema = new mongoose.Schema({
   termsConsent: {
     type: Boolean,
     required: true
+  },
+  noAlcoholGamblingConsent: {
+    type: Boolean,
+    required: true,
+    default: false
   },
   // Tournament Poster
   tournamentPoster: {
@@ -4282,6 +4365,11 @@ app.post('/api/applications', uploadApplication.any(), async (req, res) => {
       applicationData.tournamentSoftware = applicationData.tournamentSoftware ? [applicationData.tournamentSoftware] : [];
     }
 
+    // Convert string booleans to actual booleans (FormData sends as strings)
+    applicationData.dataConsent = applicationData.dataConsent === 'true' || applicationData.dataConsent === true;
+    applicationData.termsConsent = applicationData.termsConsent === 'true' || applicationData.termsConsent === true;
+    applicationData.noAlcoholGamblingConsent = applicationData.noAlcoholGamblingConsent === 'true' || applicationData.noAlcoholGamblingConsent === true;
+
     // Handle uploaded files - req.files is an array when using .any()
     const supportDocuments = [];
     if (req.files && req.files.length > 0) {
@@ -5414,8 +5502,14 @@ app.put('/api/applications/:id/state-approve', async (req, res) => {
             </div>
           `
         };
-        await sendEmail(application.email, emailTemplate);
-        console.log('📧 State approval email sent to:', application.email);
+        // Use Sarawak email for Sarawak state, otherwise use default MPA email
+        if (approvedBy?.toLowerCase() === 'sarawak') {
+          await sendSarawakEmail(application.email, emailTemplate);
+          console.log('📧 State approval email sent from Sarawak account to:', application.email);
+        } else {
+          await sendEmail(application.email, emailTemplate);
+          console.log('📧 State approval email sent from MPA account to:', application.email);
+        }
       } catch (emailError) {
         console.error('❌ Failed to send state approval email:', emailError);
       }

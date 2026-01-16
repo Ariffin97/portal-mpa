@@ -70,6 +70,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
     malaysianEntryFee: '',
     internationalEntryFee: '',
     expectedParticipants: '',
+    sponsorships: '',
     tournamentSoftware: [],
     tournamentSoftwareOther: '',
 
@@ -88,7 +89,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
     
     // Consent
     dataConsent: false,
-    termsConsent: false
+    termsConsent: false,
+    noAlcoholGamblingConsent: false
   });
 
   // State for managing multiple categories
@@ -360,6 +362,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
       malaysianEntryFee: (tournament.malaysianEntryFee || '').toString(),
       internationalEntryFee: (tournament.internationalEntryFee || '').toString(),
       expectedParticipants: (tournament.expectedParticipants || '').toString(),
+      sponsorships: tournament.sponsorships || '',
       tournamentSoftware: softwareArray,
       tournamentSoftwareOther: tournament.tournamentSoftwareOther || '',
       eventSummary: tournament.eventSummary || '',
@@ -875,6 +878,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
       
       checkNewPage(20);
       yPosition = addInfoRow('Maximum Participant', dataToUse.expectedParticipants, yPosition, true);
+      yPosition = addInfoRow('Sponsorships', dataToUse.sponsorships || 'None', yPosition, true);
 
       // Tournament Software
       let softwareNames = [];
@@ -1114,8 +1118,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
 
       submissionFormData.append('eventSummary', formData.eventSummary);
       submissionFormData.append('scoringFormat', formData.scoringFormat);
+      submissionFormData.append('sponsorships', formData.sponsorships);
       submissionFormData.append('dataConsent', formData.dataConsent);
       submissionFormData.append('termsConsent', formData.termsConsent);
+      submissionFormData.append('noAlcoholGamblingConsent', formData.noAlcoholGamblingConsent);
 
       // Add tournament poster if uploaded
       if (tournamentPoster) {
@@ -1167,6 +1173,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
         malaysianEntryFee: '',
         internationalEntryFee: '',
         expectedParticipants: '',
+        sponsorships: '',
         tournamentSoftware: '',
         tournamentSoftwareOther: '',
         hospitalName: '',
@@ -1178,9 +1185,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
         eventSummary: '',
         scoringFormat: 'traditional',
         dataConsent: false,
-        termsConsent: false
+        termsConsent: false,
+        noAlcoholGamblingConsent: false
       });
-      
+
       // Clear saved categories, support documents, and poster
       setSavedCategories([]);
       setSupportDocuments([]);
@@ -2261,6 +2269,21 @@ const TournamentApplication = ({ setCurrentPage }) => {
           </div>
 
           <div className="form-group">
+            <label htmlFor="sponsorships">List of Sponsorships Involved</label>
+            <textarea
+              id="sponsorships"
+              name="sponsorships"
+              value={formData.sponsorships}
+              onChange={handleInputChange}
+              rows="4"
+              placeholder="Enter sponsor names (one per line or comma-separated)&#10;e.g., Company A, Company B, Company C"
+            />
+            <small className="form-note">
+              List all sponsors involved in this tournament. Leave blank if no sponsors.
+            </small>
+          </div>
+
+          <div className="form-group">
             <label>Tournament Software Being Used * (Select all that apply)</label>
             <div style={{
               maxHeight: '200px',
@@ -2483,9 +2506,9 @@ const TournamentApplication = ({ setCurrentPage }) => {
         </div>
 
         <div className="form-section">
-          <h3>Upload Support Documents</h3>
+          <h3>Upload Fact Sheet</h3>
           <div className="form-group">
-            <label htmlFor="supportDocuments">Upload Supporting Documents</label>
+            <label htmlFor="supportDocuments">Upload Fact Sheet *</label>
             <input
               type="file"
               id="supportDocuments"
@@ -2501,15 +2524,14 @@ const TournamentApplication = ({ setCurrentPage }) => {
               }}
             />
             <small className="form-note">
-              Upload relevant supporting documents such as venue permits, partnership agreements, event proposals, etc.
-              Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB each)
+              Upload your tournament fact sheet (required). Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB each)
             </small>
           </div>
 
-          {/* Display uploaded support documents */}
+          {/* Display uploaded fact sheet */}
           {supportDocuments.length > 0 && (
             <div style={{ marginTop: '15px', marginBottom: '15px' }}>
-              <h4>Uploaded Support Documents:</h4>
+              <h4>Uploaded Fact Sheet:</h4>
               <div style={{
                 border: '1px solid #ddd',
                 borderRadius: '4px',
@@ -2602,6 +2624,20 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 I have read, understood, and agree to abide by the Terms and Conditions set forth by Malaysia Pickleball Association (MPA) for tournament participation and organization. I acknowledge that failure to comply with these terms may result in disqualification or other appropriate actions.
               </label>
             </div>
+
+            <div className="consent-item">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  name="noAlcoholGamblingConsent"
+                  checked={formData.noAlcoholGamblingConsent}
+                  onChange={handleInputChange}
+                  required
+                />
+                <span className="checkmark"></span>
+                I confirm that this tournament will not involve, sell, promote, or allow any alcohol or gambling activities whatsoever. I understand that any violation of this policy may result in immediate disqualification and other appropriate actions by Malaysia Pickleball Association (MPA).
+              </label>
+            </div>
           </div>
         </div>
         
@@ -2619,10 +2655,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 {submitError}
               </div>
             )}
-            <button 
-              type="submit" 
-              className={`submit-btn ${(!formData.dataConsent || !formData.termsConsent || isSubmitting) ? 'disabled' : ''}`}
-              disabled={!formData.dataConsent || !formData.termsConsent || isSubmitting}
+            <button
+              type="submit"
+              className={`submit-btn ${(!formData.dataConsent || !formData.termsConsent || !formData.noAlcoholGamblingConsent || isSubmitting || supportDocuments.length === 0) ? 'disabled' : ''}`}
+              disabled={!formData.dataConsent || !formData.termsConsent || !formData.noAlcoholGamblingConsent || isSubmitting || supportDocuments.length === 0}
             >
               {isSubmitting ? 'Submitting Application...' : 'Submit Tournament Application'}
             </button>
@@ -3051,6 +3087,21 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     min="1"
                     required
                   />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="edit-sponsorships">List of Sponsorships Involved</label>
+                  <textarea
+                    id="edit-sponsorships"
+                    name="sponsorships"
+                    value={editFormData.sponsorships || ''}
+                    onChange={handleEditInputChange}
+                    rows="4"
+                    placeholder="Enter sponsor names (one per line or comma-separated)&#10;e.g., Company A, Company B, Company C"
+                  />
+                  <small className="form-note">
+                    List all sponsors involved in this tournament. Leave blank if no sponsors.
+                  </small>
                 </div>
 
                 <div className="form-group">

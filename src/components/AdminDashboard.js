@@ -1529,9 +1529,18 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
 
 
-  const showApplicationDetails = (application) => {
-    setSelectedApplication(application);
-    setShowModal(true);
+  const showApplicationDetails = async (application) => {
+    try {
+      // Fetch full application details including supportDocuments
+      const fullApplication = await apiService.getApplicationById(application.applicationId);
+      setSelectedApplication(fullApplication);
+      setShowModal(true);
+    } catch (error) {
+      console.error('Error fetching application details:', error);
+      // Fallback to the application data from the list
+      setSelectedApplication(application);
+      setShowModal(true);
+    }
   };
 
   const closeModal = () => {
@@ -10280,8 +10289,12 @@ Settings
                     <label>Expected Participants:</label>
                     <span>{selectedApplication.expectedParticipants || 'Not provided'}</span>
                   </div>
+                  <div className="detail-item">
+                    <label>Sponsorships:</label>
+                    <span>{selectedApplication.sponsorships || 'None'}</span>
+                  </div>
                 </div>
-                
+
                 <div className="detail-item full-width">
                   <label>Event Summary/Purpose:</label>
                   <div className="summary-text">
@@ -10346,9 +10359,9 @@ Settings
                 )}
               </div>
 
-              {/* Support Documents Section */}
+              {/* Fact Sheet Section */}
               <div className="detail-section">
-                <h3>Support Documents</h3>
+                <h3>Fact Sheet</h3>
                 {selectedApplication.supportDocuments && selectedApplication.supportDocuments.length > 0 ? (
                   <div className="support-documents-grid">
                     <div style={{
@@ -10473,9 +10486,43 @@ Settings
                     borderRadius: '4px',
                     fontStyle: 'italic'
                   }}>
-                    No support documents were uploaded with this tournament application.
+                    No fact sheet was uploaded with this tournament application.
                   </div>
                 )}
+              </div>
+
+              {/* Consent & Agreement Section */}
+              <div className="detail-section">
+                <h3>Consent & Agreement</h3>
+                <div className="detail-grid">
+                  <div className="detail-item">
+                    <label>Data Consent:</label>
+                    <span style={{
+                      color: selectedApplication.dataConsent ? '#28a745' : '#dc3545',
+                      fontWeight: 'bold'
+                    }}>
+                      {selectedApplication.dataConsent ? '✓ Agreed' : '✗ Not Agreed'}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Terms & Conditions:</label>
+                    <span style={{
+                      color: selectedApplication.termsConsent ? '#28a745' : '#dc3545',
+                      fontWeight: 'bold'
+                    }}>
+                      {selectedApplication.termsConsent ? '✓ Agreed' : '✗ Not Agreed'}
+                    </span>
+                  </div>
+                  <div className="detail-item">
+                    <label>No Alcohol & Gambling:</label>
+                    <span style={{
+                      color: selectedApplication.noAlcoholGamblingConsent ? '#28a745' : '#dc3545',
+                      fontWeight: 'bold'
+                    }}>
+                      {selectedApplication.noAlcoholGamblingConsent ? '✓ Agreed' : '✗ Not Agreed'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div className="detail-section">
