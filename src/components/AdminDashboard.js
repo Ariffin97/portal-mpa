@@ -230,20 +230,29 @@ const AdminDashboard = ({ setCurrentPage }) => {
   // Mobile status folder dropdown state
   const [expandedStatusFolder, setExpandedStatusFolder] = useState(null);
 
+  // Helper function to check if an application is from 2026
+  const isFrom2026 = (app) => {
+    const dateApplied = app.dateApplied ? new Date(app.dateApplied) : null;
+    const eventStartDate = app.eventStartDate ? new Date(app.eventStartDate) : null;
+    // Check if either date is from 2026
+    if (eventStartDate && eventStartDate.getFullYear() === 2026) return true;
+    if (dateApplied && dateApplied.getFullYear() === 2026) return true;
+    return false;
+  };
+
   // Helper function to check if an application is from 2025
   const isFrom2025 = (app) => {
     const dateApplied = app.dateApplied ? new Date(app.dateApplied) : null;
     const eventStartDate = app.eventStartDate ? new Date(app.eventStartDate) : null;
     // Check if either date is from 2025
-    if (dateApplied && dateApplied.getFullYear() === 2025) return true;
     if (eventStartDate && eventStartDate.getFullYear() === 2025) return true;
+    if (dateApplied && dateApplied.getFullYear() === 2025) return true;
     return false;
   };
 
-  // Filter applications by year
-  const currentYearApplications = applications.filter(app => !isFrom2025(app));
-  const history2025Applications = applications.filter(app => isFrom2025(app));
-  const currentYearApprovedTournaments = approvedTournaments.filter(app => !isFrom2025(app));
+  // Filter applications by year - only show 2026 applications in current view
+  const currentYearApplications = applications.filter(app => isFrom2026(app));
+  const archivedApplications = applications.filter(app => isFrom2025(app));
 
   // Load saved assessment forms and submissions on component mount
   useEffect(() => {
@@ -7566,7 +7575,7 @@ Settings
               <div className="loading-message" style={{ textAlign: 'center', padding: '20px' }}>
                 <p>Loading applications...</p>
               </div>
-            ) : applications.length === 0 ? (
+            ) : currentYearApplications.length === 0 ? (
               <div className="no-applications">
                 <p>No applications found.</p>
                 <p>Applications will appear here once users submit tournament applications.</p>
@@ -7581,7 +7590,7 @@ Settings
                     { key: 'Approved', label: 'Approved', color: '#10b981' },
                     { key: 'Rejected', label: 'Rejected', color: '#ef4444' }
                   ].map(status => {
-                    const statusApps = applications.filter(app => app.status === status.key);
+                    const statusApps = currentYearApplications.filter(app => app.status === status.key);
                     const isExpanded = expandedStatusFolder === status.key;
                     return (
                       <div key={status.key} className="mobile-status-folder">
@@ -7622,12 +7631,12 @@ Settings
                   {/* Pending Review Column */}
                   <div className="status-column">
                     <h3 className="status-column-header pending">
-                      Pending Review ({applications.filter(app => app.status === 'Pending Review').length})
+                      Pending Review ({currentYearApplications.filter(app => app.status === 'Pending Review').length})
                     </h3>
                     <div className="status-column-content">
-                      {applications.filter(app => app.status === 'Pending Review').length > 0 ? (
+                      {currentYearApplications.filter(app => app.status === 'Pending Review').length > 0 ? (
                         <div className="tournament-list">
-                          {applications.filter(app => app.status === 'Pending Review').map((app, index) => (
+                          {currentYearApplications.filter(app => app.status === 'Pending Review').map((app, index) => (
                             <div
                               key={app.applicationId || app.id}
                               className="tournament-item"
@@ -7648,12 +7657,12 @@ Settings
                   {/* Under Review Column */}
                   <div className="status-column">
                     <h3 className="status-column-header under-review">
-                      Under Review ({applications.filter(app => app.status === 'Under Review').length})
+                      Under Review ({currentYearApplications.filter(app => app.status === 'Under Review').length})
                     </h3>
                     <div className="status-column-content">
-                      {applications.filter(app => app.status === 'Under Review').length > 0 ? (
+                      {currentYearApplications.filter(app => app.status === 'Under Review').length > 0 ? (
                         <div className="tournament-list">
-                          {applications.filter(app => app.status === 'Under Review').map((app, index) => (
+                          {currentYearApplications.filter(app => app.status === 'Under Review').map((app, index) => (
                             <div
                               key={app.applicationId || app.id}
                               className="tournament-item"
@@ -7674,12 +7683,12 @@ Settings
                   {/* Approved Column */}
                   <div className="status-column">
                     <h3 className="status-column-header approved">
-                      Approved ({applications.filter(app => app.status === 'Approved').length})
+                      Approved ({currentYearApplications.filter(app => app.status === 'Approved').length})
                     </h3>
                     <div className="status-column-content">
-                      {applications.filter(app => app.status === 'Approved').length > 0 ? (
+                      {currentYearApplications.filter(app => app.status === 'Approved').length > 0 ? (
                         <div className="tournament-list">
-                          {applications.filter(app => app.status === 'Approved').map((app, index) => (
+                          {currentYearApplications.filter(app => app.status === 'Approved').map((app, index) => (
                             <div
                               key={app.applicationId || app.id}
                               className="tournament-item"
@@ -7700,12 +7709,12 @@ Settings
                   {/* Rejected Column */}
                   <div className="status-column rejected">
                     <h3 className="status-column-header rejected">
-                      Rejected ({applications.filter(app => app.status === 'Rejected').length})
+                      Rejected ({currentYearApplications.filter(app => app.status === 'Rejected').length})
                     </h3>
                     <div className="status-column-content">
-                      {applications.filter(app => app.status === 'Rejected').length > 0 ? (
+                      {currentYearApplications.filter(app => app.status === 'Rejected').length > 0 ? (
                         <div className="tournament-list">
-                          {applications.filter(app => app.status === 'Rejected').map((app, index) => (
+                          {currentYearApplications.filter(app => app.status === 'Rejected').map((app, index) => (
                             <div
                               key={app.applicationId || app.id}
                               className="tournament-item"
@@ -8292,11 +8301,11 @@ Settings
                 All Applications ({currentYearApplications.length})
               </button>
               <button
-                className={`status-filter-btn ${selectedStatusFilter === 'History2025' ? 'active' : ''}`}
-                onClick={() => setSelectedStatusFilter('History2025')}
-                title="Applications from 2025"
+                className={`status-filter-btn ${selectedStatusFilter === 'Archive' ? 'active' : ''}`}
+                onClick={() => setSelectedStatusFilter('Archive')}
+                title="Archived applications from 2025"
               >
-                History 2025 ({history2025Applications.length})
+                Archive ({archivedApplications.length})
               </button>
             </div>
 
@@ -8337,15 +8346,15 @@ Settings
                         <th>Tournament Name</th>
                         <th>ID Number</th>
                         <th>Date</th>
-                        <th>{selectedStatusFilter === 'History2025' ? 'Year' : 'Status'}</th>
+                        <th>{selectedStatusFilter === 'Archive' ? 'Year' : 'Status'}</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(selectedStatusFilter === 'ApprovedTournaments'
                         ? currentYearApplications.filter(app => app.status === 'Approved')
-                        : selectedStatusFilter === 'History2025'
-                          ? history2025Applications
+                        : selectedStatusFilter === 'Archive'
+                          ? archivedApplications
                           : currentYearApplications.filter(app => selectedStatusFilter === 'All' || app.status === selectedStatusFilter)
                       ).map((app, index) => {
                           const appId = app.applicationId || app.id;
@@ -8395,7 +8404,7 @@ Settings
                                 })()}
                               </td>
                               <td>
-                                {selectedStatusFilter === 'History2025' ? (
+                                {selectedStatusFilter === 'Archive' ? (
                                   <span
                                     className="status-badge-table"
                                     style={{ backgroundColor: '#6b7280' }}
@@ -8437,7 +8446,7 @@ Settings
                                         View
                                       </button>
                                     </>
-                                  ) : selectedStatusFilter === 'History2025' ? (
+                                  ) : selectedStatusFilter === 'Archive' ? (
                                     <>
                                       <button
                                         onClick={() => showApplicationDetails(app)}

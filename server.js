@@ -1462,8 +1462,7 @@ const tournamentApplicationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Performance indexes
-tournamentApplicationSchema.index({ applicationId: 1 });
+// Performance indexes (applicationId index is auto-created by unique: true in schema)
 tournamentApplicationSchema.index({ email: 1 });
 tournamentApplicationSchema.index({ status: 1 });
 tournamentApplicationSchema.index({ submissionDate: -1 });
