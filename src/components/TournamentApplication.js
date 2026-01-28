@@ -1770,10 +1770,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
               id="email"
               name="email"
               value={formData.email}
-              onChange={handleInputChange}
+              readOnly
+              disabled
+              style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
               required
             />
-            <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
+            <small className="form-note">This is your registered organization email and cannot be changed</small>
           </div>
           
           <div className="form-group">

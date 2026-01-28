@@ -4243,7 +4243,7 @@ app.get('/api/applications', async (req, res) => {
   try {
     const applications = await TournamentApplication
       .find()
-      .select('-supportDocuments')
+      .select('-supportDocuments -supportLetterPdf.data')
       .sort({ submissionDate: -1 })
       .lean()
       .exec();
@@ -4258,10 +4258,15 @@ app.get('/api/applications/organization/:email', async (req, res) => {
   try {
     const { email } = req.params;
     // Exclude admin-created tournaments from organization's applied tournaments list
-    const applications = await TournamentApplication.find({ 
-      email, 
-      createdByAdmin: { $ne: true } 
-    }).sort({ submissionDate: -1 });
+    // Use case-insensitive regex to match emails regardless of case
+    // Exclude large Base64 fields to prevent timeout
+    const applications = await TournamentApplication.find({
+      email: { $regex: new RegExp(`^${email}$`, 'i') },
+      createdByAdmin: { $ne: true }
+    })
+    .select('-supportDocuments -supportLetterPdf.data')
+    .sort({ submissionDate: -1 })
+    .lean();
     res.json(applications);
   } catch (error) {
     console.error('Get organization applications error:', error);
@@ -4311,9 +4316,13 @@ app.post('/api/admin/fix-admin-tournaments', async (req, res) => {
 // Get approved tournaments (sanctioned tournaments)
 app.get('/api/approved-tournaments', async (req, res) => {
   try {
-    const approvedTournaments = await TournamentApplication.find({ 
-      status: 'Approved' 
-    }).sort({ eventStartDate: 1 });
+    // Exclude large Base64 fields to prevent timeout
+    const approvedTournaments = await TournamentApplication.find({
+      status: 'Approved'
+    })
+    .select('-supportDocuments -supportLetterPdf.data -tournamentPoster.data')
+    .sort({ eventStartDate: 1 })
+    .lean();
     res.json(approvedTournaments);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -4323,7 +4332,18 @@ app.get('/api/approved-tournaments', async (req, res) => {
 // Get tournament application by ID
 app.get('/api/applications/:id', async (req, res) => {
   try {
-    const application = await TournamentApplication.findOne({ applicationId: req.params.id });
+    // Use ?full=true to include large Base64 fields (supportDocuments, supportLetterPdf)
+    const includeFull = req.query.full === 'true';
+
+    let query = TournamentApplication.findOne({ applicationId: req.params.id });
+
+    // Exclude large fields by default to prevent timeout
+    if (!includeFull) {
+      query = query.select('-supportDocuments -supportLetterPdf.data');
+    }
+
+    const application = await query.lean();
+
     if (!application) {
       return res.status(404).json({ error: 'Application not found' });
     }
@@ -4698,17 +4718,32 @@ app.patch('/api/applications/:id/status', async (req, res) => {
     if (status === 'More Info Required' && requiredInfo) {
       updateData.requiredInfo = requiredInfo;
     }
-    
+
+    // Use projection to exclude large Base64 fields from the response
     const application = await TournamentApplication.findOneAndUpdate(
       { applicationId: req.params.id },
       updateData,
-      { new: true }
+      { new: true, projection: { supportDocuments: 0, 'supportLetterPdf.data': 0 } }
     );
-    
+
     if (!application) {
       return res.status(404).json({ error: 'Application not found' });
     }
-    
+
+    // Emit WebSocket event for status update (fast operation)
+    io.emit('applicationUpdated', {
+      applicationId: application.applicationId,
+      eventTitle: application.eventTitle,
+      status: application.status,
+      organiserName: application.organiserName
+    });
+
+    // RESPOND IMMEDIATELY - Don't wait for webhooks/emails
+    res.json(application);
+
+    // ============ BACKGROUND PROCESSING (after response sent) ============
+    // All the following runs AFTER the response is sent to prevent timeout
+
     // INSTANT WEBHOOK - Notify main site of status change immediately
     try {
       console.log('🚨 Sending INSTANT status change webhook to main site...');
@@ -5048,21 +5083,14 @@ app.patch('/api/applications/:id/status', async (req, res) => {
 
       if (!emailResult.success) {
         console.error('Failed to send more info required email:', emailResult.error);
-        // Still return success for the status update, even if email fails
       }
     }
 
-    // Emit WebSocket event for status update
-    io.emit('applicationUpdated', {
-      applicationId: application.applicationId,
-      eventTitle: application.eventTitle,
-      status: application.status,
-      organiserName: application.organiserName
-    });
+    console.log('✅ Background processing completed for:', application.applicationId);
 
-    res.json(application);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    // Log error but don't send response (already sent)
+    console.error('Status update error:', error.message);
   }
 });
 
