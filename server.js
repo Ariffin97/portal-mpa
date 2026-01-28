@@ -6421,32 +6421,25 @@ app.post('/api/admin/login', async (req, res) => {
     let loginSuccessful = false;
     let userAuthority = 'admin';
     
-    // Check hardcoded super admin credentials first
-    if (trimmedUsername === 'admin' && trimmedPassword === 'admin123') {
-      console.log('Login successful for hardcoded super admin');
-      loginSuccessful = true;
-      userAuthority = 'super_admin';
-    } else {
-      // Check database for admin users
-      try {
-        const adminUser = await AdminUser.findOne({ 
-          username: trimmedUsername, 
-          status: 'active' 
-        });
-        
-        if (adminUser && adminUser.password === trimmedPassword) {
-          console.log('Login successful for database admin user:', trimmedUsername);
-          loginSuccessful = true;
-          userAuthority = adminUser.authorityLevel;
-          
-          // Update last login time
-          adminUser.lastLogin = new Date();
-          await adminUser.save();
-        }
-      } catch (dbError) {
-        console.error('Database error during authentication:', dbError);
-        // Continue with login failure below
+    // Check database for admin users
+    try {
+      const adminUser = await AdminUser.findOne({
+        username: trimmedUsername,
+        status: 'active'
+      });
+
+      if (adminUser && adminUser.password === trimmedPassword) {
+        console.log('Login successful for database admin user:', trimmedUsername);
+        loginSuccessful = true;
+        userAuthority = adminUser.authorityLevel;
+
+        // Update last login time
+        adminUser.lastLogin = new Date();
+        await adminUser.save();
       }
+    } catch (dbError) {
+      console.error('Database error during authentication:', dbError);
+      // Continue with login failure below
     }
     
     if (loginSuccessful) {
