@@ -5488,9 +5488,11 @@ app.post('/api/applications/:id/approve', async (req, res) => {
 // ============================================
 
 // Manual resend support letter for approved tournaments
+// Use ?force=true to send support letter for state-level tournaments (when state doesn't have permission)
 app.post('/api/applications/:id/resend-support-letter', async (req, res) => {
   try {
-    console.log('📧 Manual resend support letter requested for:', req.params.id);
+    const forceResend = req.query.force === 'true';
+    console.log('📧 Manual resend support letter requested for:', req.params.id, forceResend ? '(FORCE MODE)' : '');
 
     const t = await TournamentApplication.findOne({ applicationId: req.params.id });
 
@@ -5506,15 +5508,19 @@ app.post('/api/applications/:id/resend-support-letter', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Tournament has no email address' });
     }
 
-    // Skip support letter for District/Divisional/State level tournaments
+    // Skip support letter for District/Divisional/State level tournaments (unless force=true)
     const stateLevelTournaments = ['district', 'divisional', 'state'];
     const isStateLevelTournament = stateLevelTournaments.includes(t.classification?.toLowerCase());
 
-    if (isStateLevelTournament) {
+    if (isStateLevelTournament && !forceResend) {
       return res.status(400).json({
         ok: false,
-        error: 'Support letters for state-level tournaments are handled by state associations'
+        error: 'Support letters for state-level tournaments are handled by state associations. Use ?force=true to override.'
       });
+    }
+
+    if (isStateLevelTournament && forceResend) {
+      console.log('📋 Force sending support letter for state-level tournament:', t.classification);
     }
 
     // Check if we already have a cached PDF in the database
