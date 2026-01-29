@@ -5251,20 +5251,25 @@ app.post('/api/applications/:id/approve', async (req, res) => {
         return `${startDay}${ordinal(startDay)} ${startMonth} ${startYear} - ${endDay}${ordinal(endDay)} ${endMonth} ${endYear}`;
       };
 
-      // Helper function to make HTTPS GET request
-      const makeHttpsGet = (url) => {
+      // Helper function to make HTTPS GET request with timeout
+      const makeHttpsGet = (url, timeoutMs = 25000) => {
         return new Promise((resolve, reject) => {
           const https = require('https');
-          https.get(url, (response) => {
+          const req = https.get(url, (response) => {
             let data = '';
             response.on('data', chunk => data += chunk);
             response.on('end', () => resolve(data));
-          }).on('error', reject);
+          });
+          req.on('error', reject);
+          req.setTimeout(timeoutMs, () => {
+            req.destroy();
+            reject(new Error(`Request timeout after ${timeoutMs}ms`));
+          });
         });
       };
 
-      // Helper function to make HTTPS POST request
-      const makeHttpsPost = (url, postData) => {
+      // Helper function to make HTTPS POST request with timeout
+      const makeHttpsPost = (url, postData, timeoutMs = 25000) => {
         return new Promise((resolve, reject) => {
           const https = require('https');
           const urlObj = new URL(url);
@@ -5275,7 +5280,8 @@ app.post('/api/applications/:id/approve', async (req, res) => {
             headers: {
               'Content-Type': 'application/json',
               'Content-Length': Buffer.byteLength(postData)
-            }
+            },
+            timeout: timeoutMs
           };
           const req = https.request(options, (response) => {
             let data = '';
@@ -5283,6 +5289,10 @@ app.post('/api/applications/:id/approve', async (req, res) => {
             response.on('end', () => resolve({ data, statusCode: response.statusCode }));
           });
           req.on('error', reject);
+          req.setTimeout(timeoutMs, () => {
+            req.destroy();
+            reject(new Error(`Request timeout after ${timeoutMs}ms`));
+          });
           req.write(postData);
           req.end();
         });
@@ -5332,10 +5342,14 @@ app.post('/api/applications/:id/approve', async (req, res) => {
       };
 
       console.log('📤 Sending Support Letter request to Google Apps Script...');
+      console.log('📄 Support Letter payload:', JSON.stringify(supportLetterPayload, null, 2));
 
       // Call Google Apps Script using https module
       const postData = JSON.stringify(supportLetterPayload);
       const response = await makeHttpsPost(SUPPORT_LETTER_WEBHOOK_URL, postData);
+
+      console.log('📥 Raw response status:', response.statusCode);
+      console.log('📥 Raw response (first 500 chars):', response.data.substring(0, 500));
 
       let supportLetterResult;
 
@@ -5345,35 +5359,46 @@ app.post('/api/applications/:id/approve', async (req, res) => {
         const redirectMatch = response.data.match(/HREF="([^"]+)"/);
         if (redirectMatch) {
           const redirectUrl = redirectMatch[1].replace(/&amp;/g, '&');
+          console.log('📄 Redirect URL:', redirectUrl);
           const redirectData = await makeHttpsGet(redirectUrl);
+          console.log('📥 Redirect response (first 500 chars):', redirectData.substring(0, 500));
 
           if (redirectData.includes('Moved Temporarily')) {
             const secondMatch = redirectData.match(/HREF="([^"]+)"/);
             if (secondMatch) {
               const finalUrl = secondMatch[1].replace(/&amp;/g, '&');
+              console.log('📄 Second redirect URL:', finalUrl);
               const finalData = await makeHttpsGet(finalUrl);
+              console.log('📥 Final response (first 500 chars):', finalData.substring(0, 500));
               supportLetterResult = JSON.parse(finalData);
             }
           } else {
             try {
               supportLetterResult = JSON.parse(redirectData);
             } catch (e) {
-              console.log('📄 Could not parse redirect response as JSON');
-              supportLetterResult = { ok: false, error: 'Could not parse response' };
+              console.log('📄 Could not parse redirect response as JSON:', e.message);
+              console.log('📄 Redirect response was:', redirectData.substring(0, 1000));
+              supportLetterResult = { ok: false, error: 'Could not parse response: ' + redirectData.substring(0, 200) };
             }
           }
         } else {
-          supportLetterResult = { ok: false, error: 'Unexpected response format' };
+          console.log('📄 No redirect URL found in response');
+          supportLetterResult = { ok: false, error: 'Unexpected response format - no redirect URL' };
         }
       } else {
         try {
           supportLetterResult = JSON.parse(response.data);
         } catch (e) {
-          supportLetterResult = { ok: false, error: 'Could not parse response' };
+          console.log('📄 Could not parse response as JSON:', e.message);
+          console.log('📄 Response was:', response.data.substring(0, 1000));
+          supportLetterResult = { ok: false, error: 'Could not parse response: ' + response.data.substring(0, 200) };
         }
       }
 
       console.log('📄 Support Letter webhook response:', supportLetterResult?.ok ? 'Success' : 'Failed');
+      if (!supportLetterResult?.ok) {
+        console.log('📄 Support Letter result details:', JSON.stringify(supportLetterResult, null, 2).substring(0, 1000));
+      }
 
       // If the Google Apps Script returns PDF base64, send email with attachment
       if (supportLetterResult && supportLetterResult.ok && supportLetterResult.pdfBase64 && t.email) {
@@ -5423,9 +5448,19 @@ app.post('/api/applications/:id/approve', async (req, res) => {
         } else {
           console.error('❌ Failed to send Support Letter email:', emailResult.error);
         }
+      } else {
+        // Log why the email wasn't sent
+        console.error('⚠️ Support Letter email NOT sent. Debug info:');
+        console.error('  - supportLetterResult exists:', !!supportLetterResult);
+        console.error('  - supportLetterResult.ok:', supportLetterResult?.ok);
+        console.error('  - supportLetterResult.pdfBase64 exists:', !!supportLetterResult?.pdfBase64);
+        console.error('  - supportLetterResult.pdfUrl exists:', !!supportLetterResult?.pdfUrl);
+        console.error('  - t.email exists:', !!t.email);
+        console.error('  - supportLetterResult.error:', supportLetterResult?.error);
+        console.error('  - Full result:', JSON.stringify(supportLetterResult, null, 2).substring(0, 1000));
       }
 
-      console.log('📄 Support Letter webhook completed successfully');
+      console.log('📄 Support Letter webhook completed');
     } catch (supportLetterError) {
       console.error('❌ Support Letter webhook failed:', supportLetterError.message);
       // Don't fail the approval if support letter webhook fails
@@ -5444,6 +5479,335 @@ app.post('/api/applications/:id/approve', async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: error.message || 'Failed to approve tournament'
+    });
+  }
+});
+
+// ============================================
+// RESEND SUPPORT LETTER ENDPOINT
+// ============================================
+
+// Manual resend support letter for approved tournaments
+app.post('/api/applications/:id/resend-support-letter', async (req, res) => {
+  try {
+    console.log('📧 Manual resend support letter requested for:', req.params.id);
+
+    const t = await TournamentApplication.findOne({ applicationId: req.params.id });
+
+    if (!t) {
+      return res.status(404).json({ ok: false, error: 'Tournament not found' });
+    }
+
+    if (t.status !== 'Approved') {
+      return res.status(400).json({ ok: false, error: 'Tournament is not approved yet' });
+    }
+
+    if (!t.email) {
+      return res.status(400).json({ ok: false, error: 'Tournament has no email address' });
+    }
+
+    // Skip support letter for District/Divisional/State level tournaments
+    const stateLevelTournaments = ['district', 'divisional', 'state'];
+    const isStateLevelTournament = stateLevelTournaments.includes(t.classification?.toLowerCase());
+
+    if (isStateLevelTournament) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Support letters for state-level tournaments are handled by state associations'
+      });
+    }
+
+    // Check if we already have a cached PDF in the database
+    if (t.supportLetterPdf && t.supportLetterPdf.data) {
+      console.log('📄 Using cached support letter PDF from database');
+
+      const emailTemplate = emailTemplates.supportLetterGenerated(t, null);
+      const attachments = [
+        {
+          filename: t.supportLetterPdf.fileName || `${t.approvalRef} - Support Letter.pdf`,
+          content: t.supportLetterPdf.data,
+          encoding: 'base64',
+          contentType: 'application/pdf'
+        },
+        {
+          filename: 'MPA Safe Sport Code.pdf',
+          path: path.join(__dirname, 'src/assets/documents/safesportcode.pdf'),
+          contentType: 'application/pdf'
+        },
+        {
+          filename: 'MPA Additional Guidelines for Pickleball Tournament.pdf',
+          path: path.join(__dirname, 'src/assets/documents/MPA Additional Guidelines for Pickleball TournamentR1a.pdf'),
+          contentType: 'application/pdf'
+        }
+      ];
+
+      const emailResult = await sendEmail(t.email, emailTemplate, attachments);
+
+      if (emailResult.success) {
+        console.log('✅ Support Letter email resent successfully to:', t.email);
+        return res.json({
+          ok: true,
+          message: 'Support letter email resent successfully (from cache)',
+          email: t.email
+        });
+      } else {
+        console.error('❌ Failed to resend Support Letter email:', emailResult.error);
+        return res.status(500).json({ ok: false, error: emailResult.error });
+      }
+    }
+
+    // Generate new support letter if not cached
+    console.log('📄 No cached PDF found, generating new support letter...');
+
+    const SUPPORT_LETTER_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbw6im3bFlI8X-KBnz-7HFKSyXfIk8DK1i0KIieyGVEs-T44NnTrAv8V-rbt7g6B5giW/exec';
+
+    // Helper function to format date with ordinal suffix
+    const formatDateWithOrdinal = (date) => {
+      const d = new Date(date);
+      const day = d.getDate();
+      const month = d.toLocaleString('en-GB', { month: 'long' });
+      const year = d.getFullYear();
+      const ordinal = (day) => {
+        if (day > 3 && day < 21) return 'th';
+        switch (day % 10) {
+          case 1: return 'st';
+          case 2: return 'nd';
+          case 3: return 'rd';
+          default: return 'th';
+        }
+      };
+      return `${day}${ordinal(day)} ${month} ${year}`;
+    };
+
+    // Format tournament date range
+    const formatDateRange = (startDate, endDate) => {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const startDay = start.getDate();
+      const endDay = end.getDate();
+      const startMonth = start.toLocaleString('en-GB', { month: 'long' });
+      const endMonth = end.toLocaleString('en-GB', { month: 'long' });
+      const startYear = start.getFullYear();
+      const endYear = end.getFullYear();
+
+      const ordinal = (day) => {
+        if (day > 3 && day < 21) return 'th';
+        switch (day % 10) {
+          case 1: return 'st';
+          case 2: return 'nd';
+          case 3: return 'rd';
+          default: return 'th';
+        }
+      };
+
+      if (startMonth === endMonth && startYear === endYear) {
+        return `${startDay}${ordinal(startDay)} - ${endDay}${ordinal(endDay)} ${endMonth} ${endYear}`;
+      }
+      if (startYear === endYear) {
+        return `${startDay}${ordinal(startDay)} ${startMonth} - ${endDay}${ordinal(endDay)} ${endMonth} ${endYear}`;
+      }
+      return `${startDay}${ordinal(startDay)} ${startMonth} ${startYear} - ${endDay}${ordinal(endDay)} ${endMonth} ${endYear}`;
+    };
+
+    // Helper function for HTTPS GET
+    const makeHttpsGet = (url) => {
+      return new Promise((resolve, reject) => {
+        const https = require('https');
+        https.get(url, (response) => {
+          let data = '';
+          response.on('data', chunk => data += chunk);
+          response.on('end', () => resolve(data));
+        }).on('error', reject);
+      });
+    };
+
+    // Helper function for HTTPS POST
+    const makeHttpsPost = (url, postData) => {
+      return new Promise((resolve, reject) => {
+        const https = require('https');
+        const urlObj = new URL(url);
+        const options = {
+          hostname: urlObj.hostname,
+          path: urlObj.pathname + urlObj.search,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+          }
+        };
+        const req = https.request(options, (response) => {
+          let data = '';
+          response.on('data', chunk => data += chunk);
+          response.on('end', () => resolve({ data, statusCode: response.statusCode }));
+        });
+        req.on('error', reject);
+        req.write(postData);
+        req.end();
+      });
+    };
+
+    // Look up organization data
+    let companyAddress = `${t.city}, ${t.state}`;
+    let companyRegNumber = 'N/A';
+    let applicantName = t.organiserName;
+
+    if (t.organiserName) {
+      const org = await Organization.findOne({ organizationName: t.organiserName });
+      if (org) {
+        if (org.addressLine1) {
+          const addressParts = [];
+          const cleanPart = (part) => part ? part.trim().replace(/,+$/, '').trim() : '';
+          if (org.addressLine1 && cleanPart(org.addressLine1)) addressParts.push(cleanPart(org.addressLine1));
+          if (org.addressLine2 && cleanPart(org.addressLine2)) addressParts.push(cleanPart(org.addressLine2));
+          if (org.city && cleanPart(org.city)) addressParts.push(cleanPart(org.city));
+          if (org.postcode && cleanPart(org.postcode)) addressParts.push(cleanPart(org.postcode));
+          if (org.state && cleanPart(org.state)) addressParts.push(cleanPart(org.state));
+          companyAddress = addressParts.join(', ');
+        }
+        if (org.registrationNo) companyRegNumber = org.registrationNo;
+        if (org.applicantFullName) applicantName = org.applicantFullName;
+      }
+    }
+
+    const supportLetterPayload = {
+      Date: formatDateWithOrdinal(new Date()),
+      RefNumber: t.approvalRef,
+      ApplicantName: applicantName,
+      CompanyName: t.organiserName,
+      CompanyRegNumber: companyRegNumber,
+      CompanyAddress: companyAddress,
+      ApplicantEmail: t.email,
+      TournamentName: t.eventTitle,
+      TournamentDate: formatDateRange(t.eventStartDate, t.eventEndDate),
+      TournamentVenue: t.venue
+    };
+
+    console.log('📤 Sending Support Letter request to Google Apps Script...');
+    console.log('📄 Payload:', JSON.stringify(supportLetterPayload, null, 2));
+
+    const postData = JSON.stringify(supportLetterPayload);
+    const response = await makeHttpsPost(SUPPORT_LETTER_WEBHOOK_URL, postData);
+
+    console.log('📥 Raw response status:', response.statusCode);
+    console.log('📥 Raw response data (first 500 chars):', response.data.substring(0, 500));
+
+    let supportLetterResult;
+
+    // Handle redirect from Google Apps Script
+    if (response.data.includes('Moved Temporarily') || response.data.includes('HREF=')) {
+      console.log('📄 Following redirect...');
+      const redirectMatch = response.data.match(/HREF="([^"]+)"/);
+      if (redirectMatch) {
+        const redirectUrl = redirectMatch[1].replace(/&amp;/g, '&');
+        console.log('📄 Redirect URL:', redirectUrl);
+        const redirectData = await makeHttpsGet(redirectUrl);
+        console.log('📥 Redirect response (first 500 chars):', redirectData.substring(0, 500));
+
+        if (redirectData.includes('Moved Temporarily')) {
+          const secondMatch = redirectData.match(/HREF="([^"]+)"/);
+          if (secondMatch) {
+            const finalUrl = secondMatch[1].replace(/&amp;/g, '&');
+            console.log('📄 Second redirect URL:', finalUrl);
+            const finalData = await makeHttpsGet(finalUrl);
+            console.log('📥 Final response (first 500 chars):', finalData.substring(0, 500));
+            supportLetterResult = JSON.parse(finalData);
+          }
+        } else {
+          try {
+            supportLetterResult = JSON.parse(redirectData);
+          } catch (e) {
+            console.log('📄 Could not parse redirect response as JSON:', e.message);
+            supportLetterResult = { ok: false, error: 'Could not parse response: ' + redirectData.substring(0, 200) };
+          }
+        }
+      } else {
+        supportLetterResult = { ok: false, error: 'Unexpected response format - no redirect URL found' };
+      }
+    } else {
+      try {
+        supportLetterResult = JSON.parse(response.data);
+      } catch (e) {
+        console.log('📄 Could not parse response as JSON:', e.message);
+        supportLetterResult = { ok: false, error: 'Could not parse response: ' + response.data.substring(0, 200) };
+      }
+    }
+
+    console.log('📄 Support Letter result:', JSON.stringify(supportLetterResult, null, 2).substring(0, 500));
+
+    if (supportLetterResult && supportLetterResult.ok && supportLetterResult.pdfBase64) {
+      // Save PDF to database
+      t.supportLetterPdf = {
+        data: supportLetterResult.pdfBase64,
+        fileName: supportLetterResult.fileName || `${t.approvalRef} - Support Letter.pdf`,
+        generatedAt: new Date()
+      };
+      await t.save();
+      console.log('💾 Support Letter PDF saved to database');
+
+      // Send email with attachments
+      const emailTemplate = emailTemplates.supportLetterGenerated(t, null);
+      const attachments = [
+        {
+          filename: supportLetterResult.fileName || `${t.approvalRef} - Support Letter.pdf`,
+          content: supportLetterResult.pdfBase64,
+          encoding: 'base64',
+          contentType: 'application/pdf'
+        },
+        {
+          filename: 'MPA Safe Sport Code.pdf',
+          path: path.join(__dirname, 'src/assets/documents/safesportcode.pdf'),
+          contentType: 'application/pdf'
+        },
+        {
+          filename: 'MPA Additional Guidelines for Pickleball Tournament.pdf',
+          path: path.join(__dirname, 'src/assets/documents/MPA Additional Guidelines for Pickleball TournamentR1a.pdf'),
+          contentType: 'application/pdf'
+        }
+      ];
+
+      const emailResult = await sendEmail(t.email, emailTemplate, attachments);
+
+      if (emailResult.success) {
+        console.log('✅ Support Letter email sent successfully to:', t.email);
+        return res.json({
+          ok: true,
+          message: 'Support letter generated and email sent successfully',
+          email: t.email
+        });
+      } else {
+        console.error('❌ Failed to send Support Letter email:', emailResult.error);
+        return res.status(500).json({ ok: false, error: 'PDF generated but email failed: ' + emailResult.error });
+      }
+    } else if (supportLetterResult && supportLetterResult.ok && supportLetterResult.pdfUrl) {
+      // Fallback: Send email with link
+      const emailTemplate = emailTemplates.supportLetterGenerated(t, supportLetterResult.pdfUrl);
+      const emailResult = await sendEmail(t.email, emailTemplate);
+
+      if (emailResult.success) {
+        console.log('✅ Support Letter email (with link) sent to:', t.email);
+        return res.json({
+          ok: true,
+          message: 'Support letter email sent with download link',
+          email: t.email
+        });
+      } else {
+        return res.status(500).json({ ok: false, error: 'Email failed: ' + emailResult.error });
+      }
+    } else {
+      const errorMsg = supportLetterResult?.error || 'Google Apps Script did not return PDF data';
+      console.error('❌ Support Letter generation failed:', errorMsg);
+      return res.status(500).json({
+        ok: false,
+        error: errorMsg,
+        details: supportLetterResult
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Resend support letter error:', error);
+    return res.status(500).json({
+      ok: false,
+      error: error.message || 'Failed to resend support letter'
     });
   }
 });
