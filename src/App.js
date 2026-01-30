@@ -403,7 +403,7 @@ function App() {
 
             <div className="guidelines-section">
               <h3>7. Non-Compliance Penalty</h3>
-              <p>Failure to comply with any MPA Competition/Event Guidelines or requirements shall result in a penalty of <strong>MYR 5,000</strong>, without prejudice to further actions deemed appropriate by the Malaysia Pickleball Association (MPA).</p>
+              <p>Non-compliance with any of the MPA guidelines stated herein shall result in a penalty of <strong>MYR 5,000</strong>, without prejudice to further actions deemed appropriate by the Malaysia Pickleball Association (MPA).</p>
             </div>
 
             <div className="guidelines-section important">
