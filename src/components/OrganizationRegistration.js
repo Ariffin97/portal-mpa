@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import mpaLogo from '../assets/images/mpa.png';
 import apiService from '../services/api';
 
@@ -60,6 +60,93 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
     }
   });
   const [passwordMatch, setPasswordMatch] = useState(true);
+
+  // Sync browser auto-filled values to React state
+  const syncAutoFilledValues = () => {
+    const fieldsToSync = [
+      'organizationName', 'registrationNo', 'applicantFullName', 'phoneNumber', 'email',
+      'password', 'confirmPassword', 'addressLine1', 'addressLine2', 'postcode'
+    ];
+
+    const updates = {};
+    fieldsToSync.forEach(fieldName => {
+      const element = document.getElementById(fieldName);
+      if (element && element.value && element.value !== formData[fieldName]) {
+        updates[fieldName] = element.value;
+      }
+    });
+
+    if (Object.keys(updates).length > 0) {
+      setFormData(prev => ({ ...prev, ...updates }));
+
+      // If password was synced, also update password strength
+      if (updates.password) {
+        setPasswordStrength(checkPasswordStrength(updates.password));
+      }
+
+      // If both passwords were synced, check match
+      if (updates.password || updates.confirmPassword) {
+        const pwd = updates.password || formData.password;
+        const confirmPwd = updates.confirmPassword || formData.confirmPassword;
+        if (pwd && confirmPwd) {
+          setPasswordMatch(pwd === confirmPwd);
+        }
+      }
+
+      return updates;
+    }
+    return null;
+  };
+
+  // Sync browser auto-filled values after component mounts
+  useEffect(() => {
+    const syncTimer = setTimeout(() => {
+      const updates = syncAutoFilledValues();
+      if (updates) {
+        console.log('Syncing browser auto-filled values:', updates);
+      }
+    }, 500);
+
+    return () => clearTimeout(syncTimer);
+  }, []);
+
+  // Section completion checks
+  const isOrganizationDetailsComplete = () => {
+    return formData.organizationName.trim() !== '' &&
+           formData.registrationNo.trim() !== '' &&
+           registrationDocument !== null;
+  };
+
+  const isApplicantInfoComplete = () => {
+    return formData.applicantFullName.trim() !== '' &&
+           formData.phoneNumber.trim() !== '' &&
+           formData.email.trim() !== '';
+  };
+
+  const isPasswordSectionComplete = () => {
+    return formData.password.trim() !== '' &&
+           formData.confirmPassword.trim() !== '' &&
+           passwordStrength.score >= 4 &&
+           passwordMatch;
+  };
+
+  const isAddressSectionComplete = () => {
+    return formData.addressLine1.trim() !== '' &&
+           formData.city.trim() !== '' &&
+           formData.postcode.trim() !== '' &&
+           formData.state.trim() !== '' &&
+           formData.country.trim() !== '';
+  };
+
+  // Section completion indicator component
+  const SectionCompletionTick = ({ isComplete }) => (
+    <span
+      className={`section-completion-tick ${isComplete ? 'complete' : ''}`}
+      title={isComplete ? 'Section complete' : 'Please complete all required fields'}
+    >
+      {isComplete ? '✓' : ''}
+    </span>
+  );
 
   const checkPasswordStrength = (password) => {
     const checks = {
@@ -188,18 +275,35 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Sync any browser auto-filled values before validation
+    const syncedValues = syncAutoFilledValues();
+    const currentFormData = syncedValues ? { ...formData, ...syncedValues } : formData;
+
+    // Update password strength if password was synced
+    let currentPasswordStrength = passwordStrength;
+    if (syncedValues && syncedValues.password) {
+      currentPasswordStrength = checkPasswordStrength(syncedValues.password);
+    }
+
+    // Check password match with synced values
+    let currentPasswordMatch = passwordMatch;
+    if (syncedValues && (syncedValues.password || syncedValues.confirmPassword)) {
+      currentPasswordMatch = currentFormData.password === currentFormData.confirmPassword;
+    }
+
     setIsSubmitting(true);
     setSubmitError('');
 
     // Validate password strength
-    if (passwordStrength.score < 4) {
+    if (currentPasswordStrength.score < 4) {
       setSubmitError('Password must be at least "Good" strength. Please include uppercase, lowercase, number, and symbol.');
       setIsSubmitting(false);
       return;
     }
 
     // Validate password match
-    if (!passwordMatch || formData.password !== formData.confirmPassword) {
+    if (!currentPasswordMatch || currentFormData.password !== currentFormData.confirmPassword) {
       setSubmitError('Passwords do not match. Please check both password fields.');
       setIsSubmitting(false);
       return;
@@ -209,9 +313,9 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
       // Create FormData to handle file upload
       const submissionData = new FormData();
 
-      // Add all form fields
-      Object.keys(formData).forEach(key => {
-        submissionData.append(key, formData[key]);
+      // Add all form fields (use currentFormData which includes any synced auto-fill values)
+      Object.keys(currentFormData).forEach(key => {
+        submissionData.append(key, currentFormData[key]);
       });
 
       // Add the registration document file
@@ -254,7 +358,10 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
       {!isSubmitted ? (
         <form onSubmit={handleSubmit}>
           <div className="form-section">
-            <h3>Organization Information</h3>
+            <h3 className="section-header">
+              Organization Details
+              <SectionCompletionTick isComplete={isOrganizationDetailsComplete()} />
+            </h3>
             
             <div className="form-group">
               <label htmlFor="organizationName">Official Organization/Company Name *</label>
@@ -358,6 +465,11 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
               )}
             </div>
 
+            <h3 className="section-header sub-section">
+              Applicant Information
+              <SectionCompletionTick isComplete={isApplicantInfoComplete()} />
+            </h3>
+
             <div className="form-group">
               <label htmlFor="applicantFullName">Full Name of Applicant/Representative *</label>
               <input
@@ -393,6 +505,11 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
                 required
               />
             </div>
+
+            <h3 className="section-header sub-section">
+              Password
+              <SectionCompletionTick isComplete={isPasswordSectionComplete()} />
+            </h3>
 
             <div className="form-group">
               <label htmlFor="password">Create Password *</label>
@@ -518,6 +635,11 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
                 </div>
               )}
             </div>
+
+            <h3 className="section-header sub-section">
+              Address
+              <SectionCompletionTick isComplete={isAddressSectionComplete()} />
+            </h3>
 
             <div className="form-group">
               <label htmlFor="addressLine1">Address Line 1 *</label>
@@ -704,6 +826,42 @@ const OrganizationRegistration = ({ setCurrentPage }) => {
       )}
       
       <style>{`
+        .section-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .section-header.sub-section {
+          font-size: 16px;
+          color: #374151;
+          margin-top: 28px;
+          margin-bottom: 16px;
+          padding-top: 20px;
+          border-top: 1px solid #e5e7eb;
+        }
+
+        .section-completion-tick {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background-color: #e5e7eb;
+          color: transparent;
+          font-size: 14px;
+          font-weight: bold;
+          transition: all 0.3s ease;
+          flex-shrink: 0;
+        }
+
+        .section-completion-tick.complete {
+          background-color: #10b981;
+          color: white;
+          box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        }
+
         .password-strength-container {
           margin-top: 8px;
           margin-bottom: 12px;

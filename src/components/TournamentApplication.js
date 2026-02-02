@@ -137,6 +137,53 @@ const TournamentApplication = ({ setCurrentPage }) => {
   const [approvedTournaments, setApprovedTournaments] = useState([]);
   const [isLoadingApprovedTournaments, setIsLoadingApprovedTournaments] = useState(false);
 
+  // Section completion checks
+  const isOrganiserInfoComplete = () => {
+    return formData.organiserName.trim() !== '' &&
+           formData.registrationNo.trim() !== '' &&
+           formData.telContact.trim() !== '' &&
+           formData.personInCharge.trim() !== '' &&
+           formData.email.trim() !== '';
+  };
+
+  const isEventDetailsComplete = () => {
+    return formData.eventTitle.trim() !== '' &&
+           formData.eventStartDate !== '' &&
+           formData.eventEndDate !== '' &&
+           formData.state !== '' &&
+           formData.city !== '' &&
+           formData.venue.trim() !== '' &&
+           formData.classification !== '' &&
+           formData.eventType !== '' &&
+           formData.expectedParticipants !== '' &&
+           formData.tournamentSoftware.length > 0 &&
+           formData.hospitalName.trim() !== '' &&
+           formData.hospitalDistance.trim() !== '' &&
+           formData.numberOfMedics !== '' &&
+           formData.emergencyTransportType !== '' &&
+           formData.eventSummary.trim() !== '';
+  };
+
+  const isFactSheetComplete = () => {
+    return supportDocuments.length > 0;
+  };
+
+  const isConsentComplete = () => {
+    return formData.dataConsent &&
+           formData.termsConsent &&
+           formData.noAlcoholGamblingConsent;
+  };
+
+  // Section completion indicator component
+  const SectionCompletionTick = ({ isComplete }) => (
+    <span
+      className={`section-completion-tick ${isComplete ? 'complete' : ''}`}
+      title={isComplete ? 'Section complete' : 'Please complete all required fields'}
+    >
+      {isComplete ? '✓' : ''}
+    </span>
+  );
+
   // Load organization data on component mount
   useEffect(() => {
     const organizationData = localStorage.getItem('organizationData');
@@ -179,6 +226,33 @@ const TournamentApplication = ({ setCurrentPage }) => {
       setCurrentPage('home');
     }
   }, [setCurrentPage]);
+
+  // Sync browser auto-filled values after component mounts
+  // Browsers may autofill after React renders, so we check after a short delay
+  useEffect(() => {
+    const syncTimer = setTimeout(() => {
+      const fieldsToSync = [
+        'organiserName', 'registrationNo', 'telContact', 'personInCharge', 'email',
+        'eventTitle', 'venue', 'hospitalName', 'hospitalDistance', 'numberOfMedics',
+        'eventSummary', 'expectedParticipants', 'malaysianEntryFee', 'internationalEntryFee'
+      ];
+
+      const updates = {};
+      fieldsToSync.forEach(fieldName => {
+        const element = document.getElementById(fieldName);
+        if (element && element.value && element.value !== formData[fieldName]) {
+          updates[fieldName] = element.value;
+        }
+      });
+
+      if (Object.keys(updates).length > 0) {
+        console.log('Syncing browser auto-filled values:', updates);
+        setFormData(prev => ({ ...prev, ...updates }));
+      }
+    }, 500); // Check after 500ms to allow browser autofill to complete
+
+    return () => clearTimeout(syncTimer);
+  }, []); // Run once on mount
 
   // Load approved tournament software on component mount
   useEffect(() => {
@@ -1024,8 +1098,37 @@ const TournamentApplication = ({ setCurrentPage }) => {
     img.src = mpaLogo;
   };
 
+  // Sync any browser auto-filled values to React state
+  const syncAutoFilledValues = () => {
+    const fieldsToSync = [
+      'organiserName', 'registrationNo', 'telContact', 'personInCharge', 'email',
+      'eventTitle', 'venue', 'hospitalName', 'hospitalDistance', 'numberOfMedics',
+      'eventSummary', 'expectedParticipants', 'malaysianEntryFee', 'internationalEntryFee',
+      'tournamentSoftwareOther', 'standbyVehicleType', 'emergencyTransportQuantity'
+    ];
+
+    const updates = {};
+    fieldsToSync.forEach(fieldName => {
+      const element = document.getElementById(fieldName);
+      if (element && element.value && element.value !== formData[fieldName]) {
+        updates[fieldName] = element.value;
+      }
+    });
+
+    if (Object.keys(updates).length > 0) {
+      setFormData(prev => ({ ...prev, ...updates }));
+      return updates;
+    }
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Sync any browser auto-filled values before validation
+    const syncedValues = syncAutoFilledValues();
+    const currentFormData = syncedValues ? { ...formData, ...syncedValues } : formData;
+
     setIsSubmitting(true);
     setSubmitError('');
     
@@ -1037,46 +1140,46 @@ const TournamentApplication = ({ setCurrentPage }) => {
     }
 
     // Validate tournament software selection
-    if (!formData.tournamentSoftware || formData.tournamentSoftware.length === 0) {
+    if (!currentFormData.tournamentSoftware || currentFormData.tournamentSoftware.length === 0) {
       alert('Please select at least one tournament software.');
       setIsSubmitting(false);
       return;
     }
 
     // Validate tournament software "Other" field
-    if (formData.tournamentSoftware.includes('Other') && !formData.tournamentSoftwareOther.trim()) {
+    if (currentFormData.tournamentSoftware.includes('Other') && !currentFormData.tournamentSoftwareOther.trim()) {
       alert('Please specify the tournament software name.');
       setIsSubmitting(false);
       return;
     }
 
     // Validate Emergency Plan fields
-    if (!formData.hospitalName || !formData.hospitalName.trim()) {
+    if (!currentFormData.hospitalName || !currentFormData.hospitalName.trim()) {
       alert('Please enter the hospital name in the Emergency Plan section.');
       setIsSubmitting(false);
       return;
     }
-    if (!formData.hospitalDistance || !formData.hospitalDistance.trim()) {
+    if (!currentFormData.hospitalDistance || !currentFormData.hospitalDistance.trim()) {
       alert('Please enter the distance to hospital in the Emergency Plan section.');
       setIsSubmitting(false);
       return;
     }
-    if (!formData.numberOfMedics || formData.numberOfMedics === '') {
+    if (!currentFormData.numberOfMedics || currentFormData.numberOfMedics === '') {
       alert('Please enter the number of medics in the Emergency Plan section.');
       setIsSubmitting(false);
       return;
     }
-    if (!formData.emergencyTransportType) {
+    if (!currentFormData.emergencyTransportType) {
       alert('Please select an emergency transport type in the Emergency Plan section.');
       setIsSubmitting(false);
       return;
     }
-    if (formData.emergencyTransportType === 'ambulance' && (!formData.emergencyTransportQuantity || formData.emergencyTransportQuantity === '')) {
+    if (currentFormData.emergencyTransportType === 'ambulance' && (!currentFormData.emergencyTransportQuantity || currentFormData.emergencyTransportQuantity === '')) {
       alert('Please enter the number of ambulances in the Emergency Plan section.');
       setIsSubmitting(false);
       return;
     }
-    if (formData.emergencyTransportType === 'standby_vehicle' && (!formData.standbyVehicleType || !formData.standbyVehicleType.trim())) {
+    if (currentFormData.emergencyTransportType === 'standby_vehicle' && (!currentFormData.standbyVehicleType || !currentFormData.standbyVehicleType.trim())) {
       alert('Please enter the type of vehicle in the Emergency Plan section.');
       setIsSubmitting(false);
       return;
@@ -1086,42 +1189,42 @@ const TournamentApplication = ({ setCurrentPage }) => {
       // Create FormData for file upload
       const submissionFormData = new FormData();
 
-      // Add form data
-      submissionFormData.append('organiserName', formData.organiserName);
-      submissionFormData.append('registrationNo', formData.registrationNo);
-      submissionFormData.append('telContact', formData.telContact);
-      submissionFormData.append('personInCharge', formData.personInCharge);
-      submissionFormData.append('email', formData.email);
-      submissionFormData.append('organisingPartner', formData.organisingPartner);
-      submissionFormData.append('eventTitle', formData.eventTitle);
-      submissionFormData.append('eventStartDate', formData.eventStartDate);
-      submissionFormData.append('eventEndDate', formData.eventEndDate);
-      submissionFormData.append('eventStartDateFormatted', formData.eventStartDateFormatted);
-      submissionFormData.append('eventEndDateFormatted', formData.eventEndDateFormatted);
-      submissionFormData.append('state', formData.state);
-      submissionFormData.append('city', formData.city);
-      submissionFormData.append('venue', formData.venue);
-      submissionFormData.append('classification', formData.classification);
-      submissionFormData.append('eventType', formData.eventType);
+      // Add form data (use currentFormData which includes any synced auto-fill values)
+      submissionFormData.append('organiserName', currentFormData.organiserName);
+      submissionFormData.append('registrationNo', currentFormData.registrationNo);
+      submissionFormData.append('telContact', currentFormData.telContact);
+      submissionFormData.append('personInCharge', currentFormData.personInCharge);
+      submissionFormData.append('email', currentFormData.email);
+      submissionFormData.append('organisingPartner', currentFormData.organisingPartner);
+      submissionFormData.append('eventTitle', currentFormData.eventTitle);
+      submissionFormData.append('eventStartDate', currentFormData.eventStartDate);
+      submissionFormData.append('eventEndDate', currentFormData.eventEndDate);
+      submissionFormData.append('eventStartDateFormatted', currentFormData.eventStartDateFormatted);
+      submissionFormData.append('eventEndDateFormatted', currentFormData.eventEndDateFormatted);
+      submissionFormData.append('state', currentFormData.state);
+      submissionFormData.append('city', currentFormData.city);
+      submissionFormData.append('venue', currentFormData.venue);
+      submissionFormData.append('classification', currentFormData.classification);
+      submissionFormData.append('eventType', currentFormData.eventType);
       submissionFormData.append('categories', JSON.stringify(savedCategories));
-      submissionFormData.append('expectedParticipants', parseInt(formData.expectedParticipants));
-      submissionFormData.append('tournamentSoftware', JSON.stringify(formData.tournamentSoftware));
-      submissionFormData.append('tournamentSoftwareOther', formData.tournamentSoftwareOther || '');
+      submissionFormData.append('expectedParticipants', parseInt(currentFormData.expectedParticipants));
+      submissionFormData.append('tournamentSoftware', JSON.stringify(currentFormData.tournamentSoftware));
+      submissionFormData.append('tournamentSoftwareOther', currentFormData.tournamentSoftwareOther || '');
 
       // Emergency Plan fields
-      submissionFormData.append('hospitalName', formData.hospitalName);
-      submissionFormData.append('hospitalDistance', formData.hospitalDistance);
-      submissionFormData.append('numberOfMedics', formData.numberOfMedics);
-      submissionFormData.append('emergencyTransportType', formData.emergencyTransportType);
-      submissionFormData.append('emergencyTransportQuantity', formData.emergencyTransportQuantity || '');
-      submissionFormData.append('standbyVehicleType', formData.standbyVehicleType || '');
+      submissionFormData.append('hospitalName', currentFormData.hospitalName);
+      submissionFormData.append('hospitalDistance', currentFormData.hospitalDistance);
+      submissionFormData.append('numberOfMedics', currentFormData.numberOfMedics);
+      submissionFormData.append('emergencyTransportType', currentFormData.emergencyTransportType);
+      submissionFormData.append('emergencyTransportQuantity', currentFormData.emergencyTransportQuantity || '');
+      submissionFormData.append('standbyVehicleType', currentFormData.standbyVehicleType || '');
 
-      submissionFormData.append('eventSummary', formData.eventSummary);
-      submissionFormData.append('scoringFormat', formData.scoringFormat);
-      submissionFormData.append('sponsorships', formData.sponsorships);
-      submissionFormData.append('dataConsent', formData.dataConsent);
-      submissionFormData.append('termsConsent', formData.termsConsent);
-      submissionFormData.append('noAlcoholGamblingConsent', formData.noAlcoholGamblingConsent);
+      submissionFormData.append('eventSummary', currentFormData.eventSummary);
+      submissionFormData.append('scoringFormat', currentFormData.scoringFormat);
+      submissionFormData.append('sponsorships', currentFormData.sponsorships);
+      submissionFormData.append('dataConsent', currentFormData.dataConsent);
+      submissionFormData.append('termsConsent', currentFormData.termsConsent);
+      submissionFormData.append('noAlcoholGamblingConsent', currentFormData.noAlcoholGamblingConsent);
 
       // Add tournament poster if uploaded
       if (tournamentPoster) {
@@ -1710,7 +1813,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
       
       <form onSubmit={handleSubmit}>
         <div className="form-section">
-          <h3>Organiser Information</h3>
+          <h3 className="section-header-with-tick">
+            Organiser Information
+            <SectionCompletionTick isComplete={isOrganiserInfoComplete()} />
+          </h3>
           <div className="form-group">
             <label htmlFor="organiserName">Organiser Name *</label>
             <input
@@ -1723,7 +1829,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
             />
             <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="registrationNo">PJS/ROS/Company Registration No. *</label>
             <input
@@ -1736,7 +1842,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
             />
             <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="telContact">Tel. Contact *</label>
             <input
@@ -1749,7 +1855,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
             />
             <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="personInCharge">Person in Charge *</label>
             <input
@@ -1762,7 +1868,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
             />
             <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="email">Email Address *</label>
             <input
@@ -1791,7 +1897,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
         </div>
         
         <div className="form-section">
-          <h3>Event Details</h3>
+          <h3 className="section-header-with-tick">
+            Event Details
+            <SectionCompletionTick isComplete={isEventDetailsComplete()} />
+          </h3>
           <div className="form-group">
             <label htmlFor="eventTitle">Title of Event *</label>
             <input
@@ -1889,7 +1998,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
               />
             </div>
           </div>
-          
+
           <div className="form-group date-input-group">
             <label htmlFor="eventEndDate">Event End Date *</label>
             <div className="date-input-wrapper">
@@ -1993,7 +2102,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                   ))}
                 </select>
               </div>
-              
+
               <div className="form-subgroup">
                 <label htmlFor="city">City</label>
                 <select
@@ -2014,7 +2123,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 )}
               </div>
             </div>
-            
+
             <div className="form-subgroup">
               <label htmlFor="venue">Venue</label>
               <input
@@ -2029,7 +2138,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
               <small className="form-note">Note: The venue must be fully covered and is required to hold a valid government occupancy permit.</small>
             </div>
           </div>
-          
+
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="classification">Level of Event *</label>
@@ -2049,7 +2158,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
               </select>
               <small className="form-note">Note: For State level events, the application will also be sent to the respective affiliate state association for approval.</small>
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="eventType">Type of Event *</label>
               <select
@@ -2085,7 +2194,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 Note: Organisers are required to declare all competition categories planned for this tournament.
               </small>
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="malaysianEntryFee">Malaysian Entry Fee (RM) per player *</label>
               <input
@@ -2498,7 +2607,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
             <div className="character-counter-wrapper">
               <small className="form-note">Maximum 300 characters. Do not include your factsheet.</small>
               <small className={`character-counter ${
-                formData.eventSummary.length >= 300 ? 'at-limit' : 
+                formData.eventSummary.length >= 300 ? 'at-limit' :
                 formData.eventSummary.length >= 250 ? 'near-limit' : ''
               }`}>
                 {formData.eventSummary.length}/300
@@ -2508,7 +2617,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
         </div>
 
         <div className="form-section">
-          <h3>Upload Fact Sheet</h3>
+          <h3 className="section-header-with-tick">
+            Upload Fact Sheet
+            <SectionCompletionTick isComplete={isFactSheetComplete()} />
+          </h3>
           <div className="form-group">
             <label htmlFor="supportDocuments">Upload Fact Sheet *</label>
             <input
@@ -2597,7 +2709,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
         </div>
 
         <div className="form-section">
-          <h3>Consent & Agreement</h3>
+          <h3 className="section-header-with-tick">
+            Consent & Agreement
+            <SectionCompletionTick isComplete={isConsentComplete()} />
+          </h3>
           <div className="consent-section">
             <div className="consent-item">
               <label className="checkbox-label">
@@ -2612,7 +2727,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                 I consent to the collection, use, and processing of my personal data by Malaysia Pickleball Association (MPA) for the purposes of tournament organization, administration, and related communications. I understand that my data will be handled in accordance with applicable data protection laws.
               </label>
             </div>
-            
+
             <div className="consent-item">
               <label className="checkbox-label">
                 <input
@@ -4231,6 +4346,35 @@ const TournamentApplication = ({ setCurrentPage }) => {
           </div>
         </div>
       )}
+
+      <style>{`
+        .section-header-with-tick {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .section-completion-tick {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background-color: #e5e7eb;
+          color: transparent;
+          font-size: 14px;
+          font-weight: bold;
+          transition: all 0.3s ease;
+          flex-shrink: 0;
+        }
+
+        .section-completion-tick.complete {
+          background-color: #10b981;
+          color: white;
+          box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        }
+      `}</style>
     </div>
   );
 };
