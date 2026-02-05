@@ -15,8 +15,13 @@ const AdminDashboard = ({ setCurrentPage }) => {
     toggleNoticeActive 
   } = useNotices();
   const [applications, setApplications] = useState([]);
+  const [eventApplications, setEventApplications] = useState([]);
+  const [selectedEventStatusFilter, setSelectedEventStatusFilter] = useState('Pending Review');
+  const [selectedEventApplication, setSelectedEventApplication] = useState(null);
+  const [showEventModal, setShowEventModal] = useState(false);
   const [approvedTournaments, setApprovedTournaments] = useState([]);
   const [registeredOrganizations, setRegisteredOrganizations] = useState([]);
+  const [orgSearchTerm, setOrgSearchTerm] = useState('');
   const [tournamentSoftware, setTournamentSoftware] = useState([]);
   const [tournamentSoftwareFiles, setTournamentSoftwareFiles] = useState([]);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -836,6 +841,18 @@ const AdminDashboard = ({ setCurrentPage }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDateTournaments, setSelectedDateTournaments] = useState([]);
 
+  // Event Calendar state (for dashboard dual calendars)
+  const [eventCalendarSelectedDate, setEventCalendarSelectedDate] = useState(new Date());
+  const [eventCurrentMonth, setEventCurrentMonth] = useState(new Date());
+  const [selectedDateEvents, setSelectedDateEvents] = useState([]);
+
+  // Dashboard calendar popup state
+  const [showCompetitionPopup, setShowCompetitionPopup] = useState(false);
+  const [showEventPopup, setShowEventPopup] = useState(false);
+  const [popupCompetitions, setPopupCompetitions] = useState([]);
+  const [popupEvents, setPopupEvents] = useState([]);
+  const [popupDate, setPopupDate] = useState(null);
+
   // Edit Tournament States
   const [editingTournament, setEditingTournament] = useState(null);
   const [editFormData, setEditFormData] = useState({
@@ -869,6 +886,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
   useEffect(() => {
     loadApplications();
+    loadEventApplications();
     loadApprovedTournaments();
     loadRegisteredOrganizations();
     loadTournamentSoftware();
@@ -1026,6 +1044,38 @@ const AdminDashboard = ({ setCurrentPage }) => {
       setError('Failed to load applications. Please check if the server is running.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadEventApplications = async () => {
+    try {
+      const data = await apiService.getAllEventApplications();
+      console.log('Event applications loaded:', data);
+      // Handle both array response and object with data property
+      if (Array.isArray(data)) {
+        setEventApplications(data);
+      } else if (data && Array.isArray(data.data)) {
+        setEventApplications(data.data);
+      } else if (data && Array.isArray(data.applications)) {
+        setEventApplications(data.applications);
+      } else {
+        setEventApplications([]);
+      }
+    } catch (error) {
+      console.error('Failed to load event applications:', error);
+      setEventApplications([]);
+    }
+  };
+
+  const handleEventApplicationStatusChange = async (applicationId, newStatus, remarks = null, requiredInfo = null) => {
+    try {
+      await apiService.updateEventApplicationStatus(applicationId, newStatus, remarks, requiredInfo);
+      loadEventApplications();
+      setShowEventModal(false);
+      setSelectedEventApplication(null);
+    } catch (error) {
+      console.error('Failed to update event application status:', error);
+      alert('Failed to update status: ' + error.message);
     }
   };
 
@@ -2451,6 +2501,69 @@ const AdminDashboard = ({ setCurrentPage }) => {
 
   const handleNextMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  // Event Calendar helper functions (for dashboard dual calendars)
+  const getApprovedEventsForDate = (date) => {
+    const formatDateToLocal = (dateObj) => {
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const dateStr = formatDateToLocal(date);
+
+    return eventApplications.filter(event => {
+      if (event.status !== 'Approved') return false;
+
+      const startDateObj = new Date(event.eventStartDate);
+      const endDateObj = new Date(event.eventEndDate);
+
+      const startDateStr = formatDateToLocal(startDateObj);
+      const endDateStr = formatDateToLocal(endDateObj);
+
+      return dateStr >= startDateStr && dateStr <= endDateStr;
+    });
+  };
+
+  const handleEventDateClick = (day) => {
+    const clickedDate = new Date(eventCurrentMonth.getFullYear(), eventCurrentMonth.getMonth(), day);
+    setEventCalendarSelectedDate(clickedDate);
+    const eventsOnDate = getApprovedEventsForDate(clickedDate);
+    setSelectedDateEvents(eventsOnDate);
+  };
+
+  const handleEventPrevMonth = () => {
+    setEventCurrentMonth(new Date(eventCurrentMonth.getFullYear(), eventCurrentMonth.getMonth() - 1, 1));
+  };
+
+  const handleEventNextMonth = () => {
+    setEventCurrentMonth(new Date(eventCurrentMonth.getFullYear(), eventCurrentMonth.getMonth() + 1, 1));
+  };
+
+  // Get approved tournaments for calendar display
+  const getApprovedTournamentsForDate = (date) => {
+    const formatDateToLocal = (dateObj) => {
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const dateStr = formatDateToLocal(date);
+
+    return applications.filter(app => {
+      if (app.status !== 'Approved') return false;
+
+      const startDateObj = new Date(app.eventStartDate);
+      const endDateObj = new Date(app.eventEndDate);
+
+      const startDateStr = formatDateToLocal(startDateObj);
+      const endDateStr = formatDateToLocal(endDateObj);
+
+      return dateStr >= startDateStr && dateStr <= endDateStr;
+    });
   };
 
   const handleCreateTournament = async (e) => {
@@ -4200,333 +4313,172 @@ const AdminDashboard = ({ setCurrentPage }) => {
           </p>
         </div>
       ) : (
-        <div className="org-cards-grid" style={{
-          display: 'grid',
-          gap: '1.5rem',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))'
-        }}>
-          {registeredOrganizations.map((org, index) => (
-            <div key={org._id} className="org-card" style={{
-              backgroundColor: 'white',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer',
-              border: '1px solid #e5e7eb'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
-              e.currentTarget.style.transform = 'translateY(-4px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.08)';
-              e.currentTarget.style.transform = 'translateY(0px)';
-            }}>
-              {/* Card Header with gradient */}
-              <div style={{
-                background: org.status === 'suspended'
-                  ? 'linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)'
-                  : 'linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%)',
-                padding: '1.25rem 1.5rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
+        <>
+          {/* Search Bar */}
+          <div style={{
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <div style={{ position: 'relative', flex: 1, maxWidth: '400px' }}>
+              <input
+                type="text"
+                placeholder="Search by name, MPA ID, email, or phone..."
+                value={orgSearchTerm}
+                onChange={(e) => setOrgSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px 12px 44px',
+                  fontSize: '14px',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '8px',
+                  outline: 'none',
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
+                  backgroundColor: 'white'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e0e0e0';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+              <span style={{
+                position: 'absolute',
+                left: '14px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#9ca3af',
+                fontSize: '18px'
               }}>
-                <div>
-                  <h3 style={{
-                    fontSize: '1.125rem',
-                    fontWeight: '700',
-                    color: org.status === 'suspended' ? '#991b1b' : 'white',
-                    margin: '0',
-                    lineHeight: '1.3'
-                  }}>
-                    {org.organizationName}
-                  </h3>
-                  <p style={{
-                    fontSize: '0.8rem',
-                    color: org.status === 'suspended' ? '#b91c1c' : 'rgba(255,255,255,0.8)',
-                    margin: '0.125rem 0 0 0',
-                    fontWeight: '500'
-                  }}>
-                    ID: {org.organizationId}
-                  </p>
-                </div>
-                <span style={{
-                  backgroundColor: org.status === 'suspended' ? '#dc2626' : '#10b981',
-                  color: 'white',
-                  padding: '0.375rem 0.875rem',
-                  borderRadius: '9999px',
-                  fontSize: '0.75rem',
-                  fontWeight: '600',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                }}>
-                  {org.status === 'suspended' ? 'Suspended' : 'Active'}
-                </span>
-              </div>
-
-              {/* Card Body */}
-              <div style={{ padding: '1.5rem' }}>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '1.25rem',
-                  marginBottom: '1.25rem'
-                }}>
-                  <div style={{
-                    backgroundColor: '#f8fafc',
-                    padding: '1rem',
-                    borderRadius: '10px',
-                    border: '1px solid #e2e8f0'
-                  }}>
-                    <p style={{
-                      fontSize: '0.7rem',
-                      fontWeight: '600',
-                      color: '#64748b',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      margin: '0 0 0.5rem 0'
-                    }}>
-                      Applicant
-                    </p>
-                    <p style={{
-                      fontSize: '0.9rem',
-                      color: '#1e293b',
-                      margin: '0',
-                      fontWeight: '600'
-                    }}>
-                      {org.applicantFullName}
-                    </p>
-                  </div>
-                  <div style={{
-                    backgroundColor: '#f8fafc',
-                    padding: '1rem',
-                    borderRadius: '10px',
-                    border: '1px solid #e2e8f0'
-                  }}>
-                    <p style={{
-                      fontSize: '0.7rem',
-                      fontWeight: '600',
-                      color: '#64748b',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      margin: '0 0 0.5rem 0'
-                    }}>
-                      Documents
-                    </p>
-                    <span style={{
-                      fontSize: '0.875rem',
-                      color: org.documents && org.documents.length > 0 ? '#16a34a' : '#ea580c',
-                      fontWeight: '600',
-                      backgroundColor: org.documents && org.documents.length > 0 ? '#dcfce7' : '#ffedd5',
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '6px',
-                      display: 'inline-block'
-                    }}>
-                      {org.documents && org.documents.length > 0 ?
-                        `${org.documents.length} Files` : 'No Files'
-                      }
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{
-                  backgroundColor: '#f8fafc',
-                  padding: '1rem',
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0',
-                  marginBottom: '1.25rem'
-                }}>
-                  <p style={{
-                    fontSize: '0.7rem',
-                    fontWeight: '600',
-                    color: '#64748b',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    margin: '0 0 0.5rem 0'
-                  }}>
-                    Contact Email
-                  </p>
-                  <p style={{
-                    fontSize: '0.9rem',
-                    color: '#1e293b',
-                    margin: '0',
-                    fontWeight: '500'
-                  }}>
-                    {org.email}
-                  </p>
-                </div>
-
-                <div className="org-card-actions" style={{
-                  display: 'flex',
-                  gap: '0.75rem',
-                  flexWrap: 'wrap'
-                }}>
-                <button
-                  className="org-btn org-btn-view"
-                  onClick={() => showApplicationDetails(org)}
-                  style={{
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.625rem 1.25rem',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    flex: '1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-1px)';
-                    e.target.style.boxShadow = '0 4px 8px rgba(59, 130, 246, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 4px rgba(59, 130, 246, 0.3)';
-                  }}
-                >
-                  View
-                </button>
-                <button
-                  className="org-btn org-btn-message"
-                  onClick={() => handleSendMessageToOrganiser(org.email, org.organizationName)}
-                  style={{
-                    background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.625rem 1.25rem',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    flex: '1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    boxShadow: '0 2px 4px rgba(6, 182, 212, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-1px)';
-                    e.target.style.boxShadow = '0 4px 8px rgba(6, 182, 212, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 4px rgba(6, 182, 212, 0.3)';
-                  }}
-                >
-                  Message
-                </button>
-                {org.status === 'suspended' ? (
-                  <button
-                    className="org-btn org-btn-unsuspend"
-                    onClick={() => handleUnsuspendOrganization(org._id, org.organizationName)}
-                    style={{
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '0.625rem 1.25rem',
-                      borderRadius: '8px',
-                      fontSize: '0.85rem',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      flex: '1',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-1px)';
-                      e.target.style.boxShadow = '0 4px 8px rgba(16, 185, 129, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 2px 4px rgba(16, 185, 129, 0.3)';
-                    }}
-                  >
-                    Unsuspend
-                  </button>
-                ) : (
-                  <button
-                    className="org-btn org-btn-suspend"
-                    onClick={() => handleSuspendOrganization(org._id, org.organizationName)}
-                    style={{
-                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '0.625rem 1.25rem',
-                      borderRadius: '8px',
-                      fontSize: '0.85rem',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      flex: '1',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.transform = 'translateY(-1px)';
-                      e.target.style.boxShadow = '0 4px 8px rgba(245, 158, 11, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = '0 2px 4px rgba(245, 158, 11, 0.3)';
-                    }}
-                  >
-                    Suspend
-                  </button>
-                )}
-                <button
-                  className="org-btn org-btn-remove"
-                  onClick={() => handleDeleteOrganization(org._id, org.organizationName, org.organizationId)}
-                  style={{
-                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.625rem 1.25rem',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    minWidth: '80px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-1px)';
-                    e.target.style.boxShadow = '0 4px 8px rgba(239, 68, 68, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 2px 4px rgba(239, 68, 68, 0.3)';
-                  }}
-                >
-                  Remove
-                </button>
-                </div>
-              </div>
+                🔍
+              </span>
             </div>
-          ))}
+            {orgSearchTerm && (
+              <button
+                onClick={() => setOrgSearchTerm('')}
+                style={{
+                  padding: '10px 16px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: '#666',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#e5e7eb'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#f3f4f6'}
+              >
+                Clear
+              </button>
+            )}
+            <span style={{ fontSize: '13px', color: '#666' }}>
+              {registeredOrganizations.filter(org => {
+                if (!orgSearchTerm) return true;
+                const search = orgSearchTerm.toLowerCase();
+                return (
+                  org.organizationName?.toLowerCase().includes(search) ||
+                  org.organizationId?.toLowerCase().includes(search) ||
+                  org.applicantFullName?.toLowerCase().includes(search) ||
+                  org.email?.toLowerCase().includes(search) ||
+                  org.phoneNumber?.includes(search)
+                );
+              }).length} of {registeredOrganizations.length} organizations
+            </span>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.08)'
+            }}>
+              <thead>
+                <tr style={{ backgroundColor: '#2c3e50', color: 'white' }}>
+                  <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '13px', width: '50px' }}>No.</th>
+                  <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '13px' }}>Organizer/Company</th>
+                  <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '13px', width: '120px' }}>MPA ID</th>
+                  <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '13px' }}>PIC</th>
+                  <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '13px' }}>Email</th>
+                  <th style={{ padding: '14px 12px', textAlign: 'left', fontWeight: '600', fontSize: '13px', width: '130px' }}>Phone</th>
+                  <th style={{ padding: '14px 12px', textAlign: 'center', fontWeight: '600', fontSize: '13px', width: '90px' }}>Status</th>
+                  <th style={{ padding: '14px 12px', textAlign: 'center', fontWeight: '600', fontSize: '13px', width: '80px' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {registeredOrganizations.filter(org => {
+                  if (!orgSearchTerm) return true;
+                  const search = orgSearchTerm.toLowerCase();
+                  return (
+                    org.organizationName?.toLowerCase().includes(search) ||
+                    org.organizationId?.toLowerCase().includes(search) ||
+                    org.applicantFullName?.toLowerCase().includes(search) ||
+                    org.email?.toLowerCase().includes(search) ||
+                    org.phoneNumber?.includes(search)
+                  );
+                }).map((org, index) => (
+                <tr
+                  key={org._id}
+                  style={{
+                    backgroundColor: index % 2 === 0 ? '#fff' : '#f8f9fa',
+                    borderBottom: '1px solid #e9ecef',
+                    transition: 'background-color 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e3f2fd'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#fff' : '#f8f9fa'}
+                >
+                  <td style={{ padding: '12px', fontSize: '13px', color: '#666' }}>{index + 1}</td>
+                  <td style={{ padding: '12px', fontWeight: '600', fontSize: '13px', color: '#333' }}>{org.organizationName}</td>
+                  <td style={{ padding: '12px', fontSize: '13px', fontWeight: '500', color: '#333' }}>{org.organizationId}</td>
+                  <td style={{ padding: '12px', fontSize: '13px', color: '#333' }}>{org.applicantFullName}</td>
+                  <td style={{ padding: '12px', fontSize: '13px', color: '#666' }}>{org.email}</td>
+                  <td style={{ padding: '12px', fontSize: '13px', color: '#666' }}>{org.phoneNumber || '-'}</td>
+                  <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <span style={{
+                      backgroundColor: org.status === 'suspended' ? '#fee2e2' : '#d1fae5',
+                      color: org.status === 'suspended' ? '#dc2626' : '#059669',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      textTransform: 'uppercase'
+                    }}>
+                      {org.status === 'suspended' ? 'Suspended' : 'Active'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px', textAlign: 'center' }}>
+                    <button
+                      onClick={() => showApplicationDetails(org)}
+                      style={{
+                        backgroundColor: '#3b82f6',
+                        color: 'white',
+                        border: 'none',
+                        padding: '5px 14px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#2563eb'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#3b82f6'}
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
+        </>
       )}
     </div>
   );
@@ -6649,146 +6601,182 @@ const AdminDashboard = ({ setCurrentPage }) => {
                 <p>{dateFilterEnabled && selectedDate ? `No assessment batches found from ${new Date(selectedDate).toLocaleDateString()}` : 'No assessment submissions yet.'}</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: '20px' }}>
-                {assessmentBatches.map((batch) => (
-                  <div key={batch._id} style={{
-                    background: '#f8f8f8',
-                    border: '2px solid #000',
-                    borderRadius: '12px',
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#2c3e50', color: 'white' }}>
+                      <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>No.</th>
+                      <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>Batch Code</th>
+                      <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>Form</th>
+                      <th style={{ padding: '14px 16px', textAlign: 'left', fontWeight: '600', fontSize: '14px' }}>Date</th>
+                      <th style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', fontSize: '14px' }}>Participants</th>
+                      <th style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', fontSize: '14px' }}>Passed</th>
+                      <th style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', fontSize: '14px' }}>Avg Score</th>
+                      <th style={{ padding: '14px 16px', textAlign: 'center', fontWeight: '600', fontSize: '14px' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...assessmentBatches].sort((a, b) => new Date(b.batchDate) - new Date(a.batchDate)).map((batch, index) => (
+                      <tr
+                        key={batch._id}
+                        style={{
+                          backgroundColor: index % 2 === 0 ? '#fff' : '#f8f9fa',
+                          borderBottom: '1px solid #e9ecef',
+                          transition: 'background-color 0.15s ease'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e3f2fd'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#fff' : '#f8f9fa'}
+                      >
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#666' }}>{index + 1}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: '600', color: '#333' }}>{batch._id}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#666' }}>
+                          <div>{batch.formCode}</div>
+                          {batch.formTitle && (
+                            <div style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>{batch.formTitle}</div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: '#666' }}>{batch.batchDate}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', textAlign: 'center', fontWeight: '600', color: '#333' }}>{batch.submissionCount}</td>
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <span style={{
+                            backgroundColor: '#d4edda',
+                            color: '#155724',
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '13px',
+                            fontWeight: '600'
+                          }}>
+                            {batch.submissions.filter(s => s.score >= 70).length}/{batch.submissionCount}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <span style={{
+                            backgroundColor: Math.round(batch.averageScore) >= 70 ? '#2c3e50' : '#fff',
+                            color: Math.round(batch.averageScore) >= 70 ? '#fff' : '#333',
+                            border: '2px solid #2c3e50',
+                            padding: '4px 12px',
+                            borderRadius: '16px',
+                            fontSize: '13px',
+                            fontWeight: '700'
+                          }}>
+                            {Math.round(batch.averageScore)}%
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleBatchCollapse(batch._id);
+                            }}
+                            style={{
+                              backgroundColor: collapsedBatches.has(batch._id) ? '#007bff' : '#6c757d',
+                              color: 'white',
+                              border: 'none',
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              fontWeight: '500'
+                            }}
+                          >
+                            {collapsedBatches.has(batch._id) ? 'Hide' : 'View'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Expanded Batch Details */}
+                {assessmentBatches.filter(b => collapsedBatches.has(b._id)).map((batch) => (
+                  <div key={`details-${batch._id}`} style={{
+                    marginTop: '20px',
+                    backgroundColor: '#f8f9fa',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '8px',
                     padding: '20px'
                   }}>
-                    {/* Batch Header - Folder Style */}
-                    <div
-                      onClick={() => toggleBatchCollapse(batch._id)}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '15px',
-                        paddingBottom: '15px',
-                        borderBottom: '1px solid #000',
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                        transition: 'background-color 0.2s',
-                        padding: '10px',
-                        borderRadius: '8px',
-                        backgroundColor: collapsedBatches.has(batch._id) ? '#f0f0f0' : 'transparent'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = collapsedBatches.has(batch._id) ? '#f0f0f0' : 'transparent'}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                          fontSize: '18px',
-                          color: '#f39c12',
-                          transition: 'all 0.2s',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: '24px',
-                          height: '24px'
-                        }}>
-                          {collapsedBatches.has(batch._id) ? '📂' : '📁'}
-                        </div>
-                        <div>
-                          <h4 style={{ margin: '0 0 5px 0', color: '#000', fontSize: '18px', fontWeight: 'bold' }}>
-                            {batch._id}
-                          </h4>
-                          <div style={{ color: '#666', fontSize: '14px' }}>
-                            Form: {batch.formCode} • Date: {batch.batchDate} • {batch.submissionCount} participants
-                          </div>
-                          {batch.formTitle && (
-                            <div style={{ color: '#000', fontSize: '13px', fontStyle: 'italic', marginTop: '2px' }}>
-                              "{batch.formTitle}"
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ color: '#000', fontWeight: 'bold', fontSize: '16px' }}>
-                          Avg: {Math.round(batch.averageScore)}%
-                        </div>
-                        <div style={{ color: '#666', fontSize: '12px' }}>
-                          {batch.submissions.filter(s => s.score >= 70).length} passed / {batch.submissionCount} total
-                        </div>
-                        <div style={{ color: '#999', fontSize: '11px', marginTop: '4px' }}>
-                          {collapsedBatches.has(batch._id) ? 'Click to expand' : 'Click to collapse'}
-                        </div>
-                      </div>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '15px',
+                      paddingBottom: '10px',
+                      borderBottom: '1px solid #dee2e6'
+                    }}>
+                      <h4 style={{ margin: 0, color: '#333' }}>
+                        Batch: {batch._id} - {batch.submissionCount} Participants
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toggleBatchCollapse(batch._id);
+                        }}
+                        style={{
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        Close
+                      </button>
                     </div>
-
-                    {/* Batch Submissions */}
-                    {!collapsedBatches.has(batch._id) && (
-                    <div style={{ display: 'grid', gap: '10px' }}>
-                      {batch.submissions.map((submission) => (
-                        <div
-                          key={submission._id}
-                          onClick={() => openSubmissionDetails(submission)}
-                          style={{
-                            background: 'white',
-                            border: '1px solid rgba(0, 0, 0, 0.1)',
-                            borderRadius: '8px',
-                            padding: '15px',
-                            display: 'grid',
-                            gridTemplateColumns: '2fr 1fr 1fr 100px 120px',
-                            gap: '15px',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                          title="Click to view submission details"
-                        >
-                          <div>
-                            <div style={{ color: '#333', fontWeight: 'bold', fontSize: '16px', marginBottom: '2px' }}>
-                              {submission.participantName}
-                            </div>
-                            <div style={{ color: '#666', fontSize: '13px' }}>
-                              ID: {submission.submissionId}
-                            </div>
-                            <div style={{ color: '#666', fontSize: '12px' }}>
-                              {new Date(submission.completedAt).toLocaleString()}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '14px', color: '#333' }}>
-                              <strong>{submission.correctAnswers}/{submission.totalQuestions}</strong>
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#666' }}>
-                              Time: {Math.floor(submission.timeSpent / 60)}m {submission.timeSpent % 60}s
-                            </div>
-                          </div>
-                          <div>
-                            <span style={{
-                              background: submission.score >= 70 ? '#000' : '#fff',
-                              color: submission.score >= 70 ? '#fff' : '#000',
-                              border: '1px solid #000',
-                              padding: '4px 8px',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: 'bold'
-                            }}>
-                              {submission.score >= 70 ? 'PASSED' : 'FAILED'}
-                            </span>
-                          </div>
-                          <div style={{
-                            background: submission.score >= 70 ? '#000' : '#fff',
-                            color: submission.score >= 70 ? '#fff' : '#000',
-                            border: '2px solid #000',
-                            padding: '10px 12px',
-                            borderRadius: '20px',
-                            fontWeight: 'bold',
-                            fontSize: '14px',
-                            textAlign: 'center'
-                          }}>
-                            {`${submission.score}%`}
-                          </div>
-                          <div>
-                            {/* No manual review needed - all scoring is automatic */}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    )}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'white', borderRadius: '6px', overflow: 'hidden' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: '#495057', color: 'white' }}>
+                          <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: '13px' }}>Name</th>
+                          <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: '13px' }}>ID</th>
+                          <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: '13px' }}>Date/Time</th>
+                          <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: '13px' }}>Score</th>
+                          <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: '13px' }}>Time</th>
+                          <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: '13px' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {batch.submissions.map((submission, idx) => (
+                          <tr
+                            key={submission._id}
+                            onClick={() => openSubmissionDetails(submission)}
+                            style={{
+                              backgroundColor: idx % 2 === 0 ? '#fff' : '#f8f9fa',
+                              cursor: 'pointer',
+                              borderBottom: '1px solid #eee'
+                            }}
+                          >
+                            <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: '500' }}>{submission.participantName}</td>
+                            <td style={{ padding: '10px 12px', fontSize: '12px', color: '#666' }}>{submission.submissionId}</td>
+                            <td style={{ padding: '10px 12px', fontSize: '12px', color: '#666' }}>{new Date(submission.completedAt).toLocaleString()}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', fontSize: '13px', fontWeight: '600' }}>{submission.correctAnswers}/{submission.totalQuestions}</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center', fontSize: '12px', color: '#666' }}>{Math.floor(submission.timeSpent / 60)}m {submission.timeSpent % 60}s</td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                              <span style={{
+                                backgroundColor: submission.score >= 70 ? '#28a745' : '#dc3545',
+                                color: 'white',
+                                padding: '3px 10px',
+                                borderRadius: '12px',
+                                fontSize: '11px',
+                                fontWeight: '600'
+                              }}>
+                                {submission.score >= 70 ? 'PASSED' : 'FAILED'} ({submission.score}%)
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ))}
               </div>
@@ -7066,6 +7054,14 @@ const AdminDashboard = ({ setCurrentPage }) => {
                   Application Management
                 </button>
               )}
+              {hasAccessTo('applications') && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'event-applications' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('event-applications'); setMobileMenuOpen(false); }}
+                >
+                  Event Applications
+                </button>
+              )}
               {hasAccessTo('organizations') && (
                 <button
                   className={`mobile-nav-item ${currentView === 'registered-organizations' ? 'active' : ''}`}
@@ -7270,6 +7266,26 @@ const AdminDashboard = ({ setCurrentPage }) => {
               }}
             >
               Applications
+            </button>
+          )}
+
+          {hasAccessTo('applications') && (
+            <button
+              className={`sidebar-nav-item ${currentView === 'event-applications' ? 'active' : ''}`}
+              onClick={() => setCurrentView('event-applications')}
+              style={{
+                fontSize: '16px',
+                fontWeight: '500',
+                padding: '12px 20px',
+                color: '#fff',
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: '100%',
+                textAlign: 'left',
+                cursor: 'pointer'
+              }}
+            >
+              Event Applications
             </button>
           )}
 
@@ -7547,11 +7563,6 @@ Settings
       <div className="dashboard-content">
         {currentView === 'dashboard' && (
           <>
-            <div className="dashboard-header">
-              <h2>Admin Dashboard</h2>
-              <p className="dashboard-subtitle">Manage tournament applications by status</p>
-            </div>
-
             {error && (
               <div className="error-message" style={{ 
                 color: '#d32f2f', 
@@ -7626,117 +7637,759 @@ Settings
                   })}
                 </div>
 
-                {/* Desktop Status Columns */}
-                <div className="status-columns-container desktop-status-columns">
-                  {/* Pending Review Column */}
-                  <div className="status-column">
-                    <h3 className="status-column-header pending">
-                      Pending Review ({currentYearApplications.filter(app => app.status === 'Pending Review').length})
-                    </h3>
-                    <div className="status-column-content">
-                      {currentYearApplications.filter(app => app.status === 'Pending Review').length > 0 ? (
-                        <div className="tournament-list">
-                          {currentYearApplications.filter(app => app.status === 'Pending Review').map((app, index) => (
-                            <div
-                              key={app.applicationId || app.id}
-                              className="tournament-item"
-                              onClick={() => showApplicationDetails(app)}
-                              title="Click to view details"
-                            >
-                              <span className="tournament-number">{index + 1}.</span>
-                              {app.eventTitle || 'No Event Title'}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="empty-column">No pending applications</div>
-                      )}
+                {/* Desktop Quick Stats Cards */}
+                <div className="quick-stats-container desktop-status-columns" style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: '12px',
+                  marginTop: '20px',
+                  marginBottom: '20px'
+                }}>
+                  {/* Pending Review Card */}
+                  <div
+                    className="quick-stat-card"
+                    onClick={() => setSelectedStatusFilter('Pending Review')}
+                    style={{
+                      backgroundColor: '#fff',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      borderLeft: '4px solid #f59e0b',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '36px',
+                      fontWeight: '700',
+                      color: '#f59e0b',
+                      lineHeight: '1'
+                    }}>
+                      {currentYearApplications.filter(app => app.status === 'Pending Review').length}
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      marginTop: '8px',
+                      fontWeight: '500'
+                    }}>
+                      Pending Review
                     </div>
                   </div>
 
-                  {/* Under Review Column */}
-                  <div className="status-column">
-                    <h3 className="status-column-header under-review">
-                      Under Review ({currentYearApplications.filter(app => app.status === 'Under Review').length})
-                    </h3>
-                    <div className="status-column-content">
-                      {currentYearApplications.filter(app => app.status === 'Under Review').length > 0 ? (
-                        <div className="tournament-list">
-                          {currentYearApplications.filter(app => app.status === 'Under Review').map((app, index) => (
-                            <div
-                              key={app.applicationId || app.id}
-                              className="tournament-item"
-                              onClick={() => showApplicationDetails(app)}
-                              title="Click to view details"
-                            >
-                              <span className="tournament-number">{index + 1}.</span>
-                              {app.eventTitle || 'No Event Title'}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="empty-column">No applications under review</div>
-                      )}
+                  {/* Under Review Card */}
+                  <div
+                    className="quick-stat-card"
+                    onClick={() => setSelectedStatusFilter('Under Review')}
+                    style={{
+                      backgroundColor: '#fff',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      borderLeft: '4px solid #3b82f6',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '36px',
+                      fontWeight: '700',
+                      color: '#3b82f6',
+                      lineHeight: '1'
+                    }}>
+                      {currentYearApplications.filter(app => app.status === 'Under Review').length}
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      marginTop: '8px',
+                      fontWeight: '500'
+                    }}>
+                      Under Review
                     </div>
                   </div>
 
-                  {/* Approved Column */}
-                  <div className="status-column">
-                    <h3 className="status-column-header approved">
-                      Approved ({currentYearApplications.filter(app => app.status === 'Approved').length})
-                    </h3>
-                    <div className="status-column-content">
-                      {currentYearApplications.filter(app => app.status === 'Approved').length > 0 ? (
-                        <div className="tournament-list">
-                          {currentYearApplications.filter(app => app.status === 'Approved').map((app, index) => (
-                            <div
-                              key={app.applicationId || app.id}
-                              className="tournament-item"
-                              onClick={() => showApplicationDetails(app)}
-                              title="Click to view details"
-                            >
-                              <span className="tournament-number">{index + 1}.</span>
-                              {app.eventTitle || 'No Event Title'}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="empty-column">No approved applications</div>
-                      )}
+                  {/* Approved Card */}
+                  <div
+                    className="quick-stat-card"
+                    onClick={() => setSelectedStatusFilter('Approved')}
+                    style={{
+                      backgroundColor: '#fff',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      borderLeft: '4px solid #10b981',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '36px',
+                      fontWeight: '700',
+                      color: '#10b981',
+                      lineHeight: '1'
+                    }}>
+                      {currentYearApplications.filter(app => app.status === 'Approved').length}
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      marginTop: '8px',
+                      fontWeight: '500'
+                    }}>
+                      Approved
                     </div>
                   </div>
 
-                  {/* Rejected Column */}
-                  <div className="status-column rejected">
-                    <h3 className="status-column-header rejected">
-                      Rejected ({currentYearApplications.filter(app => app.status === 'Rejected').length})
-                    </h3>
-                    <div className="status-column-content">
-                      {currentYearApplications.filter(app => app.status === 'Rejected').length > 0 ? (
-                        <div className="tournament-list">
-                          {currentYearApplications.filter(app => app.status === 'Rejected').map((app, index) => (
-                            <div
-                              key={app.applicationId || app.id}
-                              className="tournament-item"
-                              onClick={() => showApplicationDetails(app)}
-                              title="Click to view details"
-                            >
-                              <span className="tournament-number">{index + 1}.</span>
-                              {app.eventTitle || 'No Event Title'}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="empty-column">No rejected applications</div>
-                      )}
+                  {/* Rejected Card */}
+                  <div
+                    className="quick-stat-card"
+                    onClick={() => setSelectedStatusFilter('Rejected')}
+                    style={{
+                      backgroundColor: '#fff',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      borderLeft: '4px solid #ef4444',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '36px',
+                      fontWeight: '700',
+                      color: '#ef4444',
+                      lineHeight: '1'
+                    }}>
+                      {currentYearApplications.filter(app => app.status === 'Rejected').length}
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      marginTop: '8px',
+                      fontWeight: '500'
+                    }}>
+                      Rejected
+                    </div>
+                  </div>
+
+                  {/* Archive Card */}
+                  <div
+                    className="quick-stat-card"
+                    onClick={() => setSelectedStatusFilter('Archive')}
+                    style={{
+                      backgroundColor: '#fff',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      borderLeft: '4px solid #6b7280',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '36px',
+                      fontWeight: '700',
+                      color: '#6b7280',
+                      lineHeight: '1'
+                    }}>
+                      {archivedApplications.length}
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      marginTop: '8px',
+                      fontWeight: '500'
+                    }}>
+                      Archive
+                    </div>
+                  </div>
+
+                  {/* Inbox Card */}
+                  <div
+                    className="quick-stat-card"
+                    title="Inbox messages - Coming soon"
+                    style={{
+                      backgroundColor: '#fff',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      transition: 'all 0.2s ease',
+                      borderLeft: '4px solid #8b5cf6',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '36px',
+                      fontWeight: '700',
+                      color: '#8b5cf6',
+                      lineHeight: '1'
+                    }}>
+                      0
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      marginTop: '8px',
+                      fontWeight: '500'
+                    }}>
+                      Inbox
+                    </div>
+                  </div>
+
+                  {/* Feedback/Report Card */}
+                  <div
+                    className="quick-stat-card"
+                    title="Feedback & Reports - Coming soon"
+                    style={{
+                      backgroundColor: '#fff',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      transition: 'all 0.2s ease',
+                      borderLeft: '4px solid #ec4899',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '36px',
+                      fontWeight: '700',
+                      color: '#ec4899',
+                      lineHeight: '1'
+                    }}>
+                      0
+                    </div>
+                    <div style={{
+                      fontSize: '14px',
+                      color: '#666',
+                      marginTop: '8px',
+                      fontWeight: '500'
+                    }}>
+                      Feedback
                     </div>
                   </div>
                 </div>
               </>
             )}
 
+            {/* Dual Calendars Section - Approved Tournaments & Events */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '20px',
+              marginTop: '20px'
+            }}>
+              {/* Approved Tournaments Calendar */}
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                border: '1px solid #e9ecef'
+              }}>
+                <h3 style={{ margin: '0 0 15px 0', color: '#2c3e50', fontSize: '16px', borderBottom: '2px solid #28a745', paddingBottom: '10px' }}>
+                  Approved Competitions
+                </h3>
+
+                {/* Month Navigation */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '15px'
+                }}>
+                  <button
+                    onClick={handlePrevMonth}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      padding: '5px 10px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ←
+                  </button>
+                  <h4 style={{ margin: 0, color: '#495057', fontSize: '14px' }}>
+                    {currentMonth.toLocaleDateString('default', { month: 'long', year: 'numeric' })}
+                  </h4>
+                  <button
+                    onClick={handleNextMonth}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      padding: '5px 10px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    →
+                  </button>
+                </div>
+
+                {/* Calendar Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: '1px',
+                  backgroundColor: '#dee2e6',
+                  borderRadius: '6px',
+                  overflow: 'hidden'
+                }}>
+                  {/* Day headers */}
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                    <div key={i} style={{
+                      padding: '8px 4px',
+                      backgroundColor: '#f8f9fa',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      fontSize: '11px',
+                      color: '#6c757d'
+                    }}>
+                      {day}
+                    </div>
+                  ))}
+
+                  {/* Empty cells */}
+                  {Array.from({ length: getFirstDayOfMonth(currentMonth) }, (_, i) => (
+                    <div key={`empty-${i}`} style={{
+                      padding: '6px',
+                      backgroundColor: '#f8f9fa',
+                      minHeight: '35px'
+                    }} />
+                  ))}
+
+                  {/* Calendar days */}
+                  {Array.from({ length: getDaysInMonth(currentMonth) }, (_, i) => {
+                    const day = i + 1;
+                    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                    const tournaments = getApprovedTournamentsForDate(date);
+                    const isToday = new Date().toDateString() === date.toDateString();
+
+                    return (
+                      <div
+                        key={day}
+                        onClick={() => {
+                          if (tournaments.length > 0) {
+                            setPopupCompetitions(tournaments);
+                            setPopupDate(date);
+                            setShowCompetitionPopup(true);
+                          }
+                        }}
+                        style={{
+                          padding: '4px',
+                          backgroundColor: isToday ? '#e3f2fd' : 'white',
+                          minHeight: '35px',
+                          position: 'relative',
+                          fontSize: '12px',
+                          cursor: tournaments.length > 0 ? 'pointer' : 'default'
+                        }}
+                      >
+                        <span style={{
+                          color: isToday ? '#1976d2' : '#495057',
+                          fontWeight: isToday ? '600' : 'normal'
+                        }}>
+                          {day}
+                        </span>
+                        {tournaments.length > 0 && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '2px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            display: 'flex',
+                            gap: '2px'
+                          }}>
+                            {tournaments.slice(0, 3).map((_, idx) => (
+                              <span key={idx} style={{
+                                width: '5px',
+                                height: '5px',
+                                backgroundColor: '#28a745',
+                                borderRadius: '50%'
+                              }} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Count */}
+                <div style={{ marginTop: '10px', fontSize: '12px', color: '#6c757d', textAlign: 'center' }}>
+                  Total: {applications.filter(app => app.status === 'Approved').length} approved competitions
+                </div>
+
+                {/* Competition Popup */}
+                {showCompetitionPopup && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                  }} onClick={() => setShowCompetitionPopup(false)}>
+                    <div style={{
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      maxWidth: '400px',
+                      width: '90%',
+                      maxHeight: '80vh',
+                      overflowY: 'auto',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+                    }} onClick={(e) => e.stopPropagation()}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '15px',
+                        borderBottom: '2px solid #28a745',
+                        paddingBottom: '10px'
+                      }}>
+                        <h4 style={{ margin: 0, color: '#2c3e50' }}>
+                          {popupDate && popupDate.toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        </h4>
+                        <button
+                          onClick={() => setShowCompetitionPopup(false)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '20px',
+                            cursor: 'pointer',
+                            color: '#6c757d'
+                          }}
+                        >×</button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {popupCompetitions.map((comp, idx) => (
+                          <div key={idx} style={{
+                            padding: '12px',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '8px',
+                            borderLeft: '4px solid #28a745'
+                          }}>
+                            <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '6px' }}>
+                              {comp.tournamentName || comp.eventName}
+                            </div>
+                            {comp.venue && (
+                              <div style={{ fontSize: '13px', color: '#6c757d', marginBottom: '4px' }}>
+                                {comp.venue}
+                              </div>
+                            )}
+                            <div style={{ fontSize: '13px', color: '#6c757d', marginBottom: '4px' }}>
+                              {new Date(comp.eventStartDate).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' })} - {new Date(comp.eventEndDate).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </div>
+                            {comp.organiserName && (
+                              <div style={{ fontSize: '13px', color: '#6c757d' }}>
+                                {comp.organiserName}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Approved Events Calendar */}
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '12px',
+                padding: '20px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                border: '1px solid #e9ecef'
+              }}>
+                <h3 style={{ margin: '0 0 15px 0', color: '#2c3e50', fontSize: '16px', borderBottom: '2px solid #007bff', paddingBottom: '10px' }}>
+                  Approved Events
+                </h3>
+
+                {/* Month Navigation */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '15px'
+                }}>
+                  <button
+                    onClick={handleEventPrevMonth}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      padding: '5px 10px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ←
+                  </button>
+                  <h4 style={{ margin: 0, color: '#495057', fontSize: '14px' }}>
+                    {eventCurrentMonth.toLocaleDateString('default', { month: 'long', year: 'numeric' })}
+                  </h4>
+                  <button
+                    onClick={handleEventNextMonth}
+                    style={{
+                      background: 'none',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '4px',
+                      padding: '5px 10px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    →
+                  </button>
+                </div>
+
+                {/* Calendar Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(7, 1fr)',
+                  gap: '1px',
+                  backgroundColor: '#dee2e6',
+                  borderRadius: '6px',
+                  overflow: 'hidden'
+                }}>
+                  {/* Day headers */}
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                    <div key={i} style={{
+                      padding: '8px 4px',
+                      backgroundColor: '#f8f9fa',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      fontSize: '11px',
+                      color: '#6c757d'
+                    }}>
+                      {day}
+                    </div>
+                  ))}
+
+                  {/* Empty cells */}
+                  {Array.from({ length: getFirstDayOfMonth(eventCurrentMonth) }, (_, i) => (
+                    <div key={`empty-${i}`} style={{
+                      padding: '6px',
+                      backgroundColor: '#f8f9fa',
+                      minHeight: '35px'
+                    }} />
+                  ))}
+
+                  {/* Calendar days */}
+                  {Array.from({ length: getDaysInMonth(eventCurrentMonth) }, (_, i) => {
+                    const day = i + 1;
+                    const date = new Date(eventCurrentMonth.getFullYear(), eventCurrentMonth.getMonth(), day);
+                    const events = getApprovedEventsForDate(date);
+                    const isToday = new Date().toDateString() === date.toDateString();
+
+                    return (
+                      <div
+                        key={day}
+                        onClick={() => {
+                          if (events.length > 0) {
+                            setPopupEvents(events);
+                            setPopupDate(date);
+                            setShowEventPopup(true);
+                          }
+                        }}
+                        style={{
+                          padding: '4px',
+                          backgroundColor: isToday ? '#e3f2fd' : 'white',
+                          minHeight: '35px',
+                          position: 'relative',
+                          fontSize: '12px',
+                          cursor: events.length > 0 ? 'pointer' : 'default'
+                        }}
+                      >
+                        <span style={{
+                          color: isToday ? '#1976d2' : '#495057',
+                          fontWeight: isToday ? '600' : 'normal'
+                        }}>
+                          {day}
+                        </span>
+                        {events.length > 0 && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '2px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            display: 'flex',
+                            gap: '2px'
+                          }}>
+                            {events.slice(0, 3).map((_, idx) => (
+                              <span key={idx} style={{
+                                width: '5px',
+                                height: '5px',
+                                backgroundColor: '#007bff',
+                                borderRadius: '50%'
+                              }} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Count */}
+                <div style={{ marginTop: '10px', fontSize: '12px', color: '#6c757d', textAlign: 'center' }}>
+                  Total: {eventApplications.filter(app => app.status === 'Approved').length} approved events
+                </div>
+
+                {/* Event Popup */}
+                {showEventPopup && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                  }} onClick={() => setShowEventPopup(false)}>
+                    <div style={{
+                      backgroundColor: 'white',
+                      borderRadius: '12px',
+                      padding: '20px',
+                      maxWidth: '400px',
+                      width: '90%',
+                      maxHeight: '80vh',
+                      overflowY: 'auto',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
+                    }} onClick={(e) => e.stopPropagation()}>
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '15px',
+                        borderBottom: '2px solid #007bff',
+                        paddingBottom: '10px'
+                      }}>
+                        <h4 style={{ margin: 0, color: '#2c3e50' }}>
+                          {popupDate && popupDate.toLocaleDateString('en-MY', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        </h4>
+                        <button
+                          onClick={() => setShowEventPopup(false)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '20px',
+                            cursor: 'pointer',
+                            color: '#6c757d'
+                          }}
+                        >×</button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {popupEvents.map((evt, idx) => (
+                          <div key={idx} style={{
+                            padding: '12px',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '8px',
+                            borderLeft: '4px solid #007bff'
+                          }}>
+                            <div style={{ fontWeight: '600', color: '#2c3e50', marginBottom: '6px' }}>
+                              {evt.eventName}
+                            </div>
+                            {evt.venue && (
+                              <div style={{ fontSize: '13px', color: '#6c757d', marginBottom: '4px' }}>
+                                {evt.venue}
+                              </div>
+                            )}
+                            <div style={{ fontSize: '13px', color: '#6c757d', marginBottom: '4px' }}>
+                              {new Date(evt.eventStartDate).toLocaleDateString('en-MY', { day: 'numeric', month: 'short' })} - {new Date(evt.eventEndDate).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </div>
+                            {evt.organiserName && (
+                              <div style={{ fontSize: '13px', color: '#6c757d' }}>
+                                {evt.organiserName}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Tournament Updates Card Section */}
-            <div 
+            <div
               className="tournament-updates-card"
               style={{
                 backgroundColor: 'white',
@@ -8023,7 +8676,7 @@ Settings
             </div>
           </>
         )}
-        
+
         {currentView === 'calendar' && (
           <>
             <div className="dashboard-header">
@@ -8041,8 +8694,8 @@ Settings
               minHeight: '600px'
             }}>
               {/* Calendar Grid */}
-              <div className="calendar-grid">
-                <div className="calendar-header" style={{
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -8050,7 +8703,7 @@ Settings
                   paddingBottom: '15px',
                   borderBottom: '2px solid #e9ecef'
                 }}>
-                  <button 
+                  <button
                     onClick={handlePrevMonth}
                     style={{
                       background: 'none',
@@ -8061,12 +8714,12 @@ Settings
                       fontSize: '16px'
                     }}
                   >
-                    ← 
+                    ←
                   </button>
                   <h3 style={{ margin: 0 }}>
                     {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
                   </h3>
-                  <button 
+                  <button
                     onClick={handleNextMonth}
                     style={{
                       background: 'none',
@@ -8081,8 +8734,8 @@ Settings
                   </button>
                 </div>
 
-                {/* Calendar Grid */}
-                <div className="calendar-month" style={{
+                {/* Calendar Days Grid */}
+                <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(7, 1fr)',
                   gap: '1px',
@@ -8532,7 +9185,388 @@ Settings
             )}
           </>
         )}
-        
+
+        {/* Event Applications Management */}
+        {currentView === 'event-applications' && (
+          <>
+            <div className="dashboard-header">
+              <h2>Event Applications Management</h2>
+              <p className="dashboard-subtitle">Manage applications for non-tournament events (referee clinics, coaching courses, etc.)</p>
+            </div>
+
+            {/* Status Filter Buttons */}
+            <div className="status-filter-buttons">
+              <button
+                className={`status-filter-btn ${selectedEventStatusFilter === 'Pending Review' ? 'active' : ''}`}
+                onClick={() => setSelectedEventStatusFilter('Pending Review')}
+              >
+                Pending Review ({eventApplications.filter(app => app.status === 'Pending Review').length})
+              </button>
+              <button
+                className={`status-filter-btn ${selectedEventStatusFilter === 'Approved' ? 'active' : ''}`}
+                onClick={() => setSelectedEventStatusFilter('Approved')}
+              >
+                Approved ({eventApplications.filter(app => app.status === 'Approved').length})
+              </button>
+              <button
+                className={`status-filter-btn ${selectedEventStatusFilter === 'Rejected' ? 'active' : ''}`}
+                onClick={() => setSelectedEventStatusFilter('Rejected')}
+              >
+                Rejected ({eventApplications.filter(app => app.status === 'Rejected').length})
+              </button>
+              <button
+                className={`status-filter-btn ${selectedEventStatusFilter === 'All' ? 'active' : ''}`}
+                onClick={() => setSelectedEventStatusFilter('All')}
+              >
+                All Applications ({eventApplications.length})
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '16px', textAlign: 'right' }}>
+              <button
+                onClick={loadEventApplications}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#2c3e50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '13px'
+                }}
+              >
+                Refresh
+              </button>
+            </div>
+
+            {eventApplications.length === 0 ? (
+              <div className="no-applications" style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                <p>No event applications found.</p>
+                <p>Event applications will appear here once organizers submit them.</p>
+                <button
+                  onClick={loadEventApplications}
+                  style={{
+                    marginTop: '16px',
+                    padding: '10px 20px',
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Reload Data
+                </button>
+              </div>
+            ) : (
+              <div className="applications-table-container">
+                <table className="applications-table">
+                  <thead>
+                    <tr>
+                      <th>No.</th>
+                      <th>Event Title</th>
+                      <th>Event Type</th>
+                      <th>ID Number</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {eventApplications
+                      .filter(app => selectedEventStatusFilter === 'All' || app.status === selectedEventStatusFilter)
+                      .map((app, index) => (
+                        <tr key={app.applicationId}>
+                          <td>{index + 1}</td>
+                          <td>
+                            <span
+                              className="clickable-link"
+                              onClick={() => {
+                                setSelectedEventApplication(app);
+                                setShowEventModal(true);
+                              }}
+                              title="Click to view details"
+                            >
+                              {app.eventTitle || 'Untitled Event'}
+                            </span>
+                          </td>
+                          <td>{app.eventType}{app.eventTypeSpecify ? ` - ${app.eventTypeSpecify}` : ''}</td>
+                          <td>
+                            <span
+                              className="clickable-link"
+                              onClick={() => {
+                                setSelectedEventApplication(app);
+                                setShowEventModal(true);
+                              }}
+                            >
+                              {app.applicationId}
+                            </span>
+                          </td>
+                          <td>
+                            {(() => {
+                              if (!app.eventStartDate) return 'Date TBA';
+                              const startDate = new Date(app.eventStartDate);
+                              const endDate = app.eventEndDate ? new Date(app.eventEndDate) : null;
+                              if (!endDate || app.eventStartDate === app.eventEndDate) {
+                                return startDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
+                              } else {
+                                return `${startDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' })} - ${endDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                              }
+                            })()}
+                          </td>
+                          <td>
+                            <span
+                              className="status-badge-table"
+                              style={{
+                                backgroundColor: app.status === 'Approved' ? '#28a745' :
+                                                app.status === 'Rejected' ? '#dc3545' :
+                                                app.status === 'More Info Required' ? '#ffc107' : '#007bff',
+                                color: app.status === 'More Info Required' ? '#333' : 'white'
+                              }}
+                            >
+                              {app.status}
+                            </span>
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center' }}>
+                              <select
+                                value={app.status}
+                                onChange={(e) => {
+                                  const newStatus = e.target.value;
+                                  if (newStatus === 'Rejected') {
+                                    const reason = prompt('Please enter the rejection reason:');
+                                    if (reason) {
+                                      handleEventApplicationStatusChange(app.applicationId, newStatus, reason);
+                                    }
+                                  } else if (newStatus === 'More Info Required') {
+                                    const info = prompt('Please specify what information is required:');
+                                    if (info) {
+                                      handleEventApplicationStatusChange(app.applicationId, newStatus, null, info);
+                                    }
+                                  } else {
+                                    handleEventApplicationStatusChange(app.applicationId, newStatus);
+                                  }
+                                }}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '4px',
+                                  border: '1px solid #ddd',
+                                  fontSize: '13px'
+                                }}
+                              >
+                                <option value="Pending Review">Pending Review</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Rejected">Rejected</option>
+                                <option value="More Info Required">More Info Required</option>
+                              </select>
+                              <button
+                                onClick={() => {
+                                  setSelectedEventApplication(app);
+                                  setShowEventModal(true);
+                                }}
+                                className="edit-btn-table"
+                              >
+                                View
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Event Application Detail Modal */}
+            {showEventModal && selectedEventApplication && (
+              <div className="modal-overlay" onClick={() => setShowEventModal(false)}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px', maxHeight: '85vh', overflow: 'auto' }}>
+                  <div style={{
+                    backgroundColor: '#2c3e50',
+                    color: 'white',
+                    padding: '20px',
+                    marginBottom: '20px',
+                    borderRadius: '8px 8px 0 0',
+                    margin: '-20px -20px 20px -20px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h3 style={{ margin: 0 }}>Event Application Details</h3>
+                      <span
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          backgroundColor: selectedEventApplication.status === 'Approved' ? '#28a745' :
+                                          selectedEventApplication.status === 'Rejected' ? '#dc3545' :
+                                          selectedEventApplication.status === 'More Info Required' ? '#ffc107' : '#007bff',
+                          color: selectedEventApplication.status === 'More Info Required' ? '#333' : 'white'
+                        }}
+                      >
+                        {selectedEventApplication.status}
+                      </span>
+                    </div>
+                    <p style={{ margin: '8px 0 0 0', opacity: 0.8, fontSize: '14px' }}>
+                      Application ID: {selectedEventApplication.applicationId}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: '20px' }}>
+                    {/* Event Information */}
+                    <div style={{ backgroundColor: '#f8f9fa', padding: '16px', borderRadius: '8px' }}>
+                      <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50', borderBottom: '2px solid #2c3e50', paddingBottom: '8px' }}>Event Information</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <strong style={{ color: '#666', fontSize: '12px' }}>Event Title</strong>
+                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.eventTitle}</p>
+                        </div>
+                        <div>
+                          <strong style={{ color: '#666', fontSize: '12px' }}>Event Type</strong>
+                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.eventType}{selectedEventApplication.eventTypeSpecify ? ` - ${selectedEventApplication.eventTypeSpecify}` : ''}</p>
+                        </div>
+                        <div>
+                          <strong style={{ color: '#666', fontSize: '12px' }}>Event Date</strong>
+                          <p style={{ margin: '4px 0 0 0' }}>
+                            {new Date(selectedEventApplication.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+                            {selectedEventApplication.eventEndDate && selectedEventApplication.eventStartDate !== selectedEventApplication.eventEndDate &&
+                              ` - ${new Date(selectedEventApplication.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`
+                            }
+                          </p>
+                        </div>
+                        <div>
+                          <strong style={{ color: '#666', fontSize: '12px' }}>Participant Type</strong>
+                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.participantType}</p>
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <strong style={{ color: '#666', fontSize: '12px' }}>Venue</strong>
+                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.venue}, {selectedEventApplication.city}, {selectedEventApplication.state}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Organiser Information */}
+                    <div style={{ backgroundColor: '#f8f9fa', padding: '16px', borderRadius: '8px' }}>
+                      <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50', borderBottom: '2px solid #2c3e50', paddingBottom: '8px' }}>Organiser Information</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div>
+                          <strong style={{ color: '#666', fontSize: '12px' }}>Organiser Name</strong>
+                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.organiserName}</p>
+                        </div>
+                        <div>
+                          <strong style={{ color: '#666', fontSize: '12px' }}>Registration No.</strong>
+                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.registrationNo}</p>
+                        </div>
+                        <div>
+                          <strong style={{ color: '#666', fontSize: '12px' }}>Person in Charge</strong>
+                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.personInCharge}</p>
+                        </div>
+                        <div>
+                          <strong style={{ color: '#666', fontSize: '12px' }}>Contact</strong>
+                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.telContact}</p>
+                        </div>
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <strong style={{ color: '#666', fontSize: '12px' }}>Email</strong>
+                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.email}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Other Organizer (if any) */}
+                    {selectedEventApplication.otherOrganizer?.name && (
+                      <div style={{ backgroundColor: '#fff3cd', padding: '16px', borderRadius: '8px' }}>
+                        <h4 style={{ margin: '0 0 12px 0', color: '#856404', borderBottom: '2px solid #856404', paddingBottom: '8px' }}>Co-Organizer Information</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div>
+                            <strong style={{ color: '#666', fontSize: '12px' }}>Name</strong>
+                            <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.otherOrganizer.name}</p>
+                          </div>
+                          <div>
+                            <strong style={{ color: '#666', fontSize: '12px' }}>PIC Name</strong>
+                            <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.otherOrganizer.picName}</p>
+                          </div>
+                          <div>
+                            <strong style={{ color: '#666', fontSize: '12px' }}>Phone</strong>
+                            <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.otherOrganizer.phone}</p>
+                          </div>
+                          <div>
+                            <strong style={{ color: '#666', fontSize: '12px' }}>Email</strong>
+                            <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.otherOrganizer.email}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Submission Info */}
+                    <div style={{ backgroundColor: '#e9ecef', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', color: '#666' }}>
+                      <strong>Submitted:</strong> {new Date(selectedEventApplication.submissionDate).toLocaleString('en-GB', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => setShowEventModal(false)}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#6c757d',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Close
+                    </button>
+                    {selectedEventApplication.status === 'Pending Review' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            handleEventApplicationStatusChange(selectedEventApplication.applicationId, 'Approved');
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#28a745',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => {
+                            const reason = prompt('Please enter the rejection reason:');
+                            if (reason) {
+                              handleEventApplicationStatusChange(selectedEventApplication.applicationId, 'Rejected', reason);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         {currentView === 'create-tournament' && (
           <div className="create-tournament-view">
             <div className="dashboard-header">

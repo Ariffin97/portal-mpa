@@ -429,6 +429,49 @@ class ApiService {
   getTournamentSoftwareFileDownloadUrl(fileId) {
     return `${this.baseURL}/tournament-software-files/${fileId}/download`;
   }
+
+  // Event Application APIs (for non-tournament events like referee clinics, coaching)
+  async submitEventApplication(applicationData) {
+    return this.makeRequest('/event-applications', {
+      method: 'POST',
+      body: JSON.stringify(applicationData),
+    });
+  }
+
+  async getEventApplicationsByOrganization(email) {
+    return this.makeRequest(`/event-applications/organization/${encodeURIComponent(email)}`);
+  }
+
+  async getAllEventApplications() {
+    return this.makeRequest('/event-applications');
+  }
+
+  async getEventApplicationById(applicationId) {
+    return this.makeRequest(`/event-applications/${applicationId}`);
+  }
+
+  async updateEventApplicationStatus(applicationId, status, remarks = null, requiredInfo = null) {
+    const body = { status };
+    if (remarks) body.remarks = remarks;
+    if (requiredInfo) body.requiredInfo = requiredInfo;
+    return this.makeRequest(`/event-applications/${applicationId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async cancelEventApplication(applicationId, cancellationReason) {
+    return this.makeRequest(`/event-applications/${applicationId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ cancellationReason }),
+    });
+  }
+
+  async deleteEventApplication(applicationId) {
+    return this.makeRequest(`/event-applications/${applicationId}`, {
+      method: 'DELETE',
+    });
+  }
 }
 
 const apiService = new ApiService();

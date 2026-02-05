@@ -26,7 +26,7 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(styleElement);
 }
 
-const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
+const OrganiserInbox = ({ organizationData, isOpen, onClose, embedded = false }) => {
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -146,6 +146,284 @@ const OrganiserInbox = ({ organizationData, isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  // Embedded mode - render without modal overlay
+  if (embedded) {
+    return (
+      <div className="inbox-embedded">
+        {/* Messages Table */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          border: '1px solid #e1e5e9',
+          overflow: 'hidden'
+        }}>
+          {/* Table Header */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 120px 100px',
+            gap: '16px',
+            padding: '12px 20px',
+            backgroundColor: '#2c3e50',
+            color: 'white',
+            fontSize: '13px',
+            fontWeight: '600'
+          }}>
+            <div>Message</div>
+            <div style={{ textAlign: 'center' }}>Date</div>
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={handleRefresh}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: 'white',
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          {/* Messages List */}
+          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                Loading messages...
+              </div>
+            ) : error ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#e74c3c' }}>
+                {error}
+              </div>
+            ) : messages.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999' }}>
+                <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.5 }}>📭</div>
+                <p style={{ margin: 0, fontSize: '14px' }}>No messages yet</p>
+              </div>
+            ) : (
+              messages.map((message, index) => (
+                <div
+                  key={message.messageId}
+                  onClick={() => handleMessageClick(message)}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 120px 100px',
+                    gap: '16px',
+                    padding: '14px 20px',
+                    borderBottom: index < messages.length - 1 ? '1px solid #eee' : 'none',
+                    backgroundColor: message.isRead ? 'white' : '#f8fbff',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.15s ease',
+                    alignItems: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f5f7fa';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = message.isRead ? 'white' : '#f8fbff';
+                  }}
+                >
+                  {/* Subject & Preview */}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      {!message.isRead && (
+                        <span style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: '#3498db',
+                          flexShrink: 0
+                        }}></span>
+                      )}
+                      <span style={{
+                        fontWeight: message.isRead ? '500' : '600',
+                        fontSize: '14px',
+                        color: '#2c3e50',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {message.subject}
+                      </span>
+                    </div>
+                    <p style={{
+                      margin: 0,
+                      fontSize: '12px',
+                      color: '#888',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {message.content}
+                    </p>
+                  </div>
+
+                  {/* Date */}
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#888',
+                    textAlign: 'center'
+                  }}>
+                    {formatDate(message.createdAt)}
+                  </div>
+
+                  {/* Status/Action */}
+                  <div style={{ textAlign: 'center' }}>
+                    {!message.isRead ? (
+                      <span style={{
+                        display: 'inline-block',
+                        backgroundColor: '#e8f4fd',
+                        color: '#3498db',
+                        fontSize: '11px',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        fontWeight: '600'
+                      }}>
+                        New
+                      </span>
+                    ) : (
+                      <span style={{
+                        display: 'inline-block',
+                        backgroundColor: '#f0f0f0',
+                        color: '#888',
+                        fontSize: '11px',
+                        padding: '3px 10px',
+                        borderRadius: '12px'
+                      }}>
+                        Read
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Footer with count */}
+          {messages.length > 0 && (
+            <div style={{
+              padding: '10px 20px',
+              backgroundColor: '#f8f9fa',
+              borderTop: '1px solid #eee',
+              fontSize: '12px',
+              color: '#666'
+            }}>
+              {messages.length} message{messages.length !== 1 ? 's' : ''}
+              {unreadCount > 0 && ` • ${unreadCount} unread`}
+            </div>
+          )}
+        </div>
+
+        {/* Message Detail Modal */}
+        {showMessageModal && selectedMessage && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+            padding: '20px'
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '8px',
+              width: '100%',
+              maxWidth: '600px',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+            }}>
+              <div style={{
+                backgroundColor: '#2c3e50',
+                color: 'white',
+                padding: '16px 20px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{selectedMessage.subject}</h4>
+                <button
+                  onClick={closeMessageModal}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontSize: '22px',
+                    padding: '0',
+                    lineHeight: 1
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+              <div style={{ padding: '20px' }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '16px',
+                  paddingBottom: '12px',
+                  borderBottom: '1px solid #eee'
+                }}>
+                  <span style={{ fontSize: '13px', color: '#666' }}>
+                    From: <strong>MPA Admin</strong>
+                  </span>
+                  <span style={{ fontSize: '12px', color: '#999' }}>
+                    {new Date(selectedMessage.createdAt).toLocaleString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+                <div style={{
+                  fontSize: '14px',
+                  lineHeight: '1.7',
+                  color: '#333',
+                  whiteSpace: 'pre-wrap'
+                }}>
+                  {selectedMessage.content}
+                </div>
+              </div>
+              <div style={{
+                padding: '12px 20px',
+                backgroundColor: '#f8f9fa',
+                borderTop: '1px solid #eee',
+                textAlign: 'right'
+              }}>
+                <button
+                  onClick={closeMessageModal}
+                  style={{
+                    backgroundColor: '#2c3e50',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 20px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '13px'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Modal mode
   return (
     <div style={{
       position: 'fixed',

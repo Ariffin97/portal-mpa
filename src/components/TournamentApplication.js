@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import mpaLogo from '../assets/images/mpa.png';
 import apiService from '../services/api';
-import OrganiserInbox, { InboxButton } from './OrganiserInbox';
+import OrganiserInbox from './OrganiserInbox';
 
 const TournamentApplication = ({ setCurrentPage }) => {
   const [organizationData, setOrganizationData] = useState(null);
@@ -137,6 +137,39 @@ const TournamentApplication = ({ setCurrentPage }) => {
   const [approvedTournaments, setApprovedTournaments] = useState([]);
   const [isLoadingApprovedTournaments, setIsLoadingApprovedTournaments] = useState(false);
 
+  // Dashboard Navigation State
+  const [activeSection, setActiveSection] = useState('apply-tournament'); // 'apply-tournament', 'apply-event', 'my-tournaments', 'my-events', 'inbox', 'calendar', 'profile'
+  const [appliedEvents, setAppliedEvents] = useState([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(true);
+  const [isSubmittingEvent, setIsSubmittingEvent] = useState(false);
+  const [eventSubmitError, setEventSubmitError] = useState('');
+  const [eventSubmitted, setEventSubmitted] = useState(false);
+  const [submittedEventApplication, setSubmittedEventApplication] = useState(null);
+  const [eventFormData, setEventFormData] = useState({
+    organiserName: '',
+    registrationNo: '',
+    telContact: '',
+    personInCharge: '',
+    email: '',
+    eventTitle: '',
+    eventType: '',
+    eventTypeSpecify: '',
+    eventStartDate: '',
+    eventEndDate: '',
+    eventStartDateFormatted: '',
+    eventEndDateFormatted: '',
+    participantType: '',
+    state: '',
+    city: '',
+    venue: '',
+    // Other Organizer Info (Optional)
+    otherOrganizerName: '',
+    otherOrganizerPic: '',
+    otherOrganizerPhone: '',
+    otherOrganizerEmail: '',
+    otherOrganizerAddress: ''
+  });
+
   // Section completion checks
   const isOrganiserInfoComplete = () => {
     return formData.organiserName.trim() !== '' &&
@@ -202,8 +235,19 @@ const TournamentApplication = ({ setCurrentPage }) => {
         email: orgData.email
       }));
 
-      // Load applied tournaments for this organization
+      // Also initialize event form data with organization info
+      setEventFormData(prev => ({
+        ...prev,
+        organiserName: orgData.organizationName,
+        registrationNo: orgData.registrationNo,
+        personInCharge: orgData.applicantFullName,
+        telContact: orgData.phoneNumber,
+        email: orgData.email
+      }));
+
+      // Load applied tournaments and events for this organization
       loadAppliedTournaments(orgData.email);
+      loadAppliedEvents(orgData.email);
 
       // Load unread message count
       loadUnreadCount(orgData.email);
@@ -212,6 +256,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
       const refreshInterval = setInterval(() => {
         console.log('Auto-refreshing organization tournaments to sync with admin changes...');
         loadAppliedTournaments(orgData.email);
+        loadAppliedEvents(orgData.email);
         loadUnreadCount(orgData.email);
       }, 30000); // Refresh every 30 seconds
 
@@ -345,6 +390,21 @@ const TournamentApplication = ({ setCurrentPage }) => {
     }
   };
 
+  const loadAppliedEvents = async (email) => {
+    try {
+      setIsLoadingEvents(true);
+      console.log('Loading applied events for email:', email);
+      const events = await apiService.getEventApplicationsByOrganization(email);
+      console.log('Loaded events:', events);
+      setAppliedEvents(events);
+    } catch (error) {
+      console.error('Failed to load applied events:', error);
+      setAppliedEvents([]);
+    } finally {
+      setIsLoadingEvents(false);
+    }
+  };
+
   // Date formatting functions
   const formatDateForDisplay = (dateStr) => {
     if (!dateStr) return '';
@@ -418,6 +478,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
     }
 
     setEditFormData({
+      status: tournament.status || '',
       organiserName: tournament.organiserName || '',
       registrationNo: tournament.registrationNo || '',
       telContact: tournament.telContact || '',
@@ -441,6 +502,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
       tournamentSoftwareOther: tournament.tournamentSoftwareOther || '',
       eventSummary: tournament.eventSummary || '',
       scoringFormat: tournament.scoringFormat || 'traditional',
+      hospitalName: tournament.hospitalName || '',
+      hospitalDistance: tournament.hospitalDistance || '',
+      numberOfMedics: tournament.numberOfMedics || '',
+      emergencyTransportType: tournament.emergencyTransportType || '',
+      emergencyTransportQuantity: tournament.emergencyTransportQuantity || '',
+      standbyVehicleType: tournament.standbyVehicleType || '',
       dataConsent: true,
       termsConsent: true
     });
@@ -720,6 +787,110 @@ const TournamentApplication = ({ setCurrentPage }) => {
         eventEndDateFormatted: formattedValue
       }));
     }
+  };
+
+  // Event Application Form Handlers
+  const handleEventInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setEventFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleEventStateChange = (e) => {
+    const selectedState = e.target.value;
+    setEventFormData(prev => ({
+      ...prev,
+      state: selectedState,
+      city: '' // Reset city when state changes
+    }));
+  };
+
+  const handleEventDateChange = (e) => {
+    const { name, value } = e.target;
+    const formattedValue = value ? formatDateForDisplay(value) : '';
+
+    if (name === 'eventStartDate') {
+      setEventFormData(prev => ({
+        ...prev,
+        eventStartDate: value,
+        eventStartDateFormatted: formattedValue
+      }));
+    } else if (name === 'eventEndDate') {
+      setEventFormData(prev => ({
+        ...prev,
+        eventEndDate: value,
+        eventEndDateFormatted: formattedValue
+      }));
+    }
+  };
+
+  const handleEventFormSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmittingEvent(true);
+    setEventSubmitError('');
+
+    try {
+      const response = await apiService.submitEventApplication(eventFormData);
+      if (response.success) {
+        setEventSubmitted(true);
+        setSubmittedEventApplication(response.application);
+        // Reload events list
+        if (organizationData?.email) {
+          loadAppliedEvents(organizationData.email);
+        }
+      }
+    } catch (error) {
+      console.error('Error submitting event application:', error);
+      setEventSubmitError(error.message || 'Failed to submit event application');
+    } finally {
+      setIsSubmittingEvent(false);
+    }
+  };
+
+  const resetEventForm = () => {
+    setEventFormData({
+      organiserName: organizationData?.organizationName || '',
+      registrationNo: organizationData?.registrationNo || '',
+      telContact: organizationData?.phoneNumber || '',
+      personInCharge: organizationData?.applicantFullName || '',
+      email: organizationData?.email || '',
+      eventTitle: '',
+      eventType: '',
+      eventTypeSpecify: '',
+      eventStartDate: '',
+      eventEndDate: '',
+      eventStartDateFormatted: '',
+      eventEndDateFormatted: '',
+      participantType: '',
+      state: '',
+      city: '',
+      venue: '',
+      otherOrganizerName: '',
+      otherOrganizerPic: '',
+      otherOrganizerPhone: '',
+      otherOrganizerEmail: '',
+      otherOrganizerAddress: ''
+    });
+    setEventSubmitted(false);
+    setSubmittedEventApplication(null);
+    setEventSubmitError('');
+  };
+
+  const isEventFormComplete = () => {
+    return eventFormData.organiserName.trim() !== '' &&
+           eventFormData.registrationNo.trim() !== '' &&
+           eventFormData.telContact.trim() !== '' &&
+           eventFormData.email.trim() !== '' &&
+           eventFormData.eventTitle.trim() !== '' &&
+           eventFormData.eventType !== '' &&
+           eventFormData.eventStartDate !== '' &&
+           eventFormData.eventEndDate !== '' &&
+           eventFormData.participantType !== '' &&
+           eventFormData.state !== '' &&
+           eventFormData.city !== '' &&
+           eventFormData.venue.trim() !== '';
   };
 
   // Handle saving category
@@ -1466,32 +1637,32 @@ const TournamentApplication = ({ setCurrentPage }) => {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
+  // Helper function to format date to YYYY-MM-DD without timezone issues
+  const formatDateToLocal = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Helper function to parse date string and handle timezone properly
+  const parseDateString = (dateStr) => {
+    if (!dateStr) return null;
+
+    // If it's already in YYYY-MM-DD format, create date at local midnight
+    if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [year, month, day] = dateStr.split('-');
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+
+    // Otherwise parse normally and extract date part
+    const parsedDate = new Date(dateStr);
+    if (isNaN(parsedDate.getTime())) return null;
+
+    return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+  };
+
   const getTournamentsForDate = (date) => {
-    // Helper function to format date to YYYY-MM-DD without timezone issues
-    const formatDateToLocal = (d) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    // Helper function to parse date string and handle timezone properly
-    const parseDateString = (dateStr) => {
-      if (!dateStr) return null;
-
-      // If it's already in YYYY-MM-DD format, create date at local midnight
-      if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        const [year, month, day] = dateStr.split('-');
-        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      }
-
-      // Otherwise parse normally and extract date part
-      const parsedDate = new Date(dateStr);
-      if (isNaN(parsedDate.getTime())) return null;
-
-      return new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
-    };
-
     const dateStr = formatDateToLocal(date);
 
     return appliedTournaments.filter(app => {
@@ -1507,6 +1678,35 @@ const TournamentApplication = ({ setCurrentPage }) => {
     });
   };
 
+  // Get all approved tournaments for a specific date (including other organizers)
+  const getAllTournamentsForDate = (date) => {
+    const dateStr = formatDateToLocal(date);
+
+    return approvedTournaments.filter(tournament => {
+      const startDateObj = parseDateString(tournament.eventStartDate);
+      const endDateObj = parseDateString(tournament.eventEndDate);
+
+      if (!startDateObj || !endDateObj) return false;
+
+      const startDateStr = formatDateToLocal(startDateObj);
+      const endDateStr = formatDateToLocal(endDateObj);
+
+      return dateStr >= startDateStr && dateStr <= endDateStr;
+    });
+  };
+
+  // Get combined count of tournaments for a date (own + approved)
+  const getTournamentCountForDate = (date) => {
+    const ownTournaments = getTournamentsForDate(date);
+    const allApproved = getAllTournamentsForDate(date);
+    // Combine and deduplicate
+    const allIds = new Set([
+      ...ownTournaments.map(t => t.applicationId),
+      ...allApproved.map(t => t.applicationId)
+    ]);
+    return allIds.size;
+  };
+
   const handleDateClick = (day) => {
     const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     setCalendarSelectedDate(clickedDate);
@@ -1520,298 +1720,138 @@ const TournamentApplication = ({ setCurrentPage }) => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   };
 
+  // Navigation items for sidebar
+  const navItems = [
+    { id: 'apply-tournament', label: 'Apply Tournament', icon: '🏆' },
+    { id: 'apply-event', label: 'Apply Event', icon: '📋' },
+    { id: 'my-tournaments', label: 'My Tournaments', icon: '📁' },
+    { id: 'my-events', label: 'My Events', icon: '📄' },
+    { id: 'inbox', label: 'Inbox', icon: '📬', badge: unreadCount },
+    { id: 'calendar', label: 'Calendar', icon: '📅' },
+    { id: 'profile', label: 'Profile', icon: '👤' },
+  ];
+
   return (
     <div className="tournament-application-container">
       {/* Sidebar */}
-      <div className="tournament-sidebar">
-        {/* Profile Section */}
-        <div className="sidebar-section profile-section">
+      <div className="tournament-sidebar" style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        position: 'sticky',
+        top: 0
+      }}>
+        {/* Profile Header */}
+        <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           <div className="profile-header">
             <div className="profile-avatar">
               {organizationData?.organizationName?.charAt(0) || 'O'}
             </div>
             <div className="profile-info">
-              <h3>{organizationData?.organizationName || 'Organization'}</h3>
-              <p className="profile-id">{organizationData?.organizationId || 'N/A'}</p>
-              <p className="profile-email">{organizationData?.email || 'N/A'}</p>
+              <h3 style={{ margin: '0 0 4px 0', fontSize: '16px' }}>{organizationData?.organizationName || 'Organization'}</h3>
+              <p className="profile-id" style={{ margin: '0 0 2px 0', fontSize: '12px', opacity: 0.8 }}>{organizationData?.organizationId || 'N/A'}</p>
+              <p className="profile-email" style={{ margin: 0, fontSize: '11px', opacity: 0.7 }}>{organizationData?.email || 'N/A'}</p>
             </div>
           </div>
+        </div>
+
+        {/* Navigation Menu */}
+        <nav style={{ flex: 1, padding: '10px 0', overflowY: 'auto' }}>
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveSection(item.id);
+                if (item.id === 'apply-event') {
+                  resetEventForm();
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 20px',
+                backgroundColor: activeSection === item.id ? 'rgba(255,255,255,0.15)' : 'transparent',
+                color: 'white',
+                border: 'none',
+                borderLeft: activeSection === item.id ? '3px solid #fff' : '3px solid transparent',
+                cursor: 'pointer',
+                fontSize: '14px',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                transition: 'all 0.2s',
+                position: 'relative'
+              }}
+              onMouseEnter={(e) => {
+                if (activeSection !== item.id) {
+                  e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeSection !== item.id) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <span>{item.label}</span>
+              {item.badge > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  right: '15px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  padding: '2px 6px',
+                  borderRadius: '10px',
+                  minWidth: '18px',
+                  textAlign: 'center'
+                }}>
+                  {item.badge > 9 ? '9+' : item.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+
+        {/* Logout Button */}
+        <div style={{ padding: '15px 20px', marginTop: 'auto', marginBottom: '20px' }}>
           <button
-            className="update-profile-btn"
-            onClick={() => setShowUpdateProfileModal(true)}
+            className="logout-btn"
+            onClick={handleLogout}
             style={{
               width: '100%',
               padding: '10px 15px',
-              backgroundColor: '#007bff',
+              backgroundColor: '#dc3545',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               cursor: 'pointer',
               fontSize: '14px',
-              marginBottom: '10px',
               transition: 'background-color 0.2s'
             }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#0056b3'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#007bff'}
           >
-            Update Profile
-          </button>
-
-          {/* Messages Button */}
-          <div style={{ marginBottom: '10px' }}>
-            <InboxButton
-              organizationData={organizationData}
-              unreadCount={unreadCount}
-              onClick={() => setShowInboxModal(true)}
-            />
-          </div>
-
-          {/* Calendar Button */}
-          <button
-            className="calendar-btn"
-            onClick={() => setShowCalendarModal(true)}
-            style={{
-              width: '100%',
-              padding: '10px 15px',
-              backgroundColor: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              marginBottom: '10px',
-              transition: 'background-color 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
-          >
-            Tournament Calendar
-          </button>
-
-          <button className="logout-btn" onClick={handleLogout}>
             Logout
           </button>
         </div>
-
-
-        {/* Applied Tournaments Section */}
-        <div className="sidebar-section tournaments-section">
-          <div style={{
-            marginBottom: '16px',
-            paddingBottom: '12px',
-            borderBottom: '2px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'white' }}>
-              Applied Tournaments
-            </h3>
-          </div>
-
-          {isLoadingTournaments ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 20px',
-              color: '#7f8c8d'
-            }}>
-              <div>Loading tournaments...</div>
-            </div>
-          ) : appliedTournaments.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px 20px',
-              backgroundColor: '#f8f9fa',
-              borderRadius: '8px',
-              border: '2px dashed #dee2e6'
-            }}>
-              <p style={{ margin: '0 0 8px 0', color: '#6c757d', fontWeight: '500' }}>
-                No tournaments applied yet
-              </p>
-              <p style={{ margin: 0, color: '#adb5bd', fontSize: '13px' }}>
-                Submit your first application below!
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {appliedTournaments.map((tournament, index) => (
-                <div
-                  key={tournament.applicationId || index}
-                  style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    color: 'white',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                    transition: 'all 0.3s ease',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-                  }}
-                >
-                  {/* Background decoration */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '-20px',
-                    right: '-20px',
-                    width: '80px',
-                    height: '80px',
-                    background: 'rgba(255,255,255,0.1)',
-                    borderRadius: '50%'
-                  }} />
-
-                  <div style={{ position: 'relative', zIndex: 1 }}>
-                    <div style={{
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      marginBottom: '8px',
-                      lineHeight: '1.3',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
-                    }}>
-                      {tournament.eventTitle || 'Untitled Tournament'}
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: '10px',
-                      fontSize: '12px'
-                    }}>
-                      <span style={{
-                        background: 'rgba(255,255,255,0.2)',
-                        padding: '3px 8px',
-                        borderRadius: '12px',
-                        fontWeight: '500'
-                      }}>
-                        {tournament.applicationId}
-                      </span>
-                      <span style={{
-                        background: getStatusColor(tournament.status),
-                        padding: '3px 10px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>
-                        {tournament.status}
-                      </span>
-                    </div>
-
-                    <div style={{
-                      fontSize: '11px',
-                      opacity: 0.9,
-                      marginBottom: '12px'
-                    }}>
-                      {tournament.submissionDate ?
-                        new Date(tournament.submissionDate).toLocaleDateString('en-MY', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        }) :
-                        'Date N/A'
-                      }
-                    </div>
-
-                    {tournament.status === 'Cancelled' ? (
-                      <div style={{
-                        width: '100%',
-                        backgroundColor: 'rgba(108, 117, 125, 0.2)',
-                        color: '#6c757d',
-                        padding: '8px 16px',
-                        borderRadius: '6px',
-                        fontSize: '13px',
-                        fontWeight: '600',
-                        textAlign: 'center'
-                      }}>
-                        Application Cancelled
-                      </div>
-                    ) : tournament.status === 'Approved' ? (
-                      <button
-                        onClick={() => openCancelModal(tournament)}
-                        style={{
-                          width: '100%',
-                          backgroundColor: 'rgba(220, 53, 69, 0.9)',
-                          color: 'white',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(200, 35, 51, 1)';
-                          e.currentTarget.style.transform = 'scale(1.02)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(220, 53, 69, 0.9)';
-                          e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                      >
-                        Cancel Application
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => startEditTournament(tournament)}
-                        style={{
-                          width: '100%',
-                          backgroundColor: 'rgba(255,255,255,0.95)',
-                          color: '#667eea',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '6px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'white';
-                          e.currentTarget.style.transform = 'scale(1.02)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.95)';
-                          e.currentTarget.style.transform = 'scale(1)';
-                        }}
-                      >
-                        Edit Application
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
       </div>
+
 
       {/* Main Content */}
       <div className="tournament-main-content">
-        <div className="form-header">
-          <img src={mpaLogo} alt="Malaysia Pickleball Association" className="form-logo" />
-          <div className="form-header-text">
-            <h2>Tournament Application Form</h2>
-            <p className="form-subtitle">Apply to organize a pickleball tournament</p>
-          </div>
-        </div>
-      
-      <form onSubmit={handleSubmit}>
+
+        {/* Apply Tournament Section */}
+        {activeSection === 'apply-tournament' && (
+          <>
+            <div className="form-header">
+              <img src={mpaLogo} alt="Malaysia Pickleball Association" className="form-logo" />
+              <div className="form-header-text">
+                <h2>Tournament Application Form</h2>
+                <p className="form-subtitle">Apply to organize a pickleball tournament</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit}>
         <div className="form-section">
           <h3 className="section-header-with-tick">
             Organiser Information
@@ -2799,6 +2839,1064 @@ const TournamentApplication = ({ setCurrentPage }) => {
           </div>
         )}
       </form>
+          </>
+        )}
+
+        {/* Apply Event Section */}
+        {activeSection === 'apply-event' && (
+          <>
+            <div className="form-header">
+              <img src={mpaLogo} alt="Malaysia Pickleball Association" className="form-logo" />
+              <div className="form-header-text">
+                <h2>Event Application Form</h2>
+                <p className="form-subtitle">Apply to organize an event (Referee Clinic, Coaching Course, etc.)</p>
+              </div>
+            </div>
+
+            {eventSubmitted ? (
+              <div className="submission-success">
+                <div className="success-message">
+                  <h3>Event Application Submitted Successfully!</h3>
+                  <p>Your event application has been submitted and is now under review.</p>
+                  <p><strong>Application ID:</strong> {submittedEventApplication?.applicationId}</p>
+                  <p>A confirmation email has been sent to your registered email address.</p>
+                </div>
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="home-btn"
+                    onClick={() => {
+                      resetEventForm();
+                      setActiveSection('apply-tournament');
+                    }}
+                  >
+                    Back to Tournament Form
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleEventFormSubmit}>
+                {eventSubmitError && (
+                  <div style={{
+                    backgroundColor: '#f8d7da',
+                    color: '#721c24',
+                    padding: '12px 15px',
+                    borderRadius: '6px',
+                    marginBottom: '20px'
+                  }}>
+                    {eventSubmitError}
+                  </div>
+                )}
+
+                {/* Section 1: Organiser Information */}
+                <div className="form-section">
+                  <h3>Organiser Information</h3>
+                  <div className="form-group">
+                    <label htmlFor="event-organiserName">Organiser Name *</label>
+                    <input
+                      type="text"
+                      id="event-organiserName"
+                      name="organiserName"
+                      value={eventFormData.organiserName}
+                      onChange={handleEventInputChange}
+                      required
+                    />
+                    <small className="form-note">Pre-filled from organization registration (you can modify if needed)</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-registrationNo">PJS/ROS/Company Registration No. *</label>
+                    <input
+                      type="text"
+                      id="event-registrationNo"
+                      name="registrationNo"
+                      value={eventFormData.registrationNo}
+                      onChange={handleEventInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-telContact">Tel. Contact *</label>
+                    <input
+                      type="tel"
+                      id="event-telContact"
+                      name="telContact"
+                      value={eventFormData.telContact}
+                      onChange={handleEventInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-personInCharge">Person in Charge</label>
+                    <input
+                      type="text"
+                      id="event-personInCharge"
+                      name="personInCharge"
+                      value={eventFormData.personInCharge}
+                      onChange={handleEventInputChange}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-email">Email Address *</label>
+                    <input
+                      type="email"
+                      id="event-email"
+                      name="email"
+                      value={eventFormData.email}
+                      readOnly
+                      style={{ backgroundColor: '#e9ecef' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Section 2: Event Details */}
+                <div className="form-section">
+                  <h3>Event Details</h3>
+
+                  <div className="form-group">
+                    <label htmlFor="event-eventTitle">Event Title *</label>
+                    <input
+                      type="text"
+                      id="event-eventTitle"
+                      name="eventTitle"
+                      value={eventFormData.eventTitle}
+                      onChange={handleEventInputChange}
+                      required
+                      placeholder="Enter event title"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-eventType">Event Type *</label>
+                    <select
+                      id="event-eventType"
+                      name="eventType"
+                      value={eventFormData.eventType}
+                      onChange={handleEventInputChange}
+                      required
+                    >
+                      <option value="">Select Event Type</option>
+                      <option value="Referee">Referee Clinic/Course</option>
+                      <option value="Coaching">Coaching Clinic/Course</option>
+                      <option value="Other">Other (Please Specify)</option>
+                    </select>
+                  </div>
+
+                  {eventFormData.eventType === 'Other' && (
+                    <div className="form-group">
+                      <label htmlFor="event-eventTypeSpecify">Please Specify Event Type *</label>
+                      <input
+                        type="text"
+                        id="event-eventTypeSpecify"
+                        name="eventTypeSpecify"
+                        value={eventFormData.eventTypeSpecify}
+                        onChange={handleEventInputChange}
+                        required={eventFormData.eventType === 'Other'}
+                        placeholder="Enter event type"
+                      />
+                    </div>
+                  )}
+
+                  <div className="form-row">
+                    <div className="form-group half">
+                      <label htmlFor="event-eventStartDate">Event Start Date *</label>
+                      <input
+                        type="date"
+                        id="event-eventStartDate"
+                        name="eventStartDate"
+                        value={eventFormData.eventStartDate}
+                        onChange={handleEventDateChange}
+                        required
+                      />
+                    </div>
+                    <div className="form-group half">
+                      <label htmlFor="event-eventEndDate">Event End Date *</label>
+                      <input
+                        type="date"
+                        id="event-eventEndDate"
+                        name="eventEndDate"
+                        value={eventFormData.eventEndDate}
+                        onChange={handleEventDateChange}
+                        min={eventFormData.eventStartDate}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Participant Type *</label>
+                    <div className="radio-group" style={{ display: 'flex', gap: '20px', marginTop: '8px', flexWrap: 'nowrap' }}>
+                      {['Malaysia', 'Non-Malaysia', 'Both'].map(type => (
+                        <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          <input
+                            type="radio"
+                            name="participantType"
+                            value={type}
+                            checked={eventFormData.participantType === type}
+                            onChange={handleEventInputChange}
+                            required
+                          />
+                          <span>{type}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group half">
+                      <label htmlFor="event-state">State *</label>
+                      <select
+                        id="event-state"
+                        name="state"
+                        value={eventFormData.state}
+                        onChange={handleEventStateChange}
+                        required
+                      >
+                        <option value="">Select State</option>
+                        {Object.keys(malaysianStatesAndCities).map(state => (
+                          <option key={state} value={state}>{state}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group half">
+                      <label htmlFor="event-city">City *</label>
+                      <select
+                        id="event-city"
+                        name="city"
+                        value={eventFormData.city}
+                        onChange={handleEventInputChange}
+                        required
+                        disabled={!eventFormData.state}
+                      >
+                        <option value="">Select City</option>
+                        {eventFormData.state && malaysianStatesAndCities[eventFormData.state]?.map(city => (
+                          <option key={city} value={city}>{city}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-venue">Venue *</label>
+                    <input
+                      type="text"
+                      id="event-venue"
+                      name="venue"
+                      value={eventFormData.venue}
+                      onChange={handleEventInputChange}
+                      required
+                      placeholder="Enter venue name and address"
+                    />
+                  </div>
+                </div>
+
+                {/* Section 3: Other Involved Organizer (Optional) */}
+                <div className="form-section">
+                  <h3>Other Involved Organizer (Optional)</h3>
+                  <p style={{ color: '#6c757d', fontSize: '14px', marginBottom: '15px' }}>
+                    Fill in if there are other organizers involved in this event
+                  </p>
+
+                  <div className="form-group">
+                    <label htmlFor="event-otherOrganizerName">Organization Name</label>
+                    <input
+                      type="text"
+                      id="event-otherOrganizerName"
+                      name="otherOrganizerName"
+                      value={eventFormData.otherOrganizerName}
+                      onChange={handleEventInputChange}
+                      placeholder="Enter organization name"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-otherOrganizerPic">Person in Charge (P.I.C)</label>
+                    <input
+                      type="text"
+                      id="event-otherOrganizerPic"
+                      name="otherOrganizerPic"
+                      value={eventFormData.otherOrganizerPic}
+                      onChange={handleEventInputChange}
+                      placeholder="Enter P.I.C name"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-otherOrganizerPhone">Phone Number</label>
+                    <input
+                      type="tel"
+                      id="event-otherOrganizerPhone"
+                      name="otherOrganizerPhone"
+                      value={eventFormData.otherOrganizerPhone}
+                      onChange={handleEventInputChange}
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-otherOrganizerEmail">Email</label>
+                    <input
+                      type="email"
+                      id="event-otherOrganizerEmail"
+                      name="otherOrganizerEmail"
+                      value={eventFormData.otherOrganizerEmail}
+                      onChange={handleEventInputChange}
+                      placeholder="Enter email address"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="event-otherOrganizerAddress">Address</label>
+                    <textarea
+                      id="event-otherOrganizerAddress"
+                      name="otherOrganizerAddress"
+                      value={eventFormData.otherOrganizerAddress}
+                      onChange={handleEventInputChange}
+                      placeholder="Enter full address"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="form-actions">
+                  <button
+                    type="submit"
+                    className="submit-btn"
+                    disabled={!isEventFormComplete() || isSubmittingEvent}
+                  >
+                    {isSubmittingEvent ? 'Submitting Application...' : 'Submit Event Application'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </>
+        )}
+
+        {/* My Tournaments Section */}
+        {activeSection === 'my-tournaments' && (
+          <div className="content-section">
+            {/* Page Header */}
+            <div className="page-header">
+              <div className="page-header-content">
+                <h1>My Tournaments</h1>
+                <p>View and manage your tournament applications</p>
+              </div>
+              <button
+                onClick={() => setActiveSection('apply-tournament')}
+                className="primary-btn"
+              >
+                + New Application
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="content-body">
+              {isLoadingTournaments ? (
+                <div className="loading-state">
+                  <div className="spinner"></div>
+                  <p>Loading tournaments...</p>
+                </div>
+              ) : appliedTournaments.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📋</div>
+                  <h3>No tournaments yet</h3>
+                  <p>You haven't submitted any tournament applications</p>
+                  <button
+                    onClick={() => setActiveSection('apply-tournament')}
+                    className="primary-btn"
+                  >
+                    Apply for Tournament
+                  </button>
+                </div>
+              ) : (
+                <div className="table-container">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>No.</th>
+                        <th>Tournament Name</th>
+                        <th>Tournament ID</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...appliedTournaments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((tournament, index) => (
+                        <tr key={tournament.applicationId || index}>
+                          <td>{index + 1}</td>
+                          <td>{tournament.eventTitle || 'Untitled Tournament'}</td>
+                          <td><code>{tournament.applicationId}</code></td>
+                          <td>
+                            <span className={`status-badge status-${tournament.status?.toLowerCase().replace(/\s+/g, '-')}`}>
+                              {tournament.status}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              onClick={() => startEditTournament(tournament)}
+                              className="view-btn"
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* My Events Section */}
+        {activeSection === 'my-events' && (
+          <div className="content-section">
+            {/* Page Header */}
+            <div className="page-header">
+              <div className="page-header-content">
+                <h1>My Events</h1>
+                <p>View and manage your event applications</p>
+              </div>
+              <button
+                onClick={() => setActiveSection('apply-event')}
+                className="primary-btn"
+              >
+                + New Event
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="content-body">
+              {isLoadingEvents ? (
+                <div className="loading-state">
+                  <div className="spinner"></div>
+                  <p>Loading events...</p>
+                </div>
+              ) : appliedEvents.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">📅</div>
+                  <h3>No events yet</h3>
+                  <p>You haven't submitted any event applications</p>
+                  <button
+                    onClick={() => setActiveSection('apply-event')}
+                    className="primary-btn"
+                  >
+                    Apply for Event
+                  </button>
+                </div>
+              ) : (
+                <div className="cards-grid">
+                  {appliedEvents.map((event, index) => (
+                    <div key={event.applicationId || index} className="application-card">
+                      <div className="card-header">
+                        <div className="card-title-section">
+                          <h3>{event.eventTitle || (event.eventType === 'Other' ? event.eventTypeSpecify : `${event.eventType} Event`)}</h3>
+                          <span className="card-id">{event.applicationId}</span>
+                        </div>
+                        <span className={`status-badge status-${event.status?.toLowerCase().replace(/\s+/g, '-')}`}>
+                          {event.status}
+                        </span>
+                      </div>
+                      <div className="card-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Date</span>
+                          <span className="detail-value">
+                            {event.eventStartDate ? new Date(event.eventStartDate).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                          </span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Location</span>
+                          <span className="detail-value">{event.city}, {event.state}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Type</span>
+                          <span className="detail-value">{event.eventType}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Participants</span>
+                          <span className="detail-value">{event.participantType}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Inbox Section */}
+        {activeSection === 'inbox' && (
+          <div className="content-section">
+            {/* Page Header */}
+            <div className="page-header">
+              <div className="page-header-content">
+                <h1>Inbox</h1>
+                <p>Messages from MPA Admin</p>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="content-body">
+              <OrganiserInbox
+                organizationData={organizationData}
+                isOpen={true}
+                onClose={() => {}}
+                embedded={true}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Calendar Section */}
+        {activeSection === 'calendar' && (
+          <div className="content-section">
+            {/* Page Header */}
+            <div className="page-header">
+              <div className="page-header-content">
+                <h1>Calendar</h1>
+                <p>View all approved tournaments</p>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="content-body">
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 350px',
+                gap: '24px',
+                alignItems: 'start'
+              }}>
+                {/* Calendar Grid */}
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  border: '1px solid #e1e5e9',
+                  overflow: 'hidden'
+                }}>
+                  {/* Calendar Header */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '16px 20px',
+                    backgroundColor: '#2c3e50',
+                    color: 'white'
+                  }}>
+                    <button
+                      onClick={handlePrevMonth}
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        color: 'white',
+                        padding: '6px 14px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px'
+                      }}
+                    >
+                      ← Prev
+                    </button>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
+                      {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                    </h3>
+                    <button
+                      onClick={handleNextMonth}
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid rgba(255,255,255,0.3)',
+                        color: 'white',
+                        padding: '6px 14px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px'
+                      }}
+                    >
+                      Next →
+                    </button>
+                  </div>
+
+                  {/* Day Headers */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(7, 1fr)',
+                    backgroundColor: '#f8f9fa',
+                    borderBottom: '1px solid #e1e5e9'
+                  }}>
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                      <div key={day} style={{
+                        padding: '10px',
+                        textAlign: 'center',
+                        fontWeight: '600',
+                        fontSize: '12px',
+                        color: '#6c757d',
+                        textTransform: 'uppercase'
+                      }}>
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Calendar Days */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(7, 1fr)'
+                  }}>
+                    {Array.from({ length: getFirstDayOfMonth(currentMonth) }, (_, i) => (
+                      <div key={`empty-${i}`} style={{
+                        padding: '12px',
+                        minHeight: '70px',
+                        backgroundColor: '#fafafa',
+                        borderBottom: '1px solid #eee',
+                        borderRight: '1px solid #eee'
+                      }} />
+                    ))}
+                    {Array.from({ length: getDaysInMonth(currentMonth) }, (_, i) => {
+                      const day = i + 1;
+                      const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                      const ownTournaments = getTournamentsForDate(date);
+                      const allTournaments = getAllTournamentsForDate(date);
+                      const totalCount = getTournamentCountForDate(date);
+                      const isToday = new Date().toDateString() === date.toDateString();
+                      const isSelected = calendarSelectedDate && calendarSelectedDate.toDateString() === date.toDateString();
+
+                      return (
+                        <div
+                          key={day}
+                          onClick={() => setCalendarSelectedDate(date)}
+                          style={{
+                            padding: '8px',
+                            minHeight: '70px',
+                            backgroundColor: isSelected ? '#e3f2fd' : isToday ? '#fff8e1' : totalCount > 0 ? '#e8f5e9' : 'white',
+                            borderBottom: '1px solid #eee',
+                            borderRight: '1px solid #eee',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.15s ease',
+                            position: 'relative'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = '#f5f5f5';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.backgroundColor = isToday ? '#fff8e1' : totalCount > 0 ? '#e8f5e9' : 'white';
+                          }}
+                        >
+                          <span style={{
+                            fontSize: '14px',
+                            fontWeight: isToday ? '700' : '500',
+                            color: isToday ? '#f57c00' : '#333'
+                          }}>
+                            {day}
+                          </span>
+                          {totalCount > 0 && (
+                            <div style={{
+                              position: 'absolute',
+                              bottom: '6px',
+                              right: '6px',
+                              display: 'flex',
+                              gap: '3px'
+                            }}>
+                              {ownTournaments.length > 0 && (
+                                <span style={{
+                                  backgroundColor: '#2196f3',
+                                  color: 'white',
+                                  fontSize: '10px',
+                                  padding: '2px 6px',
+                                  borderRadius: '10px',
+                                  fontWeight: '600'
+                                }}>
+                                  {ownTournaments.length}
+                                </span>
+                              )}
+                              {allTournaments.length > ownTournaments.length && (
+                                <span style={{
+                                  backgroundColor: '#4caf50',
+                                  color: 'white',
+                                  fontSize: '10px',
+                                  padding: '2px 6px',
+                                  borderRadius: '10px',
+                                  fontWeight: '600'
+                                }}>
+                                  +{allTournaments.length - ownTournaments.length}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Legend */}
+                  <div style={{
+                    padding: '12px 20px',
+                    backgroundColor: '#f8f9fa',
+                    borderTop: '1px solid #e1e5e9',
+                    display: 'flex',
+                    gap: '20px',
+                    fontSize: '12px',
+                    color: '#666'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '12px', height: '12px', backgroundColor: '#2196f3', borderRadius: '50%' }}></span>
+                      Your Tournaments
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '12px', height: '12px', backgroundColor: '#4caf50', borderRadius: '50%' }}></span>
+                      Other Approved
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '12px', height: '12px', backgroundColor: '#fff8e1', border: '1px solid #f57c00', borderRadius: '2px' }}></span>
+                      Today
+                    </div>
+                  </div>
+                </div>
+
+                {/* Selected Date Panel */}
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  border: '1px solid #e1e5e9',
+                  overflow: 'hidden'
+                }}>
+                  {/* Panel Header */}
+                  <div style={{
+                    padding: '16px 20px',
+                    backgroundColor: '#2c3e50',
+                    color: 'white'
+                  }}>
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600' }}>
+                      {calendarSelectedDate ? calendarSelectedDate.toLocaleDateString('en-GB', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                      }) : 'Select a date'}
+                    </h4>
+                  </div>
+
+                  {/* Panel Content */}
+                  <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                    {calendarSelectedDate ? (
+                      <>
+                        {/* Your Tournaments */}
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid #eee' }}>
+                          <h5 style={{
+                            margin: '0 0 12px 0',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#2196f3',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            Your Tournaments
+                          </h5>
+                          {getTournamentsForDate(calendarSelectedDate).length === 0 ? (
+                            <p style={{ margin: 0, fontSize: '13px', color: '#999', fontStyle: 'italic' }}>
+                              No tournaments scheduled
+                            </p>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {getTournamentsForDate(calendarSelectedDate).map((tournament, idx) => (
+                                <div key={idx} style={{
+                                  padding: '10px 12px',
+                                  backgroundColor: '#e3f2fd',
+                                  borderRadius: '6px',
+                                  borderLeft: '3px solid #2196f3'
+                                }}>
+                                  <div style={{ fontWeight: '600', fontSize: '13px', color: '#1565c0', marginBottom: '4px' }}>
+                                    {tournament.eventTitle || 'Untitled'}
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: '#666' }}>
+                                    {tournament.venue}, {tournament.city}
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
+                                    <span style={{
+                                      display: 'inline-block',
+                                      padding: '1px 6px',
+                                      backgroundColor: tournament.status === 'Approved' ? '#c8e6c9' : '#fff3e0',
+                                      color: tournament.status === 'Approved' ? '#2e7d32' : '#e65100',
+                                      borderRadius: '3px',
+                                      fontSize: '10px'
+                                    }}>
+                                      {tournament.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Other Approved Tournaments */}
+                        <div style={{ padding: '16px 20px' }}>
+                          <h5 style={{
+                            margin: '0 0 12px 0',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#4caf50',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            Other Approved Tournaments
+                          </h5>
+                          {(() => {
+                            const ownIds = getTournamentsForDate(calendarSelectedDate).map(t => t.applicationId);
+                            const otherTournaments = getAllTournamentsForDate(calendarSelectedDate)
+                              .filter(t => !ownIds.includes(t.applicationId));
+
+                            return otherTournaments.length === 0 ? (
+                              <p style={{ margin: 0, fontSize: '13px', color: '#999', fontStyle: 'italic' }}>
+                                No other tournaments
+                              </p>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {otherTournaments.map((tournament, idx) => (
+                                  <div key={idx} style={{
+                                    padding: '10px 12px',
+                                    backgroundColor: '#e8f5e9',
+                                    borderRadius: '6px',
+                                    borderLeft: '3px solid #4caf50'
+                                  }}>
+                                    <div style={{ fontWeight: '600', fontSize: '13px', color: '#2e7d32', marginBottom: '4px' }}>
+                                      {tournament.eventTitle || 'Untitled'}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#666' }}>
+                                      {tournament.venue}, {tournament.city}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                                      {tournament.state} • {tournament.classification || 'Open'}
+                                    </div>
+                                    <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>
+                                      By: {tournament.organiserName || 'Unknown'}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ padding: '40px 20px', textAlign: 'center', color: '#999' }}>
+                        <div style={{ fontSize: '36px', marginBottom: '12px', opacity: 0.5 }}>📅</div>
+                        <p style={{ margin: 0, fontSize: '13px' }}>Click on a date to view tournaments</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Profile Section */}
+        {activeSection === 'profile' && (
+          <div className="content-section">
+            {/* Page Header */}
+            <div className="page-header" style={{ marginBottom: '16px' }}>
+              <div className="page-header-content">
+                <h1>Profile</h1>
+                <p>Manage your organization profile</p>
+              </div>
+              <button onClick={() => setShowUpdateProfileModal(true)} className="primary-btn">
+                Edit Profile
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="content-body" style={{ paddingTop: '0' }}>
+              {/* Organization Info Card */}
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '1px solid #e1e5e9',
+                overflow: 'hidden',
+                marginBottom: '20px'
+              }}>
+                {/* Header with Avatar */}
+                <div style={{
+                  backgroundColor: '#2c3e50',
+                  color: 'white',
+                  padding: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px'
+                }}>
+                  <div style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px',
+                    fontWeight: '600'
+                  }}>
+                    {organizationData?.organizationName?.charAt(0) || 'O'}
+                  </div>
+                  <div>
+                    <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', fontWeight: '600' }}>
+                      {organizationData?.organizationName || 'Organization'}
+                    </h2>
+                    <span style={{ fontSize: '13px', opacity: 0.8 }}>
+                      {organizationData?.organizationId || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Details Grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '1px',
+                  backgroundColor: '#e1e5e9'
+                }}>
+                  <div style={{ backgroundColor: 'white', padding: '16px 20px' }}>
+                    <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      Email Address
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#333', fontWeight: '500' }}>
+                      {organizationData?.email || 'N/A'}
+                    </div>
+                  </div>
+                  <div style={{ backgroundColor: 'white', padding: '16px 20px' }}>
+                    <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      Registration No.
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#333', fontWeight: '500' }}>
+                      {organizationData?.registrationNo || 'N/A'}
+                    </div>
+                  </div>
+                  <div style={{ backgroundColor: 'white', padding: '16px 20px' }}>
+                    <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      Contact Person
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#333', fontWeight: '500' }}>
+                      {organizationData?.applicantFullName || 'N/A'}
+                    </div>
+                  </div>
+                  <div style={{ backgroundColor: 'white', padding: '16px 20px' }}>
+                    <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      Phone Number
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#333', fontWeight: '500' }}>
+                      {organizationData?.phoneNumber || 'N/A'}
+                    </div>
+                  </div>
+                  {organizationData?.address && (
+                    <div style={{ backgroundColor: 'white', padding: '16px 20px', gridColumn: 'span 2' }}>
+                      <div style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                        Address
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#333', fontWeight: '500' }}>
+                        {organizationData.address}
+                        {organizationData.city && `, ${organizationData.city}`}
+                        {organizationData.state && `, ${organizationData.state}`}
+                        {organizationData.postalCode && ` ${organizationData.postalCode}`}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Documents Section */}
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '8px',
+                border: '1px solid #e1e5e9',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  padding: '14px 20px',
+                  backgroundColor: '#f8f9fa',
+                  borderBottom: '1px solid #e1e5e9',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: '#333' }}>
+                    Uploaded Documents
+                  </h3>
+                  <span style={{ fontSize: '12px', color: '#888' }}>
+                    {organizationData?.documents?.length || 0} document(s)
+                  </span>
+                </div>
+                <div style={{ padding: '16px 20px' }}>
+                  {!organizationData?.documents || organizationData.documents.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '30px', color: '#999' }}>
+                      <div style={{ fontSize: '32px', marginBottom: '8px', opacity: 0.5 }}>📄</div>
+                      <p style={{ margin: 0, fontSize: '13px' }}>No documents uploaded</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {organizationData.documents.map((doc, index) => (
+                        <div key={index} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '12px 16px',
+                          backgroundColor: '#f8f9fa',
+                          borderRadius: '6px',
+                          border: '1px solid #e9ecef'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{
+                              width: '36px',
+                              height: '36px',
+                              backgroundColor: '#e3f2fd',
+                              borderRadius: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '16px'
+                            }}>
+                              📄
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: '500', color: '#333' }}>
+                                {doc.originalname || doc.name || `Document ${index + 1}`}
+                              </div>
+                              {doc.size && (
+                                <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
+                                  {(doc.size / 1024).toFixed(1)} KB
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {doc.filename && (
+                            <a
+                              href={`${process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5001'}/uploads/organizations/${doc.filename}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                padding: '6px 14px',
+                                backgroundColor: '#2c3e50',
+                                color: 'white',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                textDecoration: 'none',
+                                fontWeight: '500'
+                              }}
+                            >
+                              View
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Tournament Modal */}
@@ -2825,7 +3923,19 @@ const TournamentApplication = ({ setCurrentPage }) => {
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ marginBottom: '20px' }}>Edit Tournament Application</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0 }}>
+                {editFormData.status === 'Approved' || editFormData.status === 'Rejected'
+                  ? 'View Tournament Application'
+                  : 'Edit Tournament Application'}
+              </h3>
+              <span
+                className={`status-badge status-${editFormData.status?.toLowerCase().replace(/\s+/g, '-')}`}
+                style={{ fontSize: '0.85rem', padding: '6px 14px' }}
+              >
+                {editFormData.status}
+              </span>
+            </div>
             
             <form onSubmit={handleUpdateTournament} className="tournament-form">
               <div className="form-section">
@@ -2840,6 +3950,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     value={editFormData.organiserName || ''}
                     onChange={handleEditInputChange}
                     required
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                 </div>
 
@@ -2852,6 +3963,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     value={editFormData.registrationNo || ''}
                     onChange={handleEditInputChange}
                     required
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                 </div>
 
@@ -2864,6 +3976,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     value={editFormData.telContact || ''}
                     onChange={handleEditInputChange}
                     required
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                 </div>
 
@@ -2875,6 +3988,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     name="personInCharge"
                     value={editFormData.personInCharge || ''}
                     onChange={handleEditInputChange}
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                 </div>
 
@@ -2887,6 +4001,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     value={editFormData.email || ''}
                     onChange={handleEditInputChange}
                     required
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                 </div>
               </div>
@@ -2903,6 +4018,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     value={editFormData.eventTitle || ''}
                     onChange={handleEditInputChange}
                     required
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                 </div>
 
@@ -2920,6 +4036,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     id="edit-tournamentPoster"
                     accept="image/jpeg,image/png,image/jpg,image/webp"
                     onChange={handleEditPosterUpload}
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -2983,9 +4100,10 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       value={editFormData.eventStartDate || ''}
                       onChange={handleEditInputChange}
                       required
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     />
                   </div>
-                  
+
                   <div className="form-group">
                     <label htmlFor="edit-eventEndDate">Event End Date *</label>
                     <input
@@ -2995,6 +4113,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       value={editFormData.eventEndDate || ''}
                       onChange={handleEditInputChange}
                       required
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     />
                   </div>
                 </div>
@@ -3069,6 +4188,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       value={editFormData.state || ''}
                       onChange={handleEditStateChange}
                       required
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     >
                       <option value="">Select State</option>
                       {Object.keys(malaysianStatesAndCities).map(state => (
@@ -3076,7 +4196,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       ))}
                     </select>
                   </div>
-                  
+
                   <div className="form-group">
                     <label htmlFor="edit-city">City *</label>
                     <select
@@ -3085,6 +4205,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       value={editFormData.city || ''}
                       onChange={handleEditInputChange}
                       required
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     >
                       <option value="">Select City</option>
                       {editFormData.state && malaysianStatesAndCities[editFormData.state]?.map(city => (
@@ -3103,6 +4224,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     value={editFormData.venue || ''}
                     onChange={handleEditInputChange}
                     required
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                 </div>
 
@@ -3115,6 +4237,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       value={editFormData.classification || ''}
                       onChange={handleEditInputChange}
                       required
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     >
                       <option value="">Select Level/Type</option>
                       <option value="District">District</option>
@@ -3134,6 +4257,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       value={editFormData.eventType || ''}
                       onChange={handleEditInputChange}
                       required
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     >
                       <option value="">Select Type</option>
                       <option value="Open">Open</option>
@@ -3155,6 +4279,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     value={editFormData.category || ''}
                     onChange={handleEditInputChange}
                     placeholder="e.g., Men's Singles, Women's Doubles, Mixed Doubles"
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                   <small className="form-note" style={{ color: '#c62828', display: 'block', marginTop: '5px' }}>
                     Note: Organisers are required to declare all competition categories planned for this tournament.
@@ -3173,6 +4298,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       min="0"
                       max="200"
                       step="0.01"
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     />
                     <small className="form-note" style={{ color: '#dc3545' }}>
                       Note: Not more than RM 200.00
@@ -3189,6 +4315,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       onChange={handleEditInputChange}
                       min="0"
                       step="0.01"
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     />
                   </div>
                 </div>
@@ -3203,6 +4330,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     onChange={handleEditInputChange}
                     min="1"
                     required
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                 </div>
 
@@ -3215,6 +4343,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     onChange={handleEditInputChange}
                     rows="4"
                     placeholder="Enter sponsor names (one per line or comma-separated)&#10;e.g., Company A, Company B, Company C"
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                   <small className="form-note">
                     List all sponsors involved in this tournament. Leave blank if no sponsors.
@@ -3239,7 +4368,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                         <label style={{
                           display: 'flex',
                           alignItems: 'center',
-                          cursor: 'pointer',
+                          cursor: editFormData.status === 'Approved' || editFormData.status === 'Rejected' ? 'not-allowed' : 'pointer',
                           fontSize: '14px'
                         }}>
                           <input
@@ -3248,11 +4377,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
                             value={software.softwareName}
                             checked={editFormData.tournamentSoftware && editFormData.tournamentSoftware.includes(software.softwareName)}
                             onChange={handleEditInputChange}
+                            disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                             style={{
                               marginRight: '10px',
                               width: '16px',
                               height: '16px',
-                              cursor: 'pointer'
+                              cursor: editFormData.status === 'Approved' || editFormData.status === 'Rejected' ? 'not-allowed' : 'pointer'
                             }}
                           />
                           {software.softwareName}
@@ -3268,7 +4398,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       <label style={{
                         display: 'flex',
                         alignItems: 'center',
-                        cursor: 'pointer',
+                        cursor: editFormData.status === 'Approved' || editFormData.status === 'Rejected' ? 'not-allowed' : 'pointer',
                         fontSize: '14px',
                         fontWeight: '500'
                       }}>
@@ -3278,11 +4408,12 @@ const TournamentApplication = ({ setCurrentPage }) => {
                           value="Other"
                           checked={editFormData.tournamentSoftware && editFormData.tournamentSoftware.includes('Other')}
                           onChange={handleEditInputChange}
+                          disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                           style={{
                             marginRight: '10px',
                             width: '16px',
                             height: '16px',
-                            cursor: 'pointer'
+                            cursor: editFormData.status === 'Approved' || editFormData.status === 'Rejected' ? 'not-allowed' : 'pointer'
                           }}
                         />
                         Other (Please specify)
@@ -3302,6 +4433,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       onChange={handleEditInputChange}
                       placeholder="Enter software name"
                       required
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     />
                   </div>
                 )}
@@ -3322,6 +4454,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       onChange={handleEditInputChange}
                       placeholder="Enter nearest hospital name"
                       required
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     />
                   </div>
 
@@ -3335,6 +4468,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       onChange={handleEditInputChange}
                       placeholder="e.g., 5 km"
                       required
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     />
                   </div>
 
@@ -3349,6 +4483,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                       placeholder="0"
                       min="0"
                       required
+                      disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                     />
                   </div>
 
@@ -3364,6 +4499,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                           checked={editFormData.emergencyTransportType === 'ambulance'}
                           onChange={handleEditInputChange}
                           required
+                          disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                           style={{ width: 'auto', marginRight: '8px' }}
                         />
                         <label htmlFor="edit-transportAmbulance" style={{ display: 'inline', fontWeight: 'normal' }}>Ambulance</label>
@@ -3377,6 +4513,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                           checked={editFormData.emergencyTransportType === 'standby_vehicle'}
                           onChange={handleEditInputChange}
                           required
+                          disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                           style={{ width: 'auto', marginRight: '8px' }}
                         />
                         <label htmlFor="edit-transportStandby" style={{ display: 'inline', fontWeight: 'normal' }}>Standby/Support Emergency Vehicle</label>
@@ -3396,6 +4533,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                         placeholder="0"
                         min="1"
                         required
+                        disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                       />
                     </div>
                   )}
@@ -3411,6 +4549,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
                         onChange={handleEditInputChange}
                         placeholder="e.g., Van, SUV"
                         required
+                        disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                       />
                       <small className="form-note" style={{ color: '#c62828', display: 'block', marginTop: '5px' }}>
                         Note: Only SUV or van–type vehicles are permitted. The distance to the hospital must not exceed 5 km. If the distance is more than 5 km, the use of an ambulance is mandatory.
@@ -3429,27 +4568,28 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     rows="5"
                     maxLength="300"
                     required
+                    disabled={editFormData.status === 'Approved' || editFormData.status === 'Rejected'}
                   />
                   <small className="form-note">Maximum 300 characters.</small>
                 </div>
               </div>
 
               {editTournamentError && (
-                <div style={{ 
-                  color: '#d32f2f', 
-                  backgroundColor: '#ffebee', 
-                  padding: '10px', 
-                  borderRadius: '4px', 
+                <div style={{
+                  color: '#d32f2f',
+                  backgroundColor: '#ffebee',
+                  padding: '10px',
+                  borderRadius: '4px',
                   marginBottom: '15px',
-                  border: '1px solid #ffcdd2' 
+                  border: '1px solid #ffcdd2'
                 }}>
                   {editTournamentError}
                 </div>
               )}
 
               <div className="form-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={cancelEditTournament}
                   style={{
                     padding: '10px 20px',
@@ -3460,21 +4600,23 @@ const TournamentApplication = ({ setCurrentPage }) => {
                     cursor: 'pointer'
                   }}
                 >
-                  Cancel
+                  {editFormData.status === 'Approved' || editFormData.status === 'Rejected' ? 'Close' : 'Cancel'}
                 </button>
-                <button 
-                  type="submit"
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Update Tournament
-                </button>
+                {!(editFormData.status === 'Approved' || editFormData.status === 'Rejected') && (
+                  <button
+                    type="submit"
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Update Tournament
+                  </button>
+                )}
               </div>
             </form>
           </div>
@@ -3984,8 +5126,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
               minHeight: '500px'
             }}>
               {/* Calendar Grid */}
-              <div className="calendar-grid">
-                <div className="calendar-header" style={{
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -4024,8 +5166,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
                   </button>
                 </div>
 
-                {/* Calendar Grid */}
-                <div className="calendar-month" style={{
+                {/* Calendar Days Grid */}
+                <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(7, 1fr)',
                   gap: '1px',

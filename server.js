@@ -141,6 +141,16 @@ function generateApplicationId() {
   return 'MPA' + result;
 }
 
+// Function to generate unique event application ID
+function generateEventApplicationId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return 'EVT' + result;
+}
+
 
 
 // Email Configuration
@@ -1468,6 +1478,151 @@ tournamentApplicationSchema.index({ status: 1 });
 tournamentApplicationSchema.index({ submissionDate: -1 });
 
 const TournamentApplication = mongoose.model('TournamentApplication', tournamentApplicationSchema);
+
+// Event Application Schema (for non-tournament events like referee clinics, coaching courses)
+const eventApplicationSchema = new mongoose.Schema({
+  applicationId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  // Organiser Information (same as tournament application)
+  organiserName: {
+    type: String,
+    required: true
+  },
+  registrationNo: {
+    type: String,
+    required: true
+  },
+  telContact: {
+    type: String,
+    required: true
+  },
+  personInCharge: {
+    type: String,
+    required: false
+  },
+  email: {
+    type: String,
+    required: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address']
+  },
+  // Event Details
+  eventTitle: {
+    type: String,
+    required: true
+  },
+  eventType: {
+    type: String,
+    required: true,
+    enum: ['Referee', 'Coaching', 'Other']
+  },
+  eventTypeSpecify: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  eventStartDate: {
+    type: Date,
+    required: true
+  },
+  eventEndDate: {
+    type: Date,
+    required: true
+  },
+  eventStartDateFormatted: {
+    type: String,
+    required: false
+  },
+  eventEndDateFormatted: {
+    type: String,
+    required: false
+  },
+  participantType: {
+    type: String,
+    required: true,
+    enum: ['Malaysia', 'Non-Malaysia', 'Both']
+  },
+  state: {
+    type: String,
+    required: true
+  },
+  city: {
+    type: String,
+    required: true
+  },
+  venue: {
+    type: String,
+    required: true
+  },
+  // Other Involved Organizer Information (Optional)
+  otherOrganizer: {
+    name: {
+      type: String,
+      default: ''
+    },
+    picName: {
+      type: String,
+      default: ''
+    },
+    phone: {
+      type: String,
+      default: ''
+    },
+    email: {
+      type: String,
+      default: ''
+    },
+    address: {
+      type: String,
+      default: ''
+    }
+  },
+  // Application Metadata
+  status: {
+    type: String,
+    default: 'Pending Review',
+    enum: ['Pending Review', 'Under Review', 'Approved', 'Rejected', 'More Info Required', 'Cancelled']
+  },
+  submissionDate: {
+    type: Date,
+    default: Date.now
+  },
+  lastUpdated: {
+    type: Date,
+    default: Date.now
+  },
+  // Admin remarks/rejection reason
+  remarks: {
+    type: String,
+    default: ''
+  },
+  requiredInfo: {
+    type: String,
+    default: ''
+  },
+  // Cancellation fields
+  cancellationReason: {
+    type: String,
+    default: ''
+  },
+  cancelledAt: {
+    type: Date
+  },
+  cancelledBy: {
+    type: String,
+    default: ''
+  }
+}, {
+  timestamps: true
+});
+
+eventApplicationSchema.index({ email: 1 });
+eventApplicationSchema.index({ status: 1 });
+eventApplicationSchema.index({ submissionDate: -1 });
+
+const EventApplication = mongoose.model('EventApplication', eventApplicationSchema);
 
 // Organization Registration Schema
 const organizationSchema = new mongoose.Schema({
@@ -6709,7 +6864,7 @@ app.delete('/api/applications/:id', async (req, res) => {
     }
     
     
-    res.json({ 
+    res.json({
       message: 'Application deleted successfully',
       deletedApplication: {
         applicationId: application.applicationId,
@@ -6723,7 +6878,322 @@ app.delete('/api/applications/:id', async (req, res) => {
   }
 });
 
+// ===============================
+// EVENT APPLICATION APIs (for non-tournament events like referee clinics, coaching)
+// ===============================
 
+// Submit new event application
+app.post('/api/event-applications', async (req, res) => {
+  try {
+    console.log('📋 Event application submission received');
+    const applicationData = req.body;
+
+    // Generate unique event application ID
+    let applicationId;
+    let isUnique = false;
+    let attempts = 0;
+
+    while (!isUnique && attempts < 10) {
+      applicationId = generateEventApplicationId();
+      const existing = await EventApplication.findOne({ applicationId });
+      if (!existing) {
+        isUnique = true;
+      }
+      attempts++;
+    }
+
+    if (!isUnique) {
+      return res.status(500).json({
+        error: 'Failed to generate unique event application ID'
+      });
+    }
+
+    // Create event application
+    const newApplication = new EventApplication({
+      applicationId,
+      organiserName: applicationData.organiserName,
+      registrationNo: applicationData.registrationNo,
+      telContact: applicationData.telContact,
+      personInCharge: applicationData.personInCharge,
+      email: applicationData.email,
+      eventTitle: applicationData.eventTitle,
+      eventType: applicationData.eventType,
+      eventTypeSpecify: applicationData.eventTypeSpecify || '',
+      eventStartDate: new Date(applicationData.eventStartDate),
+      eventEndDate: new Date(applicationData.eventEndDate),
+      eventStartDateFormatted: applicationData.eventStartDateFormatted,
+      eventEndDateFormatted: applicationData.eventEndDateFormatted,
+      participantType: applicationData.participantType,
+      state: applicationData.state,
+      city: applicationData.city,
+      venue: applicationData.venue,
+      otherOrganizer: {
+        name: applicationData.otherOrganizerName || '',
+        picName: applicationData.otherOrganizerPic || '',
+        phone: applicationData.otherOrganizerPhone || '',
+        email: applicationData.otherOrganizerEmail || '',
+        address: applicationData.otherOrganizerAddress || ''
+      },
+      status: 'Pending Review',
+      submissionDate: new Date()
+    });
+
+    const savedApplication = await newApplication.save();
+    console.log(`✅ Event application saved: ${savedApplication.applicationId}`);
+
+    // Send confirmation email to organizer
+    try {
+      const mailOptions = {
+        from: `"MPA Portal" <${process.env.EMAIL_USER}>`,
+        to: savedApplication.email,
+        subject: `Event Application Received - ${savedApplication.applicationId}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #2c3e50;">Event Application Submitted Successfully</h2>
+            <p>Dear ${savedApplication.organiserName},</p>
+            <p>Thank you for submitting your event application. Your application has been received and is now pending review.</p>
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p><strong>Application ID:</strong> ${savedApplication.applicationId}</p>
+              <p><strong>Event Title:</strong> ${savedApplication.eventTitle}</p>
+              <p><strong>Event Type:</strong> ${savedApplication.eventType}${savedApplication.eventTypeSpecify ? ` - ${savedApplication.eventTypeSpecify}` : ''}</p>
+              <p><strong>Event Date:</strong> ${new Date(savedApplication.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} - ${new Date(savedApplication.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+              <p><strong>Venue:</strong> ${savedApplication.venue}, ${savedApplication.city}, ${savedApplication.state}</p>
+              <p><strong>Participant Type:</strong> ${savedApplication.participantType}</p>
+            </div>
+            <p>We will review your application and get back to you soon.</p>
+            <p>Best regards,<br>Malaysia Pickleball Association</p>
+          </div>
+        `
+      };
+      await transporter.sendMail(mailOptions);
+      console.log('📧 Event application confirmation email sent');
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Event application submitted successfully',
+      application: savedApplication
+    });
+  } catch (error) {
+    console.error('Error submitting event application:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all event applications
+app.get('/api/event-applications', async (req, res) => {
+  try {
+    const applications = await EventApplication.find()
+      .sort({ submissionDate: -1 });
+    res.json(applications);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get event applications by organization email
+app.get('/api/event-applications/organization/:email', async (req, res) => {
+  try {
+    const applications = await EventApplication.find({
+      email: req.params.email
+    }).sort({ submissionDate: -1 });
+    res.json(applications);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single event application by ID
+app.get('/api/event-applications/:id', async (req, res) => {
+  try {
+    const application = await EventApplication.findOne({
+      applicationId: req.params.id
+    });
+    if (!application) {
+      return res.status(404).json({ error: 'Event application not found' });
+    }
+    res.json(application);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update event application status
+app.patch('/api/event-applications/:id/status', async (req, res) => {
+  try {
+    const { status, remarks, requiredInfo } = req.body;
+    const updateData = { status, lastUpdated: new Date() };
+
+    if (remarks) updateData.remarks = remarks;
+    if (requiredInfo) updateData.requiredInfo = requiredInfo;
+
+    const application = await EventApplication.findOneAndUpdate(
+      { applicationId: req.params.id },
+      updateData,
+      { new: true }
+    );
+
+    if (!application) {
+      return res.status(404).json({ error: 'Event application not found' });
+    }
+
+    // Send email notification based on status change
+    try {
+      let mailOptions = null;
+
+      if (status === 'Approved') {
+        mailOptions = {
+          from: `"MPA Portal" <${process.env.EMAIL_USER}>`,
+          to: application.email,
+          subject: `Event Application Approved - ${application.applicationId}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background-color: #28a745; color: white; padding: 20px; text-align: center;">
+                <h2 style="margin: 0;">Event Application Approved</h2>
+              </div>
+              <div style="padding: 20px;">
+                <p>Dear ${application.organiserName},</p>
+                <p>Congratulations! Your event application has been <strong style="color: #28a745;">approved</strong> by the Malaysia Pickleball Association.</p>
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745;">
+                  <p style="margin: 5px 0;"><strong>Application ID:</strong> ${application.applicationId}</p>
+                  <p style="margin: 5px 0;"><strong>Event Title:</strong> ${application.eventTitle}</p>
+                  <p style="margin: 5px 0;"><strong>Event Type:</strong> ${application.eventType}${application.eventTypeSpecify ? ` - ${application.eventTypeSpecify}` : ''}</p>
+                  <p style="margin: 5px 0;"><strong>Event Date:</strong> ${new Date(application.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} - ${new Date(application.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                  <p style="margin: 5px 0;"><strong>Venue:</strong> ${application.venue}, ${application.city}, ${application.state}</p>
+                </div>
+                ${remarks ? `<p><strong>Remarks:</strong> ${remarks}</p>` : ''}
+                <p>You may now proceed with your event preparations. Please ensure all activities comply with MPA guidelines and regulations.</p>
+                <p>Best regards,<br><strong>Malaysia Pickleball Association</strong></p>
+              </div>
+            </div>
+          `
+        };
+      } else if (status === 'Rejected') {
+        mailOptions = {
+          from: `"MPA Portal" <${process.env.EMAIL_USER}>`,
+          to: application.email,
+          subject: `Event Application Status Update - ${application.applicationId}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background-color: #dc3545; color: white; padding: 20px; text-align: center;">
+                <h2 style="margin: 0;">Event Application Not Approved</h2>
+              </div>
+              <div style="padding: 20px;">
+                <p>Dear ${application.organiserName},</p>
+                <p>We regret to inform you that your event application has <strong style="color: #dc3545;">not been approved</strong> by the Malaysia Pickleball Association.</p>
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc3545;">
+                  <p style="margin: 5px 0;"><strong>Application ID:</strong> ${application.applicationId}</p>
+                  <p style="margin: 5px 0;"><strong>Event Title:</strong> ${application.eventTitle}</p>
+                  <p style="margin: 5px 0;"><strong>Event Type:</strong> ${application.eventType}${application.eventTypeSpecify ? ` - ${application.eventTypeSpecify}` : ''}</p>
+                  <p style="margin: 5px 0;"><strong>Event Date:</strong> ${new Date(application.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })} - ${new Date(application.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                </div>
+                ${remarks ? `<div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;"><p style="margin: 0;"><strong>Reason:</strong> ${remarks}</p></div>` : ''}
+                <p>If you have any questions regarding this decision, please contact us through the portal or email.</p>
+                <p>Best regards,<br><strong>Malaysia Pickleball Association</strong></p>
+              </div>
+            </div>
+          `
+        };
+      } else if (status === 'More Info Required') {
+        mailOptions = {
+          from: `"MPA Portal" <${process.env.EMAIL_USER}>`,
+          to: application.email,
+          subject: `Action Required: Event Application ${application.applicationId}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background-color: #ffc107; color: #333; padding: 20px; text-align: center;">
+                <h2 style="margin: 0;">Additional Information Required</h2>
+              </div>
+              <div style="padding: 20px;">
+                <p>Dear ${application.organiserName},</p>
+                <p>Your event application requires additional information before we can proceed with the review.</p>
+                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #ffc107;">
+                  <p style="margin: 5px 0;"><strong>Application ID:</strong> ${application.applicationId}</p>
+                  <p style="margin: 5px 0;"><strong>Event Title:</strong> ${application.eventTitle}</p>
+                </div>
+                ${requiredInfo ? `<div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;"><p style="margin: 0;"><strong>Information Required:</strong><br>${requiredInfo}</p></div>` : ''}
+                <p>Please log in to the MPA Portal to update your application with the required information.</p>
+                <p>Best regards,<br><strong>Malaysia Pickleball Association</strong></p>
+              </div>
+            </div>
+          `
+        };
+      }
+
+      if (mailOptions) {
+        await transporter.sendMail(mailOptions);
+        console.log(`📧 Event application ${status} email sent to ${application.email}`);
+      }
+    } catch (emailError) {
+      console.error('Failed to send status update email:', emailError);
+      // Continue even if email fails
+    }
+
+    res.json({
+      success: true,
+      message: 'Event application status updated',
+      application
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Cancel event application
+app.post('/api/event-applications/:id/cancel', async (req, res) => {
+  try {
+    const { cancellationReason } = req.body;
+
+    const application = await EventApplication.findOneAndUpdate(
+      { applicationId: req.params.id },
+      {
+        status: 'Cancelled',
+        cancellationReason,
+        cancelledAt: new Date(),
+        lastUpdated: new Date()
+      },
+      { new: true }
+    );
+
+    if (!application) {
+      return res.status(404).json({ error: 'Event application not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Event application cancelled',
+      application
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete event application
+app.delete('/api/event-applications/:id', async (req, res) => {
+  try {
+    const application = await EventApplication.findOneAndDelete({
+      applicationId: req.params.id
+    });
+
+    if (!application) {
+      return res.status(404).json({ error: 'Event application not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Event application deleted',
+      deletedApplication: {
+        applicationId: application.applicationId,
+        eventType: application.eventType
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 
 
