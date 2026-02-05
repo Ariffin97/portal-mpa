@@ -180,7 +180,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
   };
 
   const isEventDetailsComplete = () => {
-    return formData.eventTitle.trim() !== '' &&
+    const baseFieldsComplete = formData.eventTitle.trim() !== '' &&
            formData.eventStartDate !== '' &&
            formData.eventEndDate !== '' &&
            formData.state !== '' &&
@@ -195,6 +195,16 @@ const TournamentApplication = ({ setCurrentPage }) => {
            formData.numberOfMedics !== '' &&
            formData.emergencyTransportType !== '' &&
            formData.eventSummary.trim() !== '';
+
+    // Check conditional Emergency Plan fields
+    if (formData.emergencyTransportType === 'ambulance') {
+      return baseFieldsComplete && formData.emergencyTransportQuantity !== '';
+    }
+    if (formData.emergencyTransportType === 'standby_vehicle') {
+      return baseFieldsComplete && formData.standbyVehicleType.trim() !== '';
+    }
+
+    return baseFieldsComplete;
   };
 
   const isFactSheetComplete = () => {
@@ -1956,7 +1966,7 @@ const TournamentApplication = ({ setCurrentPage }) => {
           </div>
 
           <div className="form-group">
-            <label htmlFor="tournamentPoster">Tournament Poster</label>
+            <label htmlFor="tournamentPoster">Competition Poster</label>
             <input
               type="file"
               id="tournamentPoster"
@@ -2814,8 +2824,8 @@ const TournamentApplication = ({ setCurrentPage }) => {
             )}
             <button
               type="submit"
-              className={`submit-btn ${(!formData.dataConsent || !formData.termsConsent || !formData.noAlcoholGamblingConsent || isSubmitting || supportDocuments.length === 0) ? 'disabled' : ''}`}
-              disabled={!formData.dataConsent || !formData.termsConsent || !formData.noAlcoholGamblingConsent || isSubmitting || supportDocuments.length === 0}
+              className={`submit-btn ${(!isEventDetailsComplete() || !formData.dataConsent || !formData.termsConsent || !formData.noAlcoholGamblingConsent || isSubmitting || supportDocuments.length === 0) ? 'disabled' : ''}`}
+              disabled={!isEventDetailsComplete() || !formData.dataConsent || !formData.termsConsent || !formData.noAlcoholGamblingConsent || isSubmitting || supportDocuments.length === 0}
             >
               {isSubmitting ? 'Submitting Application...' : 'Submit Tournament Application'}
             </button>

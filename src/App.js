@@ -602,7 +602,7 @@ function App() {
                         className="cta-tournament-software"
                         onClick={() => setCurrentPage('software-login')}
                       >
-                        Login Tournament Software
+                        Competition Software Login
                       </button>
                     </div>
                     <div className="hero-actions-row">

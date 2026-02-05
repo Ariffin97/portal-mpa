@@ -1344,6 +1344,38 @@ const tournamentApplicationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // Emergency Plan
+  hospitalName: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  hospitalDistance: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  numberOfMedics: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  emergencyTransportType: {
+    type: String,
+    required: false,
+    enum: ['ambulance', 'standby_vehicle', ''],
+    default: ''
+  },
+  emergencyTransportQuantity: {
+    type: String,
+    required: false,
+    default: ''
+  },
+  standbyVehicleType: {
+    type: String,
+    required: false,
+    default: ''
+  },
   // Tournament Categories
   categories: [{
     category: {
@@ -4512,6 +4544,16 @@ app.get('/api/applications/:id', async (req, res) => {
 app.post('/api/applications', uploadApplication.any(), async (req, res) => {
   try {
     let applicationData = req.body;
+
+    // Debug: Log emergency plan fields
+    console.log('📋 Emergency Plan Data Received:', {
+      hospitalName: applicationData.hospitalName,
+      hospitalDistance: applicationData.hospitalDistance,
+      numberOfMedics: applicationData.numberOfMedics,
+      emergencyTransportType: applicationData.emergencyTransportType,
+      emergencyTransportQuantity: applicationData.emergencyTransportQuantity,
+      standbyVehicleType: applicationData.standbyVehicleType
+    });
 
     // If categories is a string (from FormData), parse it
     if (typeof applicationData.categories === 'string') {

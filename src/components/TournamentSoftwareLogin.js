@@ -62,7 +62,15 @@ const TournamentSoftwareLogin = ({ setCurrentPage, setUserData }) => {
   };
 
   return (
-    <div className="software-login-page">
+    <div className="software-login-page" style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      background: 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)',
+      padding: '2rem',
+      paddingTop: '120px'
+    }}>
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">

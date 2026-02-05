@@ -52,7 +52,7 @@ const ApplicationStatus = () => {
 
 
   return (
-    <div className="application-status">
+    <div className="application-status" style={{ paddingTop: '60px' }}>
       <h2>Check Application Status</h2>
       
       <div className="status-search">

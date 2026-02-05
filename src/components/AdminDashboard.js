@@ -9096,6 +9096,10 @@ Settings
                                         className="view-btn-table"
                                         title="View Tournament Details"
                                       >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                          <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
                                         View
                                       </button>
                                     </>
@@ -9106,6 +9110,10 @@ Settings
                                         className="view-btn-table"
                                         title="View Historical Record"
                                       >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                          <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
                                         View
                                       </button>
                                       <span
@@ -9161,6 +9169,10 @@ Settings
                                         className="view-btn-table"
                                         title="View Details"
                                       >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                          <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
                                         View
                                       </button>
                                       {selectedStatusFilter === 'All' && (
@@ -9265,7 +9277,6 @@ Settings
                     <tr>
                       <th>No.</th>
                       <th>Event Title</th>
-                      <th>Event Type</th>
                       <th>ID Number</th>
                       <th>Date</th>
                       <th>Status</th>
@@ -9290,7 +9301,6 @@ Settings
                               {app.eventTitle || 'Untitled Event'}
                             </span>
                           </td>
-                          <td>{app.eventType}{app.eventTypeSpecify ? ` - ${app.eventTypeSpecify}` : ''}</td>
                           <td>
                             <span
                               className="clickable-link"
@@ -9310,7 +9320,12 @@ Settings
                               if (!endDate || app.eventStartDate === app.eventEndDate) {
                                 return startDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' });
                               } else {
-                                return `${startDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' })} - ${endDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                                const sameMonth = startDate.getMonth() === endDate.getMonth() && startDate.getFullYear() === endDate.getFullYear();
+                                if (sameMonth) {
+                                  return `${startDate.getDate()} - ${endDate.getDate()} ${endDate.toLocaleDateString('en-MY', { month: 'short', year: 'numeric' })}`;
+                                } else {
+                                  return `${startDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short' })} - ${endDate.toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+                                }
                               }
                             })()}
                           </td>
@@ -9364,7 +9379,19 @@ Settings
                                   setSelectedEventApplication(app);
                                   setShowEventModal(true);
                                 }}
-                                className="edit-btn-table"
+                                style={{
+                                  padding: '8px 16px',
+                                  backgroundColor: '#2c3e50',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  fontSize: '13px',
+                                  fontWeight: '500',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={(e) => e.target.style.backgroundColor = '#1a252f'}
+                                onMouseOut={(e) => e.target.style.backgroundColor = '#2c3e50'}
                               >
                                 View
                               </button>
@@ -9380,146 +9407,250 @@ Settings
             {/* Event Application Detail Modal */}
             {showEventModal && selectedEventApplication && (
               <div className="modal-overlay" onClick={() => setShowEventModal(false)}>
-                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px', maxHeight: '85vh', overflow: 'auto' }}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{
+                  maxWidth: '750px',
+                  maxHeight: '90vh',
+                  overflow: 'hidden',
+                  padding: 0,
+                  borderRadius: '12px',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                }}>
+                  {/* Header */}
                   <div style={{
-                    backgroundColor: '#2c3e50',
+                    background: 'linear-gradient(135deg, #1e3a5f 0%, #2c3e50 100%)',
                     color: 'white',
-                    padding: '20px',
-                    marginBottom: '20px',
-                    borderRadius: '8px 8px 0 0',
-                    margin: '-20px -20px 20px -20px'
+                    padding: '24px 28px',
+                    position: 'relative'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <h3 style={{ margin: 0 }}>Event Application Details</h3>
+                    <button
+                      onClick={() => setShowEventModal(false)}
+                      style={{
+                        position: 'absolute',
+                        top: '16px',
+                        right: '16px',
+                        background: 'rgba(255,255,255,0.1)',
+                        border: 'none',
+                        color: 'white',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        fontSize: '18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseOver={(e) => e.target.style.background = 'rgba(255,255,255,0.2)'}
+                      onMouseOut={(e) => e.target.style.background = 'rgba(255,255,255,0.1)'}
+                    >
+                      ✕
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+                      <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '600' }}>Event Application Details</h3>
                       <span
                         style={{
-                          padding: '6px 14px',
+                          padding: '6px 16px',
                           borderRadius: '20px',
                           fontSize: '12px',
                           fontWeight: '600',
-                          backgroundColor: selectedEventApplication.status === 'Approved' ? '#28a745' :
-                                          selectedEventApplication.status === 'Rejected' ? '#dc3545' :
-                                          selectedEventApplication.status === 'More Info Required' ? '#ffc107' : '#007bff',
-                          color: selectedEventApplication.status === 'More Info Required' ? '#333' : 'white'
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          backgroundColor: selectedEventApplication.status === 'Approved' ? '#10b981' :
+                                          selectedEventApplication.status === 'Rejected' ? '#ef4444' :
+                                          selectedEventApplication.status === 'More Info Required' ? '#f59e0b' : '#3b82f6',
+                          color: 'white',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                         }}
                       >
                         {selectedEventApplication.status}
                       </span>
                     </div>
-                    <p style={{ margin: '8px 0 0 0', opacity: 0.8, fontSize: '14px' }}>
-                      Application ID: {selectedEventApplication.applicationId}
+                    <p style={{ margin: 0, opacity: 0.7, fontSize: '14px', fontFamily: 'monospace' }}>
+                      ID: {selectedEventApplication.applicationId}
                     </p>
                   </div>
 
-                  <div style={{ display: 'grid', gap: '20px' }}>
-                    {/* Event Information */}
-                    <div style={{ backgroundColor: '#f8f9fa', padding: '16px', borderRadius: '8px' }}>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50', borderBottom: '2px solid #2c3e50', paddingBottom: '8px' }}>Event Information</h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div>
-                          <strong style={{ color: '#666', fontSize: '12px' }}>Event Title</strong>
-                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.eventTitle}</p>
-                        </div>
-                        <div>
-                          <strong style={{ color: '#666', fontSize: '12px' }}>Event Type</strong>
-                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.eventType}{selectedEventApplication.eventTypeSpecify ? ` - ${selectedEventApplication.eventTypeSpecify}` : ''}</p>
-                        </div>
-                        <div>
-                          <strong style={{ color: '#666', fontSize: '12px' }}>Event Date</strong>
-                          <p style={{ margin: '4px 0 0 0' }}>
-                            {new Date(selectedEventApplication.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
-                            {selectedEventApplication.eventEndDate && selectedEventApplication.eventStartDate !== selectedEventApplication.eventEndDate &&
-                              ` - ${new Date(selectedEventApplication.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`
-                            }
-                          </p>
-                        </div>
-                        <div>
-                          <strong style={{ color: '#666', fontSize: '12px' }}>Participant Type</strong>
-                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.participantType}</p>
-                        </div>
-                        <div style={{ gridColumn: 'span 2' }}>
-                          <strong style={{ color: '#666', fontSize: '12px' }}>Venue</strong>
-                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.venue}, {selectedEventApplication.city}, {selectedEventApplication.state}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Organiser Information */}
-                    <div style={{ backgroundColor: '#f8f9fa', padding: '16px', borderRadius: '8px' }}>
-                      <h4 style={{ margin: '0 0 12px 0', color: '#2c3e50', borderBottom: '2px solid #2c3e50', paddingBottom: '8px' }}>Organiser Information</h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div>
-                          <strong style={{ color: '#666', fontSize: '12px' }}>Organiser Name</strong>
-                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.organiserName}</p>
-                        </div>
-                        <div>
-                          <strong style={{ color: '#666', fontSize: '12px' }}>Registration No.</strong>
-                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.registrationNo}</p>
-                        </div>
-                        <div>
-                          <strong style={{ color: '#666', fontSize: '12px' }}>Person in Charge</strong>
-                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.personInCharge}</p>
-                        </div>
-                        <div>
-                          <strong style={{ color: '#666', fontSize: '12px' }}>Contact</strong>
-                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.telContact}</p>
-                        </div>
-                        <div style={{ gridColumn: 'span 2' }}>
-                          <strong style={{ color: '#666', fontSize: '12px' }}>Email</strong>
-                          <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.email}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Other Organizer (if any) */}
-                    {selectedEventApplication.otherOrganizer?.name && (
-                      <div style={{ backgroundColor: '#fff3cd', padding: '16px', borderRadius: '8px' }}>
-                        <h4 style={{ margin: '0 0 12px 0', color: '#856404', borderBottom: '2px solid #856404', paddingBottom: '8px' }}>Co-Organizer Information</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  {/* Content */}
+                  <div style={{ padding: '24px 28px', maxHeight: 'calc(90vh - 200px)', overflowY: 'auto' }}>
+                    <div style={{ display: 'grid', gap: '24px' }}>
+                      {/* Event Information */}
+                      <div style={{
+                        backgroundColor: '#ffffff',
+                        padding: '20px',
+                        borderRadius: '10px',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                      }}>
+                        <h4 style={{
+                          margin: '0 0 16px 0',
+                          color: '#1e3a5f',
+                          fontSize: '15px',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          paddingBottom: '12px',
+                          borderBottom: '2px solid #1e3a5f'
+                        }}>Event Information</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                           <div>
-                            <strong style={{ color: '#666', fontSize: '12px' }}>Name</strong>
-                            <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.otherOrganizer.name}</p>
+                            <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Event Title</label>
+                            <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.eventTitle}</p>
                           </div>
                           <div>
-                            <strong style={{ color: '#666', fontSize: '12px' }}>PIC Name</strong>
-                            <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.otherOrganizer.picName}</p>
+                            <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Event Type</label>
+                            <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.eventType}{selectedEventApplication.eventTypeSpecify ? ` - ${selectedEventApplication.eventTypeSpecify}` : ''}</p>
                           </div>
                           <div>
-                            <strong style={{ color: '#666', fontSize: '12px' }}>Phone</strong>
-                            <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.otherOrganizer.phone}</p>
+                            <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Event Date</label>
+                            <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>
+                              {new Date(selectedEventApplication.eventStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+                              {selectedEventApplication.eventEndDate && selectedEventApplication.eventStartDate !== selectedEventApplication.eventEndDate &&
+                                ` - ${new Date(selectedEventApplication.eventEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}`
+                              }
+                            </p>
                           </div>
                           <div>
-                            <strong style={{ color: '#666', fontSize: '12px' }}>Email</strong>
-                            <p style={{ margin: '4px 0 0 0' }}>{selectedEventApplication.otherOrganizer.email}</p>
+                            <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Participant Type</label>
+                            <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.participantType}</p>
+                          </div>
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Venue</label>
+                            <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.venue}, {selectedEventApplication.city}, {selectedEventApplication.state}</p>
                           </div>
                         </div>
                       </div>
-                    )}
 
-                    {/* Submission Info */}
-                    <div style={{ backgroundColor: '#e9ecef', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', color: '#666' }}>
-                      <strong>Submitted:</strong> {new Date(selectedEventApplication.submissionDate).toLocaleString('en-GB', {
-                        day: '2-digit',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {/* Organiser Information */}
+                      <div style={{
+                        backgroundColor: '#ffffff',
+                        padding: '20px',
+                        borderRadius: '10px',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                      }}>
+                        <h4 style={{
+                          margin: '0 0 16px 0',
+                          color: '#1e3a5f',
+                          fontSize: '15px',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          paddingBottom: '12px',
+                          borderBottom: '2px solid #1e3a5f'
+                        }}>Organiser Information</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                          <div>
+                            <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Organiser Name</label>
+                            <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.organiserName}</p>
+                          </div>
+                          <div>
+                            <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Registration No.</label>
+                            <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.registrationNo}</p>
+                          </div>
+                          <div>
+                            <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Person in Charge</label>
+                            <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.personInCharge}</p>
+                          </div>
+                          <div>
+                            <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Contact</label>
+                            <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.telContact}</p>
+                          </div>
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Email</label>
+                            <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.email}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Other Organizer (if any) */}
+                      {selectedEventApplication.otherOrganizer?.name && (
+                        <div style={{
+                          backgroundColor: '#ffffff',
+                          padding: '20px',
+                          borderRadius: '10px',
+                          border: '1px solid #e5e7eb',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                        }}>
+                          <h4 style={{
+                            margin: '0 0 16px 0',
+                            color: '#1e3a5f',
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            paddingBottom: '12px',
+                            borderBottom: '2px solid #1e3a5f'
+                          }}>Co-Organizer Information</h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                            <div>
+                              <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Name</label>
+                              <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.otherOrganizer.name}</p>
+                            </div>
+                            <div>
+                              <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>PIC Name</label>
+                              <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.otherOrganizer.picName}</p>
+                            </div>
+                            <div>
+                              <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Phone</label>
+                              <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.otherOrganizer.phone}</p>
+                            </div>
+                            <div>
+                              <label style={{ color: '#6b7280', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Email</label>
+                              <p style={{ margin: '6px 0 0 0', fontWeight: '500', color: '#111827' }}>{selectedEventApplication.otherOrganizer.email}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Submission Info */}
+                      <div style={{
+                        backgroundColor: '#f8fafc',
+                        padding: '14px 20px',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        color: '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        borderLeft: '3px solid #1e3a5f'
+                      }}>
+                        <span style={{ fontWeight: '600' }}>Submitted:</span>
+                        {new Date(selectedEventApplication.submissionDate).toLocaleString('en-GB', {
+                          day: '2-digit',
+                          month: 'long',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
                     </div>
                   </div>
 
                   {/* Action Buttons */}
-                  <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
+                  <div style={{
+                    display: 'flex',
+                    gap: '12px',
+                    padding: '20px 28px',
+                    justifyContent: 'flex-end',
+                    borderTop: '1px solid #e5e7eb',
+                    backgroundColor: '#f8fafc'
+                  }}>
                     <button
                       onClick={() => setShowEventModal(false)}
                       style={{
-                        padding: '10px 20px',
-                        backgroundColor: '#6c757d',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer'
+                        padding: '10px 24px',
+                        backgroundColor: 'white',
+                        color: '#374151',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                        fontSize: '14px',
+                        transition: 'all 0.2s'
                       }}
+                      onMouseOver={(e) => { e.target.style.backgroundColor = '#f3f4f6'; }}
+                      onMouseOut={(e) => { e.target.style.backgroundColor = 'white'; }}
                     >
                       Close
                     </button>
@@ -9530,13 +9661,19 @@ Settings
                             handleEventApplicationStatusChange(selectedEventApplication.applicationId, 'Approved');
                           }}
                           style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#28a745',
+                            padding: '10px 24px',
+                            backgroundColor: '#10b981',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer'
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: '500',
+                            fontSize: '14px',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                           }}
+                          onMouseOver={(e) => { e.target.style.backgroundColor = '#059669'; }}
+                          onMouseOut={(e) => { e.target.style.backgroundColor = '#10b981'; }}
                         >
                           Approve
                         </button>
@@ -9548,13 +9685,19 @@ Settings
                             }
                           }}
                           style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#dc3545',
+                            padding: '10px 24px',
+                            backgroundColor: '#ef4444',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer'
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontWeight: '500',
+                            fontSize: '14px',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                           }}
+                          onMouseOver={(e) => { e.target.style.backgroundColor = '#dc2626'; }}
+                          onMouseOut={(e) => { e.target.style.backgroundColor = '#ef4444'; }}
                         >
                           Reject
                         </button>
@@ -11563,6 +11706,36 @@ Settings
                       fontWeight: 'bold'
                     }}>
                       {selectedApplication.noAlcoholGamblingConsent ? '✓ Agreed' : '✗ Not Agreed'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Emergency Plan Section */}
+              <div className="detail-section">
+                <h3>Emergency Plan</h3>
+                <div className="detail-grid">
+                  <div className="detail-item">
+                    <label>Hospital Name:</label>
+                    <span>{selectedApplication.hospitalName || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Distance to Hospital:</label>
+                    <span>{selectedApplication.hospitalDistance ? `${selectedApplication.hospitalDistance} km` : 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Number of Medics:</label>
+                    <span>{selectedApplication.numberOfMedics || 'Not provided'}</span>
+                  </div>
+                  <div className="detail-item">
+                    <label>Emergency Transport:</label>
+                    <span>
+                      {selectedApplication.emergencyTransportType === 'ambulance'
+                        ? `Ambulance${selectedApplication.emergencyTransportQuantity ? ` (${selectedApplication.emergencyTransportQuantity} unit${selectedApplication.emergencyTransportQuantity > 1 ? 's' : ''})` : ''}`
+                        : selectedApplication.emergencyTransportType === 'standby_vehicle'
+                          ? `Standby Vehicle${selectedApplication.standbyVehicleType ? ` - ${selectedApplication.standbyVehicleType}` : ''}`
+                          : 'Not provided'
+                      }
                     </span>
                   </div>
                 </div>

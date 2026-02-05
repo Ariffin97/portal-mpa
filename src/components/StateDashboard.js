@@ -672,6 +672,36 @@ const StateDashboard = ({ setCurrentPage, userData, setIsStateLoggedIn }) => {
               )}
             </div>
 
+            {/* Emergency Plan Section */}
+            <div className="detail-section">
+              <h3>Emergency Plan</h3>
+              <div className="detail-grid">
+                <div className="detail-item">
+                  <label>Hospital Name</label>
+                  <span>{selectedApplication.hospitalName || 'N/A'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Distance to Hospital</label>
+                  <span>{selectedApplication.hospitalDistance ? `${selectedApplication.hospitalDistance} km` : 'N/A'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Number of Medics</label>
+                  <span>{selectedApplication.numberOfMedics || 'N/A'}</span>
+                </div>
+                <div className="detail-item">
+                  <label>Emergency Transport</label>
+                  <span>
+                    {selectedApplication.emergencyTransportType === 'ambulance'
+                      ? `Ambulance${selectedApplication.emergencyTransportQuantity ? ` (${selectedApplication.emergencyTransportQuantity} unit${selectedApplication.emergencyTransportQuantity > 1 ? 's' : ''})` : ''}`
+                      : selectedApplication.emergencyTransportType === 'standby_vehicle'
+                        ? `Standby Vehicle${selectedApplication.standbyVehicleType ? ` - ${selectedApplication.standbyVehicleType}` : ''}`
+                        : 'N/A'
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {selectedApplication.categories && selectedApplication.categories.length > 0 && (
               <div className="detail-section">
                 <h3>Categories & Entry Fees</h3>
