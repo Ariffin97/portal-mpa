@@ -1267,7 +1267,7 @@ const tournamentApplicationSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address']
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/, 'Please enter a valid email address']
   },
   organisingPartner: {
     type: String,
@@ -1538,7 +1538,7 @@ const eventApplicationSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address']
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/, 'Please enter a valid email address']
   },
   // Event Details
   eventTitle: {
@@ -2434,7 +2434,7 @@ const notificationSettingsSchema = new mongoose.Schema({
     email: {
       type: String,
       required: true,
-      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email address']
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/, 'Please enter a valid email address']
     },
     name: {
       type: String,

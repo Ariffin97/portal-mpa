@@ -2835,7 +2835,7 @@ const AdminDashboard = ({ setCurrentPage }) => {
     }
 
     // Validate email format
-    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+    const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,})+$/;
     if (!emailRegex.test(newNotificationEmail)) {
       alert('Please enter a valid email address');
       return;
