@@ -5021,12 +5021,14 @@ app.patch('/api/applications/:id/status', async (req, res) => {
       }
 
       // Generate and send Support Letter with attachments
-      // Skip support letter for District/Divisional/State level tournaments (handled by state associations)
+      // Skip support letter for District/Divisional/State level tournaments only for states with their own portal
+      // Currently only Sarawak has its own portal - all other states are handled by MPA
       const stateLevelTournaments = ['district', 'divisional', 'state'];
-      const isStateLevelTournament = stateLevelTournaments.includes(application.classification?.toLowerCase());
+      const isSarawak = application.state?.toLowerCase() === 'sarawak';
+      const isStateLevelTournament = stateLevelTournaments.includes(application.classification?.toLowerCase()) && isSarawak;
 
       if (isStateLevelTournament) {
-        console.log('📋 Skipping support letter for state-level tournament:', application.classification);
+        console.log('📋 Skipping support letter for Sarawak state-level tournament:', application.classification);
       }
 
       if (!isStateLevelTournament) {
@@ -5385,12 +5387,14 @@ app.post('/api/applications/:id/approve', async (req, res) => {
     }
 
     // Send Support Letter data to Google Apps Script
-    // Skip support letter for District/Divisional/State level tournaments (handled by state associations)
+    // Skip support letter for District/Divisional/State level tournaments only for states with their own portal
+    // Currently only Sarawak has its own portal - all other states are handled by MPA
     const stateLevelTournaments = ['district', 'divisional', 'state'];
-    const isStateLevelTournament = stateLevelTournaments.includes(t.classification?.toLowerCase());
+    const isSarawak = t.state?.toLowerCase() === 'sarawak';
+    const isStateLevelTournament = stateLevelTournaments.includes(t.classification?.toLowerCase()) && isSarawak;
 
     if (isStateLevelTournament) {
-      console.log('📋 Skipping support letter for state-level tournament:', t.classification);
+      console.log('📋 Skipping support letter for Sarawak state-level tournament:', t.classification);
     }
 
     if (!isStateLevelTournament) {
