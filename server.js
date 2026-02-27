@@ -5709,19 +5709,20 @@ app.post('/api/applications/:id/resend-support-letter', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Tournament has no email address' });
     }
 
-    // Skip support letter for District/Divisional/State level tournaments (unless force=true)
+    // Skip support letter for District/Divisional/State level tournaments only for Sarawak (has its own portal)
     const stateLevelTournaments = ['district', 'divisional', 'state'];
-    const isStateLevelTournament = stateLevelTournaments.includes(t.classification?.toLowerCase());
+    const isSarawak = t.state?.toLowerCase() === 'sarawak';
+    const isStateLevelTournament = stateLevelTournaments.includes(t.classification?.toLowerCase()) && isSarawak;
 
     if (isStateLevelTournament && !forceResend) {
       return res.status(400).json({
         ok: false,
-        error: 'Support letters for state-level tournaments are handled by state associations. Use ?force=true to override.'
+        error: 'Support letters for Sarawak state-level tournaments are handled by Sarawak Pickleball Association. Use ?force=true to override.'
       });
     }
 
     if (isStateLevelTournament && forceResend) {
-      console.log('📋 Force sending support letter for state-level tournament:', t.classification);
+      console.log('📋 Force sending support letter for Sarawak state-level tournament:', t.classification);
     }
 
     // Check if we already have a cached PDF in the database
