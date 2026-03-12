@@ -698,6 +698,51 @@ function App() {
     }
   };
 
+  // MAINTENANCE MODE - Set to false to restore normal access
+  const MAINTENANCE_MODE = true;
+
+  if (MAINTENANCE_MODE) {
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: '#e0e0e0',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 99999,
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        padding: '20px',
+        boxSizing: 'border-box',
+      }}>
+        <img src={mpaLogo} alt="MPA Logo" style={{ width: '120px', marginBottom: '30px', opacity: 0.7 }} />
+        <h1 style={{
+          color: '#555',
+          fontSize: '24px',
+          fontWeight: '600',
+          textAlign: 'center',
+          margin: '0 0 16px 0',
+        }}>
+          System Unavailable
+        </h1>
+        <p style={{
+          color: '#777',
+          fontSize: '16px',
+          textAlign: 'center',
+          maxWidth: '500px',
+          lineHeight: '1.6',
+          margin: 0,
+        }}>
+          The MPA Portal is unavailable until further notice.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="App">
       {currentPage !== 'login' && currentPage !== 'state-dashboard' && !showAssessmentModal && <Header currentPage={currentPage} setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
@@ -706,7 +751,7 @@ function App() {
       </main>
       {currentPage !== 'login' && currentPage !== 'state-dashboard' && !showAssessmentModal && <Footer setCurrentPage={setCurrentPage} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} />}
 
-      <OrganizationLoginModal 
+      <OrganizationLoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onLoginSuccess={() => setCurrentPage('tournament-application')}
